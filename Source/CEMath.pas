@@ -43,6 +43,7 @@
   2014 of these individuals.
 
 ******************************************************************************)
+}
 
 {
 @abstract(PGDCE Math functions)
@@ -74,25 +75,3 @@ implementation
 
 end.
 
-}
-
-unit CEMath;
-
-interface
-
-type
-  TCEVector2f = packed record
-    x, y: single;
-  end;
-  TCEVector3f = packed record
-    x, y, z: single;
-  end;
-  TCEVector = TCEVector3f;
-  
-  TCEMatrix3 = array[0..2, 0..2] of single;
-  TCEMatrix4 = array[0..3, 0..3] of single;
-  TCEMatrix = TCEMatrix4;
-
-implementation
-
-end.
