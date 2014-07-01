@@ -65,6 +65,9 @@ type
   TCEVector3f = packed record
     x, y, z: single;
   end;
+  TCEVector4f = packed record
+    x, y, z, w: single;
+  end;
   TCEVector = TCEVector3f;
   
   TCEMatrix3 = array[0..2, 0..2] of single;
