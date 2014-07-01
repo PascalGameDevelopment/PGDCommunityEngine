@@ -56,39 +56,39 @@ type
     fEntityManager: TCEEntityManager;
   public
     {Public declarations}
-    constructor create;
-    destructor destroy; override;
+    constructor Create;
+    destructor Destroy; override;
 
-    property entityManager:TCEEntityManager read fEntityManager;
+    property EntityManager: TCEEntityManager read fEntityManager;
   published
     {Published declarations}
-    property application:TCEBaseApplication read fApplication write fApplication;
-    property renderer:TCEBaseRenderer read fRenderer write fRenderer;
-    property audio:TCEBaseAudio read fAudio write fAudio;
-    property input:TCEBaseInput read fInput write fInput;
-    property physics:TCEBasePhysics read fPhysics write fPhysics;
-    property network:TCEBaseNetwork read fNetwork write fNetwork;
+    property Application: TCEBaseApplication read fApplication write fApplication;
+    property Renderer: TCEBaseRenderer read fRenderer write fRenderer;
+    property Audio: TCEBaseAudio read fAudio write fAudio;
+    property Input: TCEBaseInput read fInput write fInput;
+    property Physics: TCEBasePhysics read fPhysics write fPhysics;
+    property Network: TCEBaseNetwork read fNetwork write fNetwork;
   end;
 
 implementation
 
-constructor TCECore.create;
+constructor TCECore.Create;
 begin
   inherited;
 
-  fApplication:=nil;
-  fRenderer:=nil;
-  fAudio:=nil;
-  fInput:=nil;
-  fPhysics:=nil;
+  fApplication := nil;
+  fRenderer := nil;
+  fAudio := nil;
+  fInput := nil;
+  fPhysics := nil;
 
-  fEntityManager:=TCEEntityManager.create;
+  fEntityManager := TCEEntityManager.Create;
 end;
 
-destructor TCECore.destroy;
+destructor TCECore.Destroy;
 begin
   try
-    fEntityManager.free;
+    fEntityManager.Free;
   except
   end;
 
