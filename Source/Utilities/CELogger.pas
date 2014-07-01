@@ -31,7 +31,7 @@ On start it creates a text file with the name of the application with .log as ex
 @author(Pitfiend (pitfiend@gmail.com))
 }
 
-unit logger;
+unit CELogger;
 
 interface
 
@@ -42,7 +42,7 @@ uses
 type
   TLogOperation = (loNormal, loStatus, loWarning, loError);
 
-  TLogger = class
+  TCELogger = class
   private
     FFileHandle : TextFile;
     FApplicationName : string;
@@ -58,12 +58,12 @@ type
   end;
 
 var
-  Log : TLogger;
+  Log : TCELogger;
 
 implementation
 
-{ TLogger }
-constructor TLogger.Create;
+{ TCELogger }
+constructor TCELogger.Create;
 var
   FileName : string;
 begin
@@ -77,24 +77,24 @@ begin
         ReWrite( FFileHandle );
 end;
 
-destructor TLogger.Destroy;
+destructor TCELogger.Destroy;
 begin
     Writeln( FFileHandle );
     CloseFile( FFileHandle );
     inherited;
 end;
 
-function TLogger.GetApplicationName: string;
+function TCELogger.GetApplicationName: string;
 begin
     result := FApplicationName;
 end;
 
-function TLogger.GetApplicationPath: string;
+function TCELogger.GetApplicationPath: string;
 begin
     result := FApplicationPath;
 end;
 
-procedure TLogger.Log(MessageStr, Location: string; Operation: TLogOperation = loNormal );
+procedure TCELogger.Log(MessageStr, Location: string; Operation: TLogOperation = loNormal );
 var
     mstr : string;
 begin
@@ -111,7 +111,7 @@ end;
 
 initialization
 begin
-    Log := TLogger.Create;
+    Log := TCELogger.Create;
     Log.Log( 'Starting Application', 'Initialization', loStatus );
 end;
 
