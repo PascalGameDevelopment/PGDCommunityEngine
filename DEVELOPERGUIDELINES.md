@@ -10,7 +10,7 @@ It is based on the [JEDI Delphi Style Guide](http://wiki.delphi-jedi.org/index.p
 
 ## Source-File Naming ##
 
-Source files should use InfixCaps (or Camel Caps).  For example:- PGDCEVectorMaths.pas.  All extensions should be in lower case.  All PGDCE source code files should be prefixed with 'PGDCE'.
+Source files should use InfixCaps (or Camel Caps).  For example:- CEVectorMaths.pas.  All extensions should be in lower case.  All PGDCE source code files should be prefixed with 'CE'.
 
 Care should be taken to ensure consistent capitalisation as these files could be used on case sensitive systems such as Linux.
 
@@ -84,7 +84,7 @@ For example:-
     @author(Fred Bloggs (fred@pgd.tld))
 
     }
-    unit PGDCEVectorMaths;
+    unit CEVectorMaths;
 
 ### Compiler Directives ###
 
@@ -156,4 +156,31 @@ When using the @author tag, you should use your real name since these are releva
 
 ## Enhanced Language Features ##
 
-Use of advanced language features (from either Delphi or FreePascal) should be avoided unless 100% compatibility can be guaranteed.  At the time of writing, the features to avoid include generics and attributes.  
+Use of advanced language features (from either Delphi or FreePascal) should be avoided unless 100% compatibility can be guaranteed.  At the time of writing, the features to avoid include generics and attributes.
+
+## Repository Directories ##
+
+### Main Directory Structure ###
+
+The following directory structure should be used within the repository.
+
+- **Source** - All source code for the project should be stored in this directory.  Sub-directories should be used where appropriate to group related items (e.g. Source\Renderers or Source\Platforms)
+- **Documents** - All documents relating to the project should be stored in this directory.  The sub-directories *Design*, *API* and *User* should be used to separate the documents.  *API* should contain the PasDoc generated documentation for the engine only
+- **Assets** - All project assets (e.g. logos, artwork etc.) should be stored in this directory.  Sub-directories should be used where appropriate to group related items (e.g. Assets\Logos)
+- **Examples** - All example projects should be stored in this directory.  Each project should be placed in it's own directory with an appropriate name.  Output from these projects should be directed to the main *Bin* and *Output* directories (see below for more information)
+
+Directories which form the main directory structure should include an empty *.gitkeep* file to force the creation of the directory structure (even if they are empty).
+
+### Additional Local Directory Structure ###
+
+The following additional directories should be used locally to ensure consistency.
+
+- **Bin** - All final outputs (i.e. compiled executables and libraries) should be placed in this directory
+- **Output** - All intermediate build outputs (i.e. DCUs, OBJs etc.) should be placed in this directory
+
+The content of these directories should not be committed to the repository.  To enforce this rule, directories that should not be committed (apart from the directory structure itself) should include a *.gitignore* file with the following content:-
+
+    # Ignore everything in this directory
+    *
+    # Except this file
+    !.gitignore
