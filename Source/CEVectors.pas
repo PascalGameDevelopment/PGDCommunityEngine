@@ -10,7 +10,7 @@
   either express or implied.  See the license for the specific language governing
   rights and limitations under the license.
 
-  The Original Code is CEMath.pas
+  The Original Code is CEVectors.pas
 
   The Initial Developer of the Original Code is documented in the accompanying
   help file PGDCE.chm.  Portions created by these individuals are Copyright (C)
@@ -19,19 +19,35 @@
 ******************************************************************************)
 
 {
-@abstract(PGDCE Math functions)
+@abstract(PGDCE Vector math)
 
-Core math functionality and basic functions.
+Vector, matrix and quaternion math for PGDCE.
 
 @author(<INSERT YOUR NAME HERE> (<INSERT YOUR EMAIL ADDRESS OR WEBSITE HERE>))
+@author(Zaflis (v.teemu@gmail.com))
 }
 
-unit CEMath;
+unit CEVectors;
 
 interface
 
+uses CEMath;
+
 type
+  TCEVector2f = packed record
+    x, y: single;
+  end;
+  TCEVector3f = packed record
+    x, y, z: single;
+  end;
+  TCEVector4f = packed record
+    x, y, z, w: single;
+  end;
+  TCEVector = TCEVector3f;
   
+  TCEMatrix3 = array[0..2, 0..2] of single;
+  TCEMatrix4 = array[0..3, 0..3] of single;
+  TCEMatrix = TCEMatrix4;
 
 implementation
 

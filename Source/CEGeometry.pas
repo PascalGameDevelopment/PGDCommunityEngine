@@ -10,7 +10,7 @@
   either express or implied.  See the license for the specific language governing
   rights and limitations under the license.
 
-  The Original Code is CEMath.pas
+  The Original Code is CEGeometry.pas
 
   The Initial Developer of the Original Code is documented in the accompanying
   help file PGDCE.chm.  Portions created by these individuals are Copyright (C)
@@ -19,21 +19,22 @@
 ******************************************************************************)
 
 {
-@abstract(PGDCE Math functions)
+@abstract(PGDCE Geometry unit)
 
-Core math functionality and basic functions.
+Helpful math functions for PGDCE.
 
 @author(<INSERT YOUR NAME HERE> (<INSERT YOUR EMAIL ADDRESS OR WEBSITE HERE>))
 }
 
-unit CEMath;
+unit CEGeometry;
 
 interface
 
+uses CEMath, CEVectors;
+
 type
-  
+
 
 implementation
 
 end.
-
