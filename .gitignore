@@ -9,6 +9,8 @@
 *.groupproj.local
 *.identcache
 *.dsk
+*.cfg
+*.dof
 
 # Compiled source
 *.dcu
