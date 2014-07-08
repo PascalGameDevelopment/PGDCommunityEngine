@@ -32,6 +32,8 @@ unit CEBaseTypes;
 interface
 
 type
+  // Entity name type
+  TCEEntityName = AnsiString;
   // Command - parameterless procedure method
   TCommand = procedure() of object;
 
