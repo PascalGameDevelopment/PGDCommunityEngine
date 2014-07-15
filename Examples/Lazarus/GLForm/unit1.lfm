@@ -1,0 +1,27 @@
+object Form1: TForm1
+  Left = 256
+  Height = 394
+  Top = 134
+  Width = 522
+  Caption = 'OpenGL with TForm'
+  ClientHeight = 394
+  ClientWidth = 522
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  Position = poScreenCenter
+  LCLVersion = '1.1'
+  object GLControl: TOpenGLControl
+    Left = 24
+    Height = 236
+    Top = 40
+    Width = 312
+    AutoResizeViewport = True
+  end
+  object Timer1: TTimer
+    Enabled = False
+    Interval = 30
+    OnTimer = Timer1Timer
+    left = 46
+    top = 111
+  end
+end
