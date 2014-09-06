@@ -32,7 +32,7 @@ unit CEEntity;
 interface
 
 uses
-  CEBaseTypes;
+  CEBaseTypes, CETemplate;
 
 type
   TCEBaseEntity = class;
@@ -48,17 +48,36 @@ type
     }
   TCEBaseEntity = class
   private
+    procedure SetName(const Value: TCEEntityName);
+    procedure SetParent(const Value: TCEBaseEntity);
   protected
     fName: TCEEntityName;
     fParent: TCEBaseEntity;
     fChilds: TCEEntityList;
   public
-    property Childs: TEntityList read fChilds write Set fChilds;
-    property Parent: TCEBaseEntity read fParent write Set fParent;
+    property Childs: TCEEntityList read fChilds;
+    property Parent: TCEBaseEntity read fParent write SetParent;
   published
     // Name used for references to the entity
-    property Name: TCEEntityName read fName write fName;
+    property Name: TCEEntityName read fName write SetName;
 
+  end;
+
+  { @Abstract(Entity manager class)
+    Responsible for entity hierarchy management
+    }
+  TCEEntityManager = class
+  private
+    fReadRoot: TCEBaseEntity;
+    fWriteRoot: TCEBaseEntity;
+  public
+    { Perform frame switching. Should be called once at the beginning of each game frame.
+      Currently atomically swaps read only and writable hierarchies.}
+    procedure SwitchFrame();
+    // Read only entity hierarchy root
+    property ReadRoot: TCEBaseEntity read fReadRoot write fReadRoot;
+    // Writable entity hierarchy root
+    property WriteRoot: TCEBaseEntity read fWriteRoot write fWriteRoot;
   end;
 
 implementation
@@ -67,6 +86,25 @@ implementation
 {$I tpl_coll_vector.inc}
 
 { TCEBaseEntity }
+
+{ TCEEntityManager }
+
+procedure TCEEntityManager.SwitchFrame;
+begin
+
+end;
+
+{ TCEBaseEntity }
+
+procedure TCEBaseEntity.SetParent(const Value: TCEBaseEntity);
+begin
+  fParent := Value;
+end;
+
+procedure TCEBaseEntity.SetName(const Value: TCEEntityName);
+begin
+  fName := Value;
+end;
 
 end.
 
