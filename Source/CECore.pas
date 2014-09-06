@@ -41,6 +41,9 @@ uses
   CEEntityManager;
 
 type
+
+  { TCECore }
+
   TCECore = class
   private
     {Private declarations}
@@ -57,6 +60,7 @@ type
   public
     {Public declarations}
     constructor Create;
+    constructor CreateGLApp;
     destructor Destroy; override;
 
     property EntityManager: TCEEntityManager read fEntityManager;
@@ -76,13 +80,13 @@ constructor TCECore.Create;
 begin
   inherited;
 
-  fApplication := nil;
-  fRenderer := nil;
-  fAudio := nil;
-  fInput := nil;
-  fPhysics := nil;
-
   fEntityManager := TCEEntityManager.Create;
+end;
+
+constructor TCECore.CreateGLApp;
+begin
+  Create;
+
 end;
 
 destructor TCECore.Destroy;
