@@ -476,8 +476,8 @@ begin
     Level.FTests[i].Index := Offset+i;
     AllTests[Offset+i] := Level.FTests[i];
   end;
-  for i := 0 to High(Level.FChilds) do Inc(Offset, FillAllTests(Level.FChilds[i], AllTests, Offset + Length(Level.FTests)));
-  Result := Length(Level.FTests);
+  for i := 0 to High(Level.FChilds) do Offset := FillAllTests(Level.FChilds[i], AllTests, Offset + Length(Level.FTests));
+  Result := Offset + Length(Level.FTests);
 end;
 
 function TTestRunner.GetTotalTests: Integer;

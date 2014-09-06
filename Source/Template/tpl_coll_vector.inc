@@ -45,7 +45,7 @@ Usage:
   {$DEFINE _GEN_CNT_ADV}
   {$I _T.inc}
 
-  // Generic vector template. Unit which use this inclde should use Template unit also.
+  // Generic vector template. Unit which use this inclde should use CETemplate unit also.
   _GenVector = class(CETemplate.TTemplateInterface, _IGenVector)
   {$IFDEF HAS_STRICT}strict{$ENDIF} protected
     // Values container
