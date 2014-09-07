@@ -60,7 +60,7 @@ type
 
   TTestHash = class(TTestCollections)
   private
-    procedure ForPair(const Key: Integer; const Value: String; Data: Pointer);
+    procedure ForPair(const Key: Integer; const Value: AnsiString; Data: Pointer);
   published
     procedure TestHashMap();
   end;
@@ -100,7 +100,7 @@ end;
 
 { TTestHash }
 
-procedure TTestHash.ForPair(const Key: Integer; const Value: String; Data: Pointer);
+procedure TTestHash.ForPair(const Key: Integer; const Value: AnsiString; Data: Pointer);
 begin
 //  Writeln(Key, ' = ', Value);
   Assert(_Check((Key) = StrToInt(Value)), 'Value check in for each fail');
