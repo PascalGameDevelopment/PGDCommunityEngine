@@ -32,10 +32,19 @@ program EntityTest;
 {$APPTYPE CONSOLE}
 
 uses
-  SysUtils, CEEntity, CECommon, Tester;
+  SysUtils, CEEntity, CECommon, CEProperty, Tester;
 
 type
-  // Base class for all template classes tests
+  TestEntity = class(TCEBaseEntity)
+  public
+    procedure GetProperties(const Result: TCEProperties); override;
+    procedure SetProperties(const Properties: TCEProperties); override;
+  published
+    property IntProp: Integer read FIntProp;
+    property SingleProp: Single read FSingleProp;
+  end;
+
+  // Base class for all entity classes tests
   TEntityTest = class(TTestSuite)
   published
     procedure TestEntity();
@@ -45,6 +54,19 @@ type
 
 procedure TEntityTest.TestEntity;
 begin
+
+end;
+
+{ TestEntity }
+
+procedure TestEntity.GetProperties(const Result: TCEProperties);
+begin
+  Result.
+end;
+
+procedure TestEntity.SetProperties(const Properties: TCEProperties);
+begin
+  inherited;
 
 end;
 

@@ -32,7 +32,7 @@ unit CEEntity;
 interface
 
 uses
-  CEBaseTypes, CETemplate;
+  CEBaseTypes, CETemplate, CEProperty;
 
 type
   TCEBaseEntity = class;
@@ -55,6 +55,16 @@ type
     fParent: TCEBaseEntity;
     fChilds: TCEEntityList;
   public
+    { Retrieves a set of entity's properties and their values.
+      The basic implementation retrieves published properties using RTTI.
+      Descendant classes may override this method to add more properties.
+      The set of properties should be constant during entity's lifecycle. }
+    procedure GetProperties(const Result: TCEProperties); virtual;
+    { Sets values of entity's properties.
+      The basic implementation sets published properties using RTTI.
+      Descendant classes may override this method to handle more properties. }
+    procedure SetProperties(const Properties: TCEProperties); virtual;
+
     property Childs: TCEEntityList read fChilds;
     property Parent: TCEBaseEntity read fParent write SetParent;
   published
@@ -96,14 +106,24 @@ end;
 
 { TCEBaseEntity }
 
+procedure TCEBaseEntity.SetName(const Value: TCEEntityName);
+begin
+  fName := Value;
+end;
+
 procedure TCEBaseEntity.SetParent(const Value: TCEBaseEntity);
 begin
   fParent := Value;
 end;
 
-procedure TCEBaseEntity.SetName(const Value: TCEEntityName);
+procedure TCEBaseEntity.GetProperties(const Result: TCEProperties);
 begin
-  fName := Value;
+
+end;
+
+procedure TCEBaseEntity.SetProperties(const Properties: TCEProperties);
+begin
+
 end;
 
 end.

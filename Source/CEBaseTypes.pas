@@ -34,6 +34,7 @@ interface
 type
   // Entity name type
   TCEEntityName = AnsiString;
+  PCEEntityName = PAnsiChar;
   // Command - parameterless procedure method
   TCommand = procedure() of object;
 

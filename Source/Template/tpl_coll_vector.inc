@@ -13,7 +13,7 @@ Usage:
   implementation
 
     // Optional equals function:
-    [function _VectorEquals(v1, v2: _VectorValueType): Boolean;
+    [function _VectorEquals(const v1, v2: _VectorValueType): Boolean;
     begin
       Result := v1 = v2;
     end;]
@@ -34,6 +34,9 @@ Usage:
   {$IFEND}
 
   {$I _T.inc} = _VectorValueType;
+  {$IF not Declared(_PVectorValueType)}
+    _PVectorValueType = ^_VectorValueType;
+  {$IFEND}
   // Vector for each delegate
   _VectorDelegate = function(const e: _VectorValueType; Data: Pointer): Boolean of object;
   {$I _Dg.inc} = _VectorDelegate;
@@ -68,6 +71,8 @@ Usage:
 
     // Returns the number of elements in the collection
     function GetCount(): __CollectionIndexType; {$I inline.inc}
+    // Sets the number of elements in the collection
+    procedure SetCount(const ACount: __CollectionIndexType);
     // Returns True if the collection contains no elements
     function IsEmpty(): Boolean; {$I inline.inc}
     // Returns True if the collection contains the specified element
@@ -82,13 +87,16 @@ Usage:
     // Removes all elements from the collection
     procedure Clear(); {$I inline.inc}
     // Number of elements
-    property Count: __CollectionIndexType read FCount;
+    property Count: __CollectionIndexType read FCount write SetCount;
 
     { List interface }
 
     {/ Returns the element at the specified position in the list.
        Throws an error on invalid index if dsRangeCheck was included in the list options before instantiation. }
     function Get(Index: __CollectionIndexType): _VectorValueType; {$I inline.inc}
+    {/ Returns the address of the element at the specified position in the list.
+       Throws an error on invalid index if dsRangeCheck was included in the list options before instantiation. }
+    function GetPtr(Index: __CollectionIndexType): _PVectorValueType; {$I inline.inc}
     {/ Replaces the element at the specified position in the list with the specified element.
        Returns the element previously at the specified position.
        Throws an error on invalid index if dsRangeCheck was included in the list options when instantiation. }
@@ -109,6 +117,9 @@ Usage:
     function LastIndexOf(const e: _VectorValueType): __CollectionIndexType; {$I inline.inc}
     // Values retrieved by index
     property Values[Index: __CollectionIndexType]: _VectorValueType read Get write SetValue; default;
+
+    // Pointer to values retrieved by index
+    property ValuesPtr[Index: __CollectionIndexType]: _PVectorValueType read GetPtr;
 
     // Number of elements which the collection able to hold without memory allocations
     property Capacity: __CollectionIndexType read FCapacity write SetCapacity;
@@ -176,6 +187,12 @@ Usage:
     Result := FCount;
   end;
 
+  procedure _GenVector.SetCount(const ACount: __CollectionIndexType);
+  begin
+    EnsureCapacity(ACount);
+    FCount := ACount;
+  end;
+
   function _GenVector.IsEmpty(): Boolean;
   begin
     Result := FCount = 0;
@@ -220,6 +237,14 @@ Usage:
       if (Index < 0) or (Index >= FCount) then Assert(False, 'Range check error');
     {$ENDIF}
     Result := FValues[Index];
+  end;
+
+  function _GenVector.GetPtr(Index: __CollectionIndexType): _PVectorValueType;
+  begin
+    {$IFDEF _RANGECHECK}
+      if (Index < 0) or (Index >= FCount) then Assert(False, 'Range check error');
+    {$ENDIF}
+    Result := @FValues[Index];
   end;
 
   function _GenVector.Put(Index: __CollectionIndexType; const e: _VectorValueType): _VectorValueType;
