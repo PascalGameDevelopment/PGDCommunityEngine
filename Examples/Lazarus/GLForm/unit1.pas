@@ -35,7 +35,8 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, OpenGLContext, Forms, Controls, Graphics,
-  Dialogs, ExtCtrls, CECore, dglOpenGL;
+  Dialogs, ExtCtrls, CECore, CEOpenGLRenderer, dglOpenGL, lclIntf,
+  CEMath;
 
 type
 
@@ -49,6 +50,7 @@ type
     procedure Timer1Timer(Sender: TObject);
   private
     core: TCECore;
+    doneInit: boolean;
   public
   end;
 
@@ -63,19 +65,12 @@ implementation
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  // DEV NOTE: Just putting up commands needed to init window.
-  // Move things to proper units as they build up.
-  // There will be another example for Delphi, and one using
-  // just console app project without TForm.
   ClientWidth := 800;
   ClientHeight := 600;
   GLControl.Align := alClient;
   try
     core := TCECore.Create;
-
-    dglOpenGL.InitOpenGL();
-    dglOpenGL.ReadExtensions();
-
+    core.Renderer := TCEOpenGLRenderer.Create(false);
     Timer1.Enabled := true;
   except
   end;
@@ -91,10 +86,32 @@ begin
 end;
 
 procedure TForm1.Timer1Timer(Sender: TObject);
+var tick, a: single;
 begin
+  if not DoneInit then begin
+    DoneInit:=true;
+    if (core <> nil) and (core.Renderer <> nil) then
+      TCEOpenGLRenderer(core.Renderer).InitGL;
+  end;
+
+  tick:=GetTickCount;
+
+  // Clear
   glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT);
 
+  // Move camera
+  glLoadIdentity;
+  glTranslatef(0, 0, -4);
 
+  // Draw triangle
+  a := tick * ToRad * 0.1;
+  glBegin(GL_TRIANGLES);
+  glColor3f(1, 0, 0); glVertex3f(cos(a), -0.707, 0);
+  glColor3f(0, 1, 0); glVertex3f(-cos(a), -0.707, 0);
+  glColor3f(0, 0, 1); glVertex3f(0, 1, 0);
+  glEnd;
+
+  // Show frame on screen
   GLControl.SwapBuffers;
 end;
 

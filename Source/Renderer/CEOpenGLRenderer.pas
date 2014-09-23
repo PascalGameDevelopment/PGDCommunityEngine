@@ -31,9 +31,12 @@ unit CEOpenGLRenderer;
 interface
 
 uses
-  CEBaseRenderer;
+  CEBaseRenderer, dglOpenGL in '..\dglOpenGL.pas';
 
 type
+
+  { TCEOpenGLRenderer }
+
   TCEOpenGLRenderer = class(TCEBaseRenderer)
   private
     {Private declarations}
@@ -41,10 +44,57 @@ type
     {Protected declarations}
   public
     {Public declarations}
+    FarZ: single;
+    NearZ: single;
+    FOV: single;
+    AspectRatio: single;
+    constructor Create(doInit: boolean = true);
+    procedure InitGL;
   published
     {Published declarations}
   end;
 
 implementation
+
+{ TCEOpenGLRenderer }
+
+constructor TCEOpenGLRenderer.Create(doInit: boolean);
+begin
+  dglOpenGL.InitOpenGL();
+  dglOpenGL.ReadExtensions();
+
+  FarZ := 1000;
+  NearZ := 0.1;
+  FOV := 45;
+  AspectRatio := 1.33;
+
+  if doInit then InitGL();
+end;
+
+procedure TCEOpenGLRenderer.InitGL;
+begin
+  // Init projection matrix
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity;
+  gluPerspective(FOV, AspectRatio, NearZ, FarZ);
+
+  // Init modelview matrix
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity;
+
+  // Init GL settings
+  glClearColor(0, 0, 0, 0);
+  glColor3f(1, 1, 1);
+  glEnable(GL_TEXTURE_2D);
+  glCullFace(GL_NONE);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glDepthFunc(GL_LEQUAL);
+  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_ALPHA_TEST);
+  glAlphaFunc(GL_GREATER, 0.008);
+  glEnable(GL_NORMALIZE);
+  glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+end;
 
 end.

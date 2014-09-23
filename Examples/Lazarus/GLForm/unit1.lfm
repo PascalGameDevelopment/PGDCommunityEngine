@@ -21,7 +21,7 @@ object Form1: TForm1
     Enabled = False
     Interval = 30
     OnTimer = Timer1Timer
-    left = 46
+    left = 48
     top = 111
   end
 end

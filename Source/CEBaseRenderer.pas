@@ -32,6 +32,9 @@ unit CEBaseRenderer;
 interface
 
 type
+
+  { TCEBaseRenderer }
+
   TCEBaseRenderer = class
   private
     {Private declarations}

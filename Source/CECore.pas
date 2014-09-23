@@ -55,12 +55,10 @@ type
     fInput: TCEBaseInput;
     fPhysics: TCEBasePhysics;
     fNetwork: TCEBaseNetwork;
-
     fEntityManager: TCEEntityManager;
   public
     {Public declarations}
     constructor Create;
-    constructor CreateGLApp;
     destructor Destroy; override;
 
     property EntityManager: TCEEntityManager read fEntityManager;
@@ -83,16 +81,40 @@ begin
   fEntityManager := TCEEntityManager.Create;
 end;
 
-constructor TCECore.CreateGLApp;
-begin
-  Create;
-
-end;
-
 destructor TCECore.Destroy;
 begin
   try
+    fInput.Free;
+  except
+  end;
+
+  try
     fEntityManager.Free;
+  except
+  end;
+
+  try
+    fPhysics.Free;
+  except
+  end;
+
+  try
+    fNetwork.Free;
+  finally
+  end;
+
+  try
+    fAudio.Free;
+  except
+  end;
+
+  try
+    fRenderer.Free;
+  except
+  end;
+
+  try
+    fApplication.Free;
   except
   end;
 
