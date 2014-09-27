@@ -37,34 +37,38 @@ interface
     TRTTIName = ShortString;
     TRTTINames = array of TRTTIName;
 
-  // Returns array of published property names of the given class and its parent classes
-  function GetClassProperties(AClass: TClass; TypeKinds: TTypeKinds = tkAny): TRTTINames;
+  { Fills the list of published properties with the given types of the given class and its parent classes.
+    Returns number of such properties and the list of properties in PPropList. }
+  function GetClassPropList(AClass: TClass; out PropInfos: PPropList; TypeKinds: TTypeKinds = tkAny): Integer;
+  // Returns array of published properties names with the given types of the given class and its parent classes
+  function GetClassPropertyNames(AClass: TClass; TypeKinds: TTypeKinds = tkAny): TRTTINames;
   {  Returns array of published method names of the given class.
      If ScanParents is True published methods of parent classes are also included. }
-  function GetClassMethods(AClass: TClass; ScanParents: Boolean): TRTTINames;
+  function GetClassMethodNames(AClass: TClass; ScanParents: Boolean): TRTTINames;
 
-  // Invokes parameterless procedure method with the given name of the given class
-  procedure InvokeCommand(Obj: TObject; const Name: TRTTIName);
+  { Invokes parameterless procedure method with the given name of the given class and returns True
+    or returns False if such method not found }
+  function InvokeCommand(Obj: TObject; const Name: TRTTIName): Boolean;
 
 implementation
 
 uses CECommon, CEBaseTypes;
 
-function GetClassProperties(AClass: TClass; TypeKinds: TTypeKinds = tkAny): TRTTINames;
+function GetClassPropList(AClass: TClass; out PropInfos: PPropList; TypeKinds: TTypeKinds = tkAny): Integer;
+begin
+  // Get count of published properties
+  Result := GetPropList(AClass.ClassInfo, TypeKinds, nil);
+  // Allocate memory for all data
+  GetMem(PropInfos, Result * SizeOf(PPropInfo));
+  GetPropList(AClass.ClassInfo, TypeKinds, PropInfos);
+end;
+
+function GetClassPropertyNames(AClass: TClass; TypeKinds: TTypeKinds = tkAny): TRTTINames;
 var
-  Garbage: IRefcountedContainer;
   PropInfos: PPropList;
   Count, i: Integer;
 begin
-  Garbage := CreateRefcountedContainer();
-  // Get count of published properties
-  Count := GetPropList(AClass.ClassInfo, TypeKinds, nil);
-  // Allocate memory for all data
-  GetMem(PropInfos, Count * SizeOf(PPropInfo));
-  Garbage.AddPointer(PropInfos);
-
-  GetPropList(AClass.ClassInfo, TypeKinds, PropInfos);
-
+  Count := GetClassPropList(AClass, PropInfos, TypeKinds);
   SetLength(Result, Count);
   for i := 0 to Count - 1 do
   begin
@@ -121,7 +125,7 @@ begin
   end;
 end;
 
-function GetClassMethods(AClass: TClass; ScanParents: Boolean): TRTTINames;
+function GetClassMethodNames(AClass: TClass; ScanParents: Boolean): TRTTINames;
 var
   MethodTable: PMethodNameTable;
 begin
@@ -137,14 +141,20 @@ begin
   end;
 end;
 
-procedure InvokeCommand(Obj: TObject; const Name: TRTTIName);
+function InvokeCommand(Obj: TObject; const Name: TRTTIName): Boolean;
 var
   Method: TMethod;
 begin
   if not Assigned(Obj) then Exit;
   Method.Code := Obj.MethodAddress(Name);
-  Method.Data := Pointer(Obj);
-  TCommand(Method)();
+  if Method.Code <> nil then begin
+    // TODO: check method signature for arguments (should be none)
+    Method.Data := Pointer(Obj);
+    TCommand(Method)();
+    Result := True;
+  end else begin
+    Result := False;
+  end;
 end;
 
 end.

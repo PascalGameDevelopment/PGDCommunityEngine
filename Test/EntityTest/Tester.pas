@@ -404,7 +404,7 @@ var
   i: Integer;
   MNames: TRTTINames;
 begin
-  MNames := CERttiUtil.GetClassMethods(Self, False);
+  MNames := CERttiUtil.GetClassMethodNames(Self, False);
   SetLength(Result, Length(MNames));
   for i := 0 to High(MNames) do
   begin
@@ -611,10 +611,11 @@ begin
         FTests[Index].FailCodeLoc := E.CodeLocation;
         Result := trFail;
       end;
-{      on E: Exception do begin
+      on E: Exception do
+      begin
         Result := trException;
         raise;
-      end;}
+      end;
     end;
   finally
     FTests[Index].LastResult := Result;
