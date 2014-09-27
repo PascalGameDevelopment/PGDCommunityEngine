@@ -32,72 +32,72 @@ unit CEProperty;
 interface
 
 uses
-  CEBaseTypes, CETemplate, CERttiUtil;
+  CEBaseTypes, CETemplate, CERttiUtil, CEIO;
 
 type
   // Type for property names
   TPropertyName = AnsiString;
 
-     // Possible property types
-    TCEPropertyType = (
-      // Boolean value
-      ptBoolean,
-      // Unsigned 32-bit integer (natural) value
-      ptNatural,
-      // 32-bit integer value
-      ptInteger,
-      // 64-bit integer value
-      ptInt64,
-      // Single-precision floating-point value
-      ptSingle,
-      // Double-precision floating-point value
-      ptDouble,
-      // Unicode character
-      ptChar,
-      // Short string value
-      ptShortString,
-      // Ansi string value
-      ptAnsiString,
-      // Unicode string value
-      ptString,
-      // ARGB color value
-      ptColor,
-      // Enumerated value
-      ptEnumeration,
-      // Set of numbers [0..31]
-      ptSet,
-      // Pointer value
-      ptPointer,
-      // A link to an object
-      ptObjectLink,
-      // Bynary data
-      ptBinary,
-      // Object value
-      ptObject
-    );
+   // Possible property types
+  TCEPropertyType = (
+    // Boolean value
+    ptBoolean,
+    // Unsigned 32-bit integer (natural) value
+    ptNatural,
+    // 32-bit integer value
+    ptInteger,
+    // 64-bit integer value
+    ptInt64,
+    // Single-precision floating-point value
+    ptSingle,
+    // Double-precision floating-point value
+    ptDouble,
+    // Unicode character
+    ptChar,
+    // Short string value
+    ptShortString,
+    // Ansi string value
+    ptAnsiString,
+    // Unicode string value
+    ptString,
+    // ARGB color value
+    ptColor,
+    // Enumerated value
+    ptEnumeration,
+    // Set of numbers [0..31]
+    ptSet,
+    // Pointer value
+    ptPointer,
+    // A link to an object
+    ptObjectLink,
+    // Bynary data
+    ptBinary,
+    // Object value
+    ptObject
+  );
 
-    PCEPropertyValue = ^TCEPropertyValue;
-    // Data structure representing a property value
-    TCEPropertyValue = packed record
-      AsUnicodeString: UnicodeString;
-      asAnsiString: AnsiString;
-      // Property value as various type
-      case t: TCEPropertyType of
-        ptInteger, ptEnumeration, ptSet: (AsInteger: Integer);
-        ptInt64: (AsInt64: Int64);
-        ptChar: (AsChar: Char);
-        ptSingle: (AsSingle: Single);
-        ptDouble: (AsDouble: Double);
-        ptShortString: (AsShortString: ShortString);
-        ptObject: (AsObject: TObject);
-        //ptClassRef: (AsClass: TClass);
-        ptPointer: (AsPointer: Pointer);
+  PCEPropertyValue = ^TCEPropertyValue;
+  // Data structure representing a property value
+  TCEPropertyValue = packed record
+    AsUnicodeString: UnicodeString;
+    AsAnsiString: AnsiString;
+    // Property value as various type
+    case t: TCEPropertyType of
+      ptInteger, ptEnumeration, ptSet: (AsInteger: Integer);
+      ptInt64: (AsInt64: Int64);
+      ptChar: (AsChar: Char);
+      ptSingle: (AsSingle: Single);
+      ptDouble: (AsDouble: Double);
+      ptShortString: (AsShortString: ShortString);
+      ptObject: (AsObject: TObject);
+      //ptClassRef: (AsClass: TClass);
+      ptPointer: (AsPointer: Pointer);
 //        ptAnsiString: (AsPAnsiChar: PAnsiChar);
 //        ptString: (AsPUnicodeString: PUnicodeString);
-        ptObjectLink: (Linked: TObject; FQN: PCEEntityName);
-        ptBinary: (Data: Pointer; Size: Integer);
-        //ptDynArray, ptMethod, ptVariant, ptArray, ptRecord, ptInterface, ptProcedure: ();
-    end;
+      ptObjectLink: (Linked: TObject; FQN: PCEEntityName);
+      ptBinary: (Data: Pointer; Size: Integer);
+      //ptDynArray, ptMethod, ptVariant, ptArray, ptRecord, ptInterface, ptProcedure: ();
+  end;
 
   PCEProperty = ^TCEProperty;
   // Data structure representing a property description
@@ -141,6 +141,7 @@ type
     procedure AddProp(const Name: TPropertyName; TypeId: TCEPropertyType);
 
     procedure AddString(const Name: TPropertyName; const Value: string);
+    procedure AddAnsiString(const Name: TPropertyName; const Value: AnsiString);
     procedure AddInt(const Name: TPropertyName; const Value: Integer);
     procedure AddSingle(const Name: TPropertyName; const Value: Single);
 
@@ -152,33 +153,36 @@ type
     property Count: Integer read GetCount;
   end;
 
-  TFiler = class
-  private
-    F: file;
-    Opened: Boolean;
+  // Abstract class responsible for properties serialization / deserialization
+  TCEPropertyFilerBase = class
   public
-    destructor Destroy(); override;
+    { Reads arbitrary list of property definitions and values from input stream and returns it.
+      Returns nil if error occured.
+      May raise TCEUnsupportedOperation if filer format doesn't support storage of property definitions. }
+    function ReadArbitrary(IStream: TCEInputStream): TCEProperties; virtual; abstract;
+    // Reads and fills values of specified in Properties list of properties from input stream and returns True if success.
+    function Read(IStream: TCEInputStream; Properties: TCEProperties): Boolean; virtual; abstract;
+    // Writes properties to output stream and returns True if success.
+    function Write(OStream: TCEOutputStream; Properties: TCEProperties): Boolean; virtual; abstract;
   end;
 
-  TWriter = class(TFiler)
-  private
-    function WriteCheck(const Buffer; const Count: Cardinal): Boolean;
+  { Simple property filer implementation.
+    Doesn't store property definitions but only values and therefore doesn't support read of arbitrary list of properties. }
+  TCESimplePropertyFiler = class(TCEPropertyFilerBase)
   public
-    constructor Create(const FileName: string);
-    // Writes the properties to a stream and return True if success
-    function Write(Properties: TCEProperties): Boolean; virtual;
+    function ReadArbitrary(IStream: TCEInputStream): TCEProperties; override;
+    function Read(IStream: TCEInputStream; Properties: TCEProperties): Boolean; override;
+    function Write(OStream: TCEOutputStream; Properties: TCEProperties): Boolean; override;
   end;
 
-  TReader = class(TFiler)
-  private
-    function ReadCheck(out Buffer; const Count: Cardinal): Boolean;
-  public
-    constructor Create(const FileName: string);
-    // Reads the properties from a stream and return True if success
-    function Read(Properties: TCEProperties): Boolean; virtual;
-  end;
+  ECEPropertyError = class(ECEError);
+
+  // Builds list of property definitions for the given class using RTTI
+  function GetClassProperties(AClass: TClass): TCEProperties;
 
 implementation
+
+uses SysUtils, TypInfo;
 
 type
   TSignature = array[0..3] of AnsiChar;
@@ -274,87 +278,43 @@ begin
   FValues[FProperties.Count-1].AsUnicodeString := Value;
 end;
 
+procedure TCEProperties.AddAnsiString(const Name: TPropertyName; const Value: AnsiString);
+begin
+  AddProp(Name, ptAnsiString);
+  FValues[FProperties.Count-1].AsAnsiString := Value;
+end;
+
 procedure TCEProperties.AddInt(const Name: TPropertyName; const Value: Integer);
 begin
   AddProp(Name, ptInteger);
+  FValues[FProperties.Count-1].AsInteger := Value;
 end;
 
 procedure TCEProperties.AddSingle(const Name: TPropertyName; const Value: Single);
 begin
   AddProp(Name, ptSingle);
+  FValues[FProperties.Count-1].AsSingle := Value;
 end;
 
-{ TFiler }
 
-destructor TFiler.Destroy;
+{ TCEPropertyFiler }
+
+function TCESimplePropertyFiler.ReadArbitrary(IStream: TCEInputStream): TCEProperties;
 begin
-  if Opened then CloseFile(F);
-  inherited;
+  raise ECEUnsupportedOperation.Create('Arbitrary properties deserialization isn''t supported');
 end;
 
-{ TWriter }
-
-function TWriter.WriteCheck(const Buffer; const Count: Cardinal): Boolean;
-var b: Integer;
-begin
-//  if not Opened then if not ErrorHandler(TStreamError.Create('File stream is not opened')) then Exit;
-  BlockWrite(F, Buffer, Count, b);
-  Result := b = Count;
-end;
-
-constructor TWriter.Create(const FileName: string);
-begin
-  AssignFile(F, FileName);
-  Rewrite(F, 1);
-  Opened := True;
-end;
-
-function TWriter.Write(Properties: TCEProperties): Boolean;
-var
-  i: Integer;
-  Prop: PCEProperty;
-  Value: PCEPropertyValue;
-begin
-  Result := WriteCheck(SIMPLE_PROPERTIES_BEGIN_SIGNATURE, SizeOf(SIMPLE_PROPERTIES_BEGIN_SIGNATURE));
-  for i := 0 to Properties.Count-1 do
-  begin
-    Prop := Properties.PropByIndex(i);
-    Value := Properties.ValueByIndex(i);
-    case Prop^.TypeId of
-      ptInteger: Result := Result and WriteCheck(Value^.AsInteger, SizeOf(Value^.AsInteger));
-      ptSingle: Result := Result and WriteCheck(Value^.AsSingle, SizeOf(Value^.AsSingle));
-//      ptString: Result := Result and SaveString(Stream, Properties[i].Value);
-      else Assert(False, 'Invalid property type');
-    end;
-  end;
-  Result := Result and WriteCheck(SIMPLE_PROPERTIES_BEGIN_SIGNATURE, SizeOf(SIMPLE_PROPERTIES_BEGIN_SIGNATURE));
-end;
-
-{ TReader }
-
-function TReader.ReadCheck(out Buffer; const Count: Cardinal): Boolean;
-var b: Integer;
-begin
-  BlockRead(F, Buffer, Count, b);
-  Result := b = Count;
-end;
-
-constructor TReader.Create(const FileName: string);
-begin
-  AssignFile(F, FileName);
-  Reset(F);
-  Opened := True;
-end;
-
-function TReader.Read(Properties: TCEProperties): Boolean;
+function TCESimplePropertyFiler.Read(IStream: TCEInputStream; Properties: TCEProperties): Boolean;
 var
   i: Integer;
   Sign: TSignature;
   Prop: PCEProperty;
   Value: PCEPropertyValue;
 begin
-  Result := False;
-  if not ReadCheck(Sign, SizeOf(SIMPLE_PROPERTIES_BEGIN_SIGNATURE)) then Exit;
+  if Properties = nil then raise ECEInvalidArgument.Create('Properties argument is nil');
+  Result := false;
+
+  if not IStream.ReadCheck(Sign, SizeOf(SIMPLE_PROPERTIES_BEGIN_SIGNATURE)) then Exit;
   if Sign <> SIMPLE_PROPERTIES_BEGIN_SIGNATURE then Exit;
 
   for i := 0 to Properties.Count-1 do
@@ -362,16 +322,71 @@ begin
     Prop := Properties.PropByIndex(i);
     Value := Properties.ValueByIndex(i);
     case Prop^.TypeId of
-      ptInteger: if not ReadCheck(Value^.AsInteger, SizeOf(Value^.AsInteger)) then Exit;
-      ptSingle: if not ReadCheck(Value^.AsSingle, SizeOf(Value^.AsSingle)) then Exit;
-//      ptString: Result := Result and SaveString(Stream, Properties[i].Value);
+      ptInteger: if not IStream.ReadCheck(Value^.AsInteger, SizeOf(Value^.AsInteger)) then Exit;
+      ptSingle: if not IStream.ReadCheck(Value^.AsSingle, SizeOf(Value^.AsSingle)) then Exit;
+      ptAnsiString: if not CEIO.ReadAnsiString(IStream, Value^.AsAnsiString) then Exit;
+      ptString: if not CEIO.ReadUnicodeString(IStream, Value^.AsUnicodeString) then Exit;
       else Assert(False, 'Invalid property type');
     end;
   end;
 
-  if not ReadCheck(Sign, SizeOf(SIMPLE_PROPERTIES_END_SIGNATURE)) then Exit;
+  if not IStream.ReadCheck(Sign, SizeOf(SIMPLE_PROPERTIES_END_SIGNATURE)) then Exit;
   if Sign <> SIMPLE_PROPERTIES_END_SIGNATURE then Exit;
+
   Result := True;
+end;
+
+function TCESimplePropertyFiler.Write(OStream: TCEOutputStream; Properties: TCEProperties): Boolean;
+var
+  i: Integer;
+  Prop: PCEProperty;
+  Value: PCEPropertyValue;
+begin
+  Result := OStream.WriteCheck(SIMPLE_PROPERTIES_BEGIN_SIGNATURE, SizeOf(SIMPLE_PROPERTIES_BEGIN_SIGNATURE));
+  for i := 0 to Properties.Count-1 do
+  begin
+    Prop := Properties.PropByIndex(i);
+    Value := Properties.ValueByIndex(i);
+    case Prop^.TypeId of
+      ptInteger: Result := Result and OStream.WriteCheck(Value^.AsInteger, SizeOf(Value^.AsInteger));
+      ptSingle: Result := Result and OStream.WriteCheck(Value^.AsSingle, SizeOf(Value^.AsSingle));
+      ptAnsiString: Result := Result and CEIO.WriteAnsiString(OStream, Value^.AsAnsiString);
+      ptString: Result := Result and CEIO.WriteUnicodeString(OStream, Value^.AsUnicodeString);
+      else Assert(False, 'Invalid property type');
+    end;
+  end;
+  Result := Result and OStream.WriteCheck(SIMPLE_PROPERTIES_END_SIGNATURE, SizeOf(SIMPLE_PROPERTIES_END_SIGNATURE));
+end;
+
+function GetClassProperties(AClass: TClass): TCEProperties;
+var
+  PropInfos: PPropList;
+  PropInfo: PPropInfo;
+  Count, i: Integer;
+begin
+  Result := TCEProperties.Create();
+  Count := CERttiUtil.GetClassPropList(AClass, PropInfos);
+
+  for i := 0 to Count - 1 do
+  begin
+    PropInfo := PropInfos^[i];
+    case PropInfo^.PropType^.Kind of
+      tkInteger: Result.AddProp(PropInfo^.Name, ptInteger);
+      tkFloat: if PropInfo^.PropType^.Name = 'Single' then
+        Result.AddProp(PropInfo^.Name, ptInteger)
+      else
+        raise ECEPropertyError.Create('Unsupported property type');
+      tkLString: Result.AddProp(PropInfo^.Name, ptAnsiString);
+      tkString: begin
+        {$IFDEF UNICODE}
+        Result.AddProp(PropInfo^.Name, ptString);
+        {$ELSE}
+        Result.AddProp(PropInfo^.Name, ptAnsiString);
+        {$ENDIF}
+      end;
+      tkUString: Result.AddProp(PropInfo^.Name, ptString);
+    end;
+  end;
 end;
 
 end.

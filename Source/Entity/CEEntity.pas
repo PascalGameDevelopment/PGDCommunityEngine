@@ -59,7 +59,7 @@ type
       The basic implementation retrieves published properties using RTTI.
       Descendant classes may override this method to add more properties.
       The set of properties should be constant during entity's lifecycle. }
-    procedure GetProperties(const Result: TCEProperties); virtual;
+    function GetProperties(): TCEProperties; virtual;
     { Sets values of entity's properties.
       The basic implementation sets published properties using RTTI.
       Descendant classes may override this method to handle more properties. }
@@ -73,36 +73,10 @@ type
 
   end;
 
-  { @Abstract(Entity manager class)
-    Responsible for entity hierarchy management
-    }
-  TCEEntityManager = class
-  private
-    fReadRoot: TCEBaseEntity;
-    fWriteRoot: TCEBaseEntity;
-  public
-    { Perform frame switching. Should be called once at the beginning of each game frame.
-      Currently atomically swaps read only and writable hierarchies.}
-    procedure SwitchFrame();
-    // Read only entity hierarchy root
-    property ReadRoot: TCEBaseEntity read fReadRoot write fReadRoot;
-    // Writable entity hierarchy root
-    property WriteRoot: TCEBaseEntity read fWriteRoot write fWriteRoot;
-  end;
-
 implementation
 
 {$MESSAGE 'Instantiating TEntityList'}
 {$I tpl_coll_vector.inc}
-
-{ TCEBaseEntity }
-
-{ TCEEntityManager }
-
-procedure TCEEntityManager.SwitchFrame;
-begin
-
-end;
 
 { TCEBaseEntity }
 
@@ -116,9 +90,9 @@ begin
   fParent := Value;
 end;
 
-procedure TCEBaseEntity.GetProperties(const Result: TCEProperties);
+function TCEBaseEntity.GetProperties(): TCEProperties;
 begin
-
+  Result := CEProperty.GetClassProperties(ClassType);
 end;
 
 procedure TCEBaseEntity.SetProperties(const Properties: TCEProperties);

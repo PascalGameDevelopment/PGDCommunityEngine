@@ -31,12 +31,28 @@ unit CEBaseTypes;
 
 interface
 
+uses SysUtils;
+
 type
+  {$IF not Declared(UnicodeString)}
+    UnicodeString = WideString;
+  {$IFEND}
   // Entity name type
   TCEEntityName = AnsiString;
   PCEEntityName = PAnsiChar;
   // Command - parameterless procedure method
   TCommand = procedure() of object;
+
+  // Base error class
+  ECEError = Exception;
+
+  // Occurs when a requested operation is not supported
+  ECEUnsupportedOperation = class(ECEError)
+  end;
+
+  // Occurs when an invalid argument passed to a method or routine
+  ECEInvalidArgument = class(ECEError)
+  end;
 
   // Pointer to source code location
   PCodeLocation = ^TCodeLocation;
@@ -187,4 +203,6 @@ end;
   finalization
     AssertCriticalSection.Free();
 {$ENDIF}
+
 end.
+
