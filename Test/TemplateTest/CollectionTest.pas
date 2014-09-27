@@ -154,7 +154,7 @@ begin
 end;
 
 { TTestVector }
-
+test setCount and getPtr
 procedure TTestVector.TestList(Coll: TIntVector);
 var
   i, cnt, t: Integer;
@@ -166,7 +166,7 @@ begin
     t := Rnd.RndI(CollElCnt);
     Coll.Add(t);
     Inc(cnt);
-    Assert(_Check(Coll.Contains(t)), GetName + ': Conntains failed');
+    Assert(_Check(Coll.Contains(t)), GetName + ': Contains failed');
   end;
 
   Rnd.InitSequence(1, 0);
