@@ -145,6 +145,7 @@ function InvokeCommand(Obj: TObject; const Name: TRTTIName): Boolean;
 var
   Method: TMethod;
 begin
+  Result := False;
   if not Assigned(Obj) then Exit;
   Method.Code := Obj.MethodAddress(Name);
   if Method.Code <> nil then begin
@@ -152,8 +153,6 @@ begin
     Method.Data := Pointer(Obj);
     TCommand(Method)();
     Result := True;
-  end else begin
-    Result := False;
   end;
 end;
 

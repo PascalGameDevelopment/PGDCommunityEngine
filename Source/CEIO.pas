@@ -167,7 +167,7 @@ uses SysUtils;
       {$IFDEF UNICODE}
       SetLength(UTF8, l);
       Result := InS.ReadCheck(Pointer(UTF8)^, l * SizeOf(AnsiChar));
-      Str := UTF8;
+      Str := UTF8ToUnicodeString(UTF8);
       {$ELSE }
       SetLength(Str, l);
       Result := InS.ReadCheck(Pointer(Str)^, l * SizeOf(WideChar));
@@ -183,7 +183,7 @@ uses SysUtils;
     {$ENDIF }
   begin
     {$IFDEF UNICODE}
-      UTF8 := Str;
+      UTF8 := UTF8Encode(Str);
       l := Length(UTF8);
       Result := OutS.WriteCheck(l, SizeOf(l));
       if Result and (l > 0) then
