@@ -42,8 +42,6 @@ type
   TCEPropertyType = (
     // Boolean value
     ptBoolean,
-    // Unsigned 32-bit integer (natural) value
-    ptNatural,
     // 32-bit integer value
     ptInteger,
     // 64-bit integer value
@@ -52,8 +50,6 @@ type
     ptSingle,
     // Double-precision floating-point value
     ptDouble,
-    // Unicode character
-    ptChar,
     // Short string value
     ptShortString,
     // Ansi string value
@@ -83,9 +79,9 @@ type
     AsAnsiString: AnsiString;
     // Property value as various type
     case t: TCEPropertyType of
+      ptBoolean: (AsBoolean: Boolean);
       ptInteger, ptEnumeration, ptSet: (AsInteger: Integer);
       ptInt64: (AsInt64: Int64);
-      ptChar: (AsChar: Char);
       ptSingle: (AsSingle: Single);
       ptDouble: (AsDouble: Double);
       ptShortString: (AsShortString: ShortString);
@@ -124,12 +120,12 @@ type
     FProperties: TCEPropertyList;
     FValues: array of TCEPropertyValue;
     function GetIndex(const Name: TPropertyName): Integer;
-    function PropByIndex(Index: Integer): PCEProperty;
-    function ValueByIndex(Index: Integer): PCEPropertyValue;
+    function GetPropByIndex(Index: Integer): PCEProperty;
+    function GetValueByIndex(Index: Integer): PCEPropertyValue;
     function GetProperty(const Name: TPropertyName): TCEProperty;
     procedure SetProperty(const Name: TPropertyName; const Prop: TCEProperty);
-    function GetValue(const Name: TPropertyName): TCEPropertyValue;
-    procedure SetValue(const Name: TPropertyName; const Value: TCEPropertyValue);
+    function GetValue(const Name: TPropertyName): PCEPropertyValue;
+    procedure SetValue(const Name: TPropertyName; const Value: PCEPropertyValue);
     function GetCount: Integer;
   public
     // Creates an empty property collection
@@ -148,7 +144,9 @@ type
     // Property definitions
     property Prop[const Name: TPropertyName]: TCEProperty read GetProperty write SetProperty;
     // Property values
-    property Value[const Name: TPropertyName]: TCEPropertyValue read GetValue write SetValue; default;
+    property Value[const Name: TPropertyName]: PCEPropertyValue read GetValue write SetValue; default;
+    // Property definition by index
+    property PropByIndex[Index: Integer]: PCEProperty read GetPropByIndex;
     // Number of properties
     property Count: Integer read GetCount;
   end;
@@ -215,19 +213,19 @@ begin
   while (Result >= 0) and (FProperties[Result].Name <> Name) do Dec(Result);
 end;
 
-function TCEProperties.PropByIndex(Index: Integer): PCEProperty;
+function TCEProperties.GetPropByIndex(Index: Integer): PCEProperty;
 begin
   Result := FProperties.GetPtr(Index); //TODO: handle non existing name
 end;
 
-function TCEProperties.ValueByIndex(Index: Integer): PCEPropertyValue;
+function TCEProperties.GEtValueByIndex(Index: Integer): PCEPropertyValue;
 begin
   Result := @FValues[Index]; //TODO: handle non existing name
 end;
 
 function TCEProperties.GetProperty(const Name: TPropertyName): TCEProperty;
 begin
-  Result := PropByIndex(GetIndex(Name))^;
+  Result := GetPropByIndex(GetIndex(Name))^;
 end;
 
 procedure TCEProperties.SetProperty(const Name: TPropertyName; const Prop: TCEProperty);
@@ -235,12 +233,12 @@ begin
 
 end;
 
-function TCEProperties.GetValue(const Name: TPropertyName): TCEPropertyValue;
+function TCEProperties.GetValue(const Name: TPropertyName): PCEPropertyValue;
 begin
-  Result := ValueByIndex(GetIndex(Name))^;
+  Result := GetValueByIndex(GetIndex(Name));
 end;
 
-procedure TCEProperties.SetValue(const Name: TPropertyName; const Value: TCEPropertyValue);
+procedure TCEProperties.SetValue(const Name: TPropertyName; const Value: PCEPropertyValue);
 begin
 
 end;
@@ -319,11 +317,12 @@ begin
 
   for i := 0 to Properties.Count-1 do
   begin
-    Prop := Properties.PropByIndex(i);
-    Value := Properties.ValueByIndex(i);
+    Prop := Properties.GetPropByIndex(i);
+    Value := Properties.GetValueByIndex(i);
     case Prop^.TypeId of
       ptInteger: if not IStream.ReadCheck(Value^.AsInteger, SizeOf(Value^.AsInteger)) then Exit;
       ptSingle: if not IStream.ReadCheck(Value^.AsSingle, SizeOf(Value^.AsSingle)) then Exit;
+      ptShortString: if not CEIO.ReadShortString(IStream, Value^.AsShortString) then Exit;
       ptAnsiString: if not CEIO.ReadAnsiString(IStream, Value^.AsAnsiString) then Exit;
       ptString: if not CEIO.ReadUnicodeString(IStream, Value^.AsUnicodeString) then Exit;
       else Assert(False, 'Invalid property type');
@@ -345,11 +344,12 @@ begin
   Result := OStream.WriteCheck(SIMPLE_PROPERTIES_BEGIN_SIGNATURE, SizeOf(SIMPLE_PROPERTIES_BEGIN_SIGNATURE));
   for i := 0 to Properties.Count-1 do
   begin
-    Prop := Properties.PropByIndex(i);
-    Value := Properties.ValueByIndex(i);
+    Prop := Properties.GetPropByIndex(i);
+    Value := Properties.GetValueByIndex(i);
     case Prop^.TypeId of
       ptInteger: Result := Result and OStream.WriteCheck(Value^.AsInteger, SizeOf(Value^.AsInteger));
       ptSingle: Result := Result and OStream.WriteCheck(Value^.AsSingle, SizeOf(Value^.AsSingle));
+      ptShortString: Result := Result and CEIO.WriteShortString(OStream, Value^.AsShortString);
       ptAnsiString: Result := Result and CEIO.WriteAnsiString(OStream, Value^.AsAnsiString);
       ptString: Result := Result and CEIO.WriteUnicodeString(OStream, Value^.AsUnicodeString);
       else Assert(False, 'Invalid property type');
@@ -363,6 +363,7 @@ var
   PropInfos: PPropList;
   PropInfo: PPropInfo;
   Count, i: Integer;
+  td: PTypeData;
 begin
   Result := TCEProperties.Create();
   Count := CERttiUtil.GetClassPropList(AClass, PropInfos);
@@ -373,16 +374,23 @@ begin
     case PropInfo^.PropType^.Kind of
       tkInteger: Result.AddProp(PropInfo^.Name, ptInteger);
       tkFloat: if PropInfo^.PropType^.Name = 'Single' then
-        Result.AddProp(PropInfo^.Name, ptInteger)
+        Result.AddProp(PropInfo^.Name, ptSingle)
       else
         raise ECEPropertyError.Create('Unsupported property type');
       tkLString: Result.AddProp(PropInfo^.Name, ptAnsiString);
       tkString: begin
-        {$IFDEF UNICODE}
-        Result.AddProp(PropInfo^.Name, ptString);
-        {$ELSE}
-        Result.AddProp(PropInfo^.Name, ptAnsiString);
-        {$ENDIF}
+        if PropInfo^.PropType^.Name = 'ShortString' then
+        begin
+          Result.AddProp(PropInfo^.Name, ptShortString);
+        end
+        else
+        begin
+          {$IFDEF UNICODE}
+          Result.AddProp(PropInfo^.Name, ptString);
+          {$ELSE}
+          Result.AddProp(PropInfo^.Name, ptAnsiString);
+          {$ENDIF}
+        end;
       end;
       tkUString: Result.AddProp(PropInfo^.Name, ptString);
     end;

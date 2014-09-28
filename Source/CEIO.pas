@@ -124,6 +124,8 @@ type
     constructor Create(ACode: Integer; AMsg: string);
   end;
 
+  function ReadShortString(InS: TCEInputStream; out Str: ShortString): Boolean;
+  function WriteShortString(OutS: TCEOutputStream; const Str: ShortString): Boolean;
   function ReadAnsiString(InS: TCEInputStream; out Str: AnsiString): Boolean;
   function WriteAnsiString(OutS: TCEOutputStream; const Str: AnsiString): Boolean;
   function ReadUnicodeString(InS: TCEInputStream; out Str: UnicodeString): Boolean;
@@ -132,6 +134,22 @@ type
 implementation
 
 uses SysUtils;
+
+  function ReadShortString(InS: TCEInputStream; out Str: ShortString): Boolean;
+  var l: Byte;
+  begin
+    Result := InS.ReadCheck(l, SizeOf(l));
+    if Result then
+    begin
+      SetLength(Str, l);
+      if l > 0 then Result := InS.ReadCheck(Str[1], l);
+    end;
+  end;
+
+  function WriteShortString(OutS: TCEOutputStream; const Str: ShortString): Boolean;
+  begin
+    Result := OutS.WriteCheck(Str[0], Length(Str)+1);
+  end;
 
   function ReadAnsiString(InS: TCEInputStream; out Str: AnsiString): Boolean;
   var l: Cardinal;

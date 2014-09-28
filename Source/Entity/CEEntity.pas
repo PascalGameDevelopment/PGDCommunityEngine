@@ -75,6 +75,8 @@ type
 
 implementation
 
+uses TypInfo;
+
 {$MESSAGE 'Instantiating TEntityList'}
 {$I tpl_coll_vector.inc}
 
@@ -91,8 +93,34 @@ begin
 end;
 
 function TCEBaseEntity.GetProperties(): TCEProperties;
+var
+  i: Integer;
+  Prop: PCEProperty;
+  Value: PCEPropertyValue;
 begin
   Result := CEProperty.GetClassProperties(ClassType);
+  for i := 0 to Result.Count-1 do
+  begin
+    Prop := Result.PropByIndex[i];
+    Value := Result[Prop.Name];
+    case Prop.TypeId of
+      ptBoolean:     Value^.AsBoolean := TypInfo.GetOrdProp(Self, Prop.Name) = Ord(True);
+      ptInteger:     Value^.AsInteger := TypInfo.GetOrdProp(Self, Prop.Name);
+      ptInt64:       Value^.AsInt64 := TypInfo.GetInt64Prop(Self, Prop.Name);
+      ptSingle:      Value^.AsSingle := TypInfo.GetFloatProp(Self, Prop.Name);
+      ptDouble:      Value^.AsDouble := TypInfo.GetFloatProp(Self, Prop.Name);
+      ptShortString: Value^.AsShortString := TypInfo.GetStrProp(Self, Prop.Name);
+      ptAnsiString:  Value^.AsAnsiString := TypInfo.GetAnsiStrProp(Self, Prop.Name);
+      ptString:      Value^.AsUnicodeString := TypInfo.GetStrProp(Self, Prop.Name);
+      ptColor: ;
+      ptEnumeration: ;
+      ptSet: ;
+      ptPointer: ;
+      ptObjectLink: ;
+      ptBinary: ;
+      ptObject: ;
+    end;
+  end;
 end;
 
 procedure TCEBaseEntity.SetProperties(const Properties: TCEProperties);
