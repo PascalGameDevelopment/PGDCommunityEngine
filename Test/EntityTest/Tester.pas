@@ -56,8 +56,11 @@ const
   TEST_METHOD_SIGNATURE = 'Test';
 
 type
+  {$TYPEINFO ON}
   // Forward declaration of TTestSuite
   TTestSuite = class;
+  {$TYPEINFO OFF}
+
   // Test suite metaclass
   CTestSuite = class of TTestSuite;
 
@@ -123,8 +126,6 @@ type
     FTests: TTests;
     // Next hierarchy
     FChilds: array of TTestLevel;
-    // Creates an instance of test level
-    constructor Create(ASuiteClass: CTestSuite; AParent: TTestLevel);
 
     // Creates suite instance
     procedure CreateSuite();
@@ -143,6 +144,10 @@ type
     function GetTest(Index: Integer): TTest;
     function GetTotalTests: Integer;
   public
+    // Creates an instance of test level
+    constructor Create(ASuiteClass: CTestSuite; AParent: TTestLevel);
+    // Calls DestroySuite()
+    destructor Destroy(); override;
     { Runs the given test of the given suite. First calls Suite.InitTest() then calls test method, finally, calls Suite.DoneTest()
       Returns test outcome. }
     function RunTest(Index: Integer): TTestResult;
@@ -202,7 +207,7 @@ type
     property TestRoot: TTestLevel read FTestRoot;
   public
     // Destroys the runner
-    destructor Destroy; override;
+    destructor Destroy(); override;
   end;
 
   // Test runner implementation which outputs test results to log
@@ -491,7 +496,8 @@ begin
 end;
 
 function TTestRunner.Run(Suites: TTestSuiteVector): Boolean;
-var i: TTestResult;
+var
+  i: TTestResult;
 begin
   for i := Low(TTestResult) to High(TTestResult) do Stats[i] := 0;
   PrepareTests(TestSuites);
@@ -537,6 +543,12 @@ begin
   FSuiteClass := ASuiteClass;
   FParent     := AParent;
   LastIndex   := -1;
+end;
+
+destructor TTestLevel.Destroy;
+begin
+  DestroySuite();
+  inherited;
 end;
 
 procedure TTestLevel.CreateSuite;
@@ -719,7 +731,7 @@ end;
 procedure TLogTestRunner.HandleTestException(const ATest: TTest; E: Exception);
 begin
   if Assigned(E) then
-    LogError('Exception in test "' + ATest.Name + '" with message: ' + E.Message);
+    LogError('Exception in test "' + String(ATest.Name) + '" with message: ' + E.Message);
 end;
 
 function TLogTestRunner.IsTestEnabled(const ATest: TTest): Boolean;
