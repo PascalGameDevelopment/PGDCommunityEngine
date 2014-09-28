@@ -9,12 +9,8 @@
 {$IFDEF VER220} {$DEFINE Delphi} {$DEFINE Delphi2005} {$DEFINE Delphi2006} {$DEFINE Delphi2009} {$DEFINE DelphiXE} {$ENDIF} // Delphi XE
 {$IFDEF VER230} {$DEFINE Delphi} {$DEFINE Delphi2005} {$DEFINE Delphi2006} {$DEFINE Delphi2009} {$DEFINE DelphiXE} {$DEFINE FireMonkey} {$ENDIF} // Delphi XE2
 
-{$IFDEF UNICODE}
-  {$STRINGCHECKS OFF}
-{$ENDIF}
-
 {$IFDEF FPC}
-  {$MODE DELPHI}
+  {$MODE DELPHIUNICODE}
   {$DEFINE HAS_INLINE}
   {$DEFINE HAS_STRICT}
   {$IFDEF WIN32}
@@ -22,6 +18,10 @@
   {$ENDIF}
 {$ELSE}
   {$DEFINE DELPHI}
+{$ENDIF}
+
+{$IFDEF UNICODE}
+  {$STRINGCHECKS OFF}           // Comment for C++ builder compatibility
 {$ENDIF}
 
 {$IFDEF Delphi}

@@ -103,6 +103,8 @@ begin
   Props.Free();
   Assert(_Check((e1.FIntProp = e2.FIntProp) and (e1.FSingleProp = e2.FSingleProp)), GetName + ': Get/Set fail');
   Assert(_Check((e1.FAnsiStringProp = e2.FAnsiStringProp) and (e1.FStringProp = e2.FStringProp) and (e1.FShortStringProp = e2.FShortStringProp)), GetName + ': Get/Set string fail');
+  e1.Free();
+  e2.Free();
 end;
 
 procedure TEntityTest.TestWriteRead;
@@ -135,9 +137,12 @@ begin
 
   Filer.Free();
   e2.SetProperties(Props2);
+
   Props2.Free();
   Assert(_Check((e1.FIntProp = e2.FIntProp) and (e1.FSingleProp = e2.FSingleProp)), GetName + ': Read/Write fail');
   Assert(_Check((e1.FAnsiStringProp = e2.FAnsiStringProp) and (e1.FStringProp = e2.FStringProp)), GetName + ': Get/Set string fail');
+  e1.Free();
+  e2.Free();
 end;
 
 begin

@@ -37,11 +37,11 @@ interface
     TRTTIName = ShortString;
     TRTTINames = array of TRTTIName;
 
-  { Fills the list of published properties with the given types of the given class and its parent classes.
+  { Fills the list of published properties of the given class and its parent classes.
     Returns number of such properties and the list of properties in PPropList. }
-  function GetClassPropList(AClass: TClass; out PropInfos: PPropList; TypeKinds: TTypeKinds = tkAny): Integer;
-  // Returns array of published properties names with the given types of the given class and its parent classes
-  function GetClassPropertyNames(AClass: TClass; TypeKinds: TTypeKinds = tkAny): TRTTINames;
+  function GetClassPropList(AClass: TClass; out PropInfos: PPropList): Integer;
+  // Returns array of published properties names of the given class and its parent classes
+  function GetClassPropertyNames(AClass: TClass): TRTTINames;
   {  Returns array of published method names of the given class.
      If ScanParents is True published methods of parent classes are also included. }
   function GetClassMethodNames(AClass: TClass; ScanParents: Boolean): TRTTINames;
@@ -54,21 +54,21 @@ implementation
 
 uses CECommon, CEBaseTypes;
 
-function GetClassPropList(AClass: TClass; out PropInfos: PPropList; TypeKinds: TTypeKinds = tkAny): Integer;
+function GetClassPropList(AClass: TClass; out PropInfos: PPropList): Integer;
 begin
   // Get count of published properties
-  Result := GetPropList(AClass.ClassInfo, TypeKinds, nil);
+  Result := GetPropList(AClass.ClassInfo, tkProperties, nil);
   // Allocate memory for all data
   GetMem(PropInfos, Result * SizeOf(PPropInfo));
-  GetPropList(AClass.ClassInfo, TypeKinds, PropInfos);
+  GetPropList(AClass.ClassInfo, tkProperties, PropInfos);
 end;
 
-function GetClassPropertyNames(AClass: TClass; TypeKinds: TTypeKinds = tkAny): TRTTINames;
+function GetClassPropertyNames(AClass: TClass): TRTTINames;
 var
   PropInfos: PPropList;
   Count, i: Integer;
 begin
-  Count := GetClassPropList(AClass, PropInfos, TypeKinds);
+  Count := GetClassPropList(AClass, PropInfos);
   SetLength(Result, Count);
   for i := 0 to Count - 1 do
   begin
@@ -129,7 +129,7 @@ function GetClassMethodNames(AClass: TClass; ScanParents: Boolean): TRTTINames;
 var
   MethodTable: PMethodNameTable;
 begin
-  MethodTable := PPointer(Integer(Pointer(AClass)) + vmtMethodTable)^;
+  MethodTable := PPointer(Cardinal(Pointer(AClass)) + vmtMethodTable)^;
   AddMethods(MethodTable, Result);
 
   AClass := AClass.ClassParent;

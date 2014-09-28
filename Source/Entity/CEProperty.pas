@@ -69,7 +69,9 @@ type
     // Bynary data
     ptBinary,
     // Object value
-    ptObject
+    ptObject,
+    // Class value
+    ptClass
   );
 
   PCEPropertyValue = ^TCEPropertyValue;
@@ -299,6 +301,7 @@ end;
 
 function TCESimplePropertyFiler.ReadArbitrary(IStream: TCEInputStream): TCEProperties;
 begin
+  Result := nil;
   raise ECEUnsupportedOperation.Create('Arbitrary properties deserialization isn''t supported');
 end;
 
@@ -368,32 +371,47 @@ begin
   Result := TCEProperties.Create();
   Count := CERttiUtil.GetClassPropList(AClass, PropInfos);
 
-  for i := 0 to Count - 1 do
-  begin
-    PropInfo := PropInfos^[i];
-    case PropInfo^.PropType^.Kind of
-      tkInteger: Result.AddProp(PropInfo^.Name, ptInteger);
-      tkFloat: if PropInfo^.PropType^.Name = 'Single' then
-        Result.AddProp(PropInfo^.Name, ptSingle)
-      else
-        raise ECEPropertyError.Create('Unsupported property type');
-      tkLString: Result.AddProp(PropInfo^.Name, ptAnsiString);
-      tkString: begin
-        if PropInfo^.PropType^.Name = 'ShortString' then
+  try
+    for i := 0 to Count - 1 do
+    begin
+      PropInfo := PropInfos^[i];
+      case PropInfo^.PropType^.Kind of
+        tkInteger: Result.AddProp(PropInfo^.Name, ptInteger);
+        tkFloat:
+          if PropInfo^.PropType^.Name = 'Single' then
+            Result.AddProp(PropInfo^.Name, ptSingle)
+          else if PropInfo^.PropType^.Name = 'Double' then
+            Result.AddProp(PropInfo^.Name, ptDouble)
+          else
+            raise ECEPropertyError.Create('Unsupported property type');
+        tkLString {$IFDEF FPC}, tkAString{$ENDIF}: Result.AddProp(PropInfo^.Name, ptAnsiString);
+        tkString:
         begin
-          Result.AddProp(PropInfo^.Name, ptShortString);
-        end
-        else
-        begin
-          {$IFDEF UNICODE}
-          Result.AddProp(PropInfo^.Name, ptString);
-          {$ELSE}
-          Result.AddProp(PropInfo^.Name, ptAnsiString);
-          {$ENDIF}
+          if PropInfo^.PropType^.Name = 'ShortString' then
+          begin
+            Result.AddProp(PropInfo^.Name, ptShortString);
+          end
+          else
+          begin
+            {$IFDEF UNICODE}
+            Result.AddProp(PropInfo^.Name, ptString);
+            {$ELSE}
+            Result.AddProp(PropInfo^.Name, ptAnsiString);
+            {$ENDIF}
+          end;
+        end;
+        {$IF Declared(tkUString)}tkUString, {$IFEND}tkWString: Result.AddProp(PropInfo^.Name, ptString);
+        tkClass: Result.AddProp(PropInfo^.Name, ptClass);
+        tkEnumeration: Result.AddProp(PropInfo^.Name, ptEnumeration);
+        tkSet: Result.AddProp(PropInfo^.Name, ptSet);
+        tkInt64: Result.AddProp(PropInfo^.Name, ptInt64);
+        else begin
+          raise ECEPropertyError.Create('Unsupported property type: ' + string(PropInfo^.PropType^.Name));
         end;
       end;
-      tkUString: Result.AddProp(PropInfo^.Name, ptString);
     end;
+  finally
+    FreeMem(PropInfos);
   end;
 end;
 

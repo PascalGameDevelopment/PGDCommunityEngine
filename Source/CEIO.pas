@@ -100,6 +100,8 @@ type
   public
     // Creates `a file stream associating it with file with the given file name
     constructor Create(const AFileName: string);
+    // Frees FFile
+    destructor Destroy(); override;
     // Closes file
     procedure Close; override;
     function Read(out Buffer; const Count: Cardinal): Cardinal; override;
@@ -113,6 +115,8 @@ type
   public
     // Creates a file stream associating it with file with the given file name
     constructor Create(const AFileName: string; const ShareMode: TCEFileShare = smAllowAll);
+    // Frees FFile
+    destructor Destroy(); override;
     // Closes file
     procedure Close; override;
     function Write(const Buffer; const Count: Cardinal): Cardinal; override;
@@ -174,44 +178,42 @@ uses SysUtils;
   function ReadUnicodeString(InS: TCEInputStream; out Str: UnicodeString): Boolean;
   var
     l: Cardinal;
-    {$IFDEF UNICODE}
     UTF8: UTF8String;
-    {$ENDIF }
   begin
     Str := '';
     Result := InS.ReadCheck(l, SizeOf(l));
     if Result and (l > 0) then
     begin
-      {$IFDEF UNICODE}
       SetLength(UTF8, l);
       Result := InS.ReadCheck(Pointer(UTF8)^, l * SizeOf(AnsiChar));
-      Str := UTF8ToUnicodeString(UTF8);
-      {$ELSE }
-      SetLength(Str, l);
-      Result := InS.ReadCheck(Pointer(Str)^, l * SizeOf(WideChar));
-      {$ENDIF }
+      {$IFDEF Unicode}
+        {$IFDEF FPC}
+        Str := UTF8Decode(UTF8);
+        {$ELSE}
+        Str := UTF8ToUnicodeString(UTF8);
+        {$ENDIF}
+      {$ELSE}
+      Str := UTF8Decode(UTF8);
+      {$ENDIF}
+{      SetLength(Str, l);
+      Result := InS.ReadCheck(Pointer(Str)^, l * SizeOf(WideChar));}
     end;
   end;
 
   function WriteUnicodeString(OutS: TCEOutputStream; const Str: UnicodeString): Boolean;
   var
     l: Cardinal;
-    {$IFDEF UNICODE}
-      UTF8: UTF8String;
-    {$ENDIF }
+    UTF8: UTF8String;
   begin
-    {$IFDEF UNICODE}
       UTF8 := UTF8Encode(Str);
       l := Length(UTF8);
       Result := OutS.WriteCheck(l, SizeOf(l));
       if Result and (l > 0) then
         Result := OutS.WriteCheck(Pointer(UTF8)^, l * SizeOf(AnsiChar));
-    {$ELSE }
-      l := Length(Str);
+{      l := Length(Str);
       Result := OutS.WriteCheck(l, SizeOf(l));
       if Result and (l > 0) then
-        Result := OutS.WriteCheck(Pointer(Str)^, l * SizeOf(WideChar));
-    {$ENDIF }
+        Result := OutS.WriteCheck(Pointer(Str)^, l * SizeOf(WideChar));}
   end;
 
 { TCEStream }
@@ -324,9 +326,15 @@ begin
   FFile := TCEFile.Create(AFileName, fuRead);
 end;
 
+destructor TCEFileInputStream.Destroy;
+begin
+  FreeAndNil(FFile);
+  inherited;
+end;
+
 procedure TCEFileInputStream.Close;
 begin
-  FFile.Close();
+  if Assigned(FFile) then FFile.Close();
 end;
 
 function TCEFileInputStream.Read(out Buffer; const Count: Cardinal): Cardinal;
@@ -341,9 +349,15 @@ begin
   FFile := TCEFile.Create(AFileName, fuWrite, ShareMode);
 end;
 
+destructor TCEFileOutputStream.Destroy;
+begin
+  FreeAndNil(FFile);
+  inherited;
+end;
+
 procedure TCEFileOutputStream.Close;
 begin
-  FFile.Close();
+  if Assigned(FFile) then FFile.Close();
 end;
 
 function TCEFileOutputStream.Write(const Buffer; const Count: Cardinal): Cardinal;

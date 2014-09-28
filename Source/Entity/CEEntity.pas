@@ -35,7 +35,9 @@ uses
   CEBaseTypes, CETemplate, CEProperty;
 
 type
+  {$TYPEINFO ON}
   TCEBaseEntity = class;
+  {$TYPEINFO OFF}
 
   _VectorValueType = TCEBaseEntity;
   {$MESSAGE 'Instantiating TEntityList interface'}
@@ -70,7 +72,6 @@ type
   published
     // Name used for references to the entity
     property Name: TCEEntityName read fName write SetName;
-
   end;
 
 implementation
@@ -103,22 +104,33 @@ begin
   begin
     Prop := Result.PropByIndex[i];
     Value := Result[Prop.Name];
-    case Prop.TypeId of
-      ptBoolean:     Value^.AsBoolean := TypInfo.GetOrdProp(Self, Prop.Name) = Ord(True);
-      ptInteger:     Value^.AsInteger := TypInfo.GetOrdProp(Self, Prop.Name);
-      ptInt64:       Value^.AsInt64 := TypInfo.GetInt64Prop(Self, Prop.Name);
-      ptSingle:      Value^.AsSingle := TypInfo.GetFloatProp(Self, Prop.Name);
-      ptDouble:      Value^.AsDouble := TypInfo.GetFloatProp(Self, Prop.Name);
-      ptShortString: Value^.AsShortString := TypInfo.GetStrProp(Self, Prop.Name);
-      ptAnsiString:  Value^.AsAnsiString := TypInfo.GetAnsiStrProp(Self, Prop.Name);
-      ptString:      Value^.AsUnicodeString := TypInfo.GetStrProp(Self, Prop.Name);
+//    Writeln('Prop name: ', Prop^.Name, ', type: ', Prop^.TypeId);
+    case Prop^.TypeId of
+      ptBoolean:     Value^.AsBoolean := TypInfo.GetOrdProp(Self, Prop^.Name) = Ord(True);
+      ptInteger:     Value^.AsInteger := TypInfo.GetOrdProp(Self, Prop^.Name);
+      ptInt64:       Value^.AsInt64 := TypInfo.GetInt64Prop(Self, Prop^.Name);
+      ptSingle:      Value^.AsSingle := TypInfo.GetFloatProp(Self, Prop^.Name);
+      ptDouble:      Value^.AsDouble := TypInfo.GetFloatProp(Self, Prop^.Name);
+      ptShortString: Value^.AsShortString := TypInfo.GetStrProp(Self, Prop^.Name);
+      {$IFDEF UNICODE}
+        {$IFDEF FPC}
+        ptAnsiString:  Value^.AsAnsiString := TypInfo.GetStrProp(Self, Prop^.Name);
+        {$ELSE}
+        ptAnsiString:  Value^.AsAnsiString := TypInfo.GetAnsiStrProp(Self, Prop^.Name);
+        {$ENDIF}
+      ptString:      Value^.AsUnicodeString := TypInfo.GetStrProp(Self, Prop^.Name);
+      {$ELSE}
+      ptAnsiString:  Value^.AsAnsiString := TypInfo.GetStrProp(Self, Prop^.Name);
+      ptString:      Value^.AsUnicodeString := TypInfo.GetWideStrProp(Self, Prop^.Name);
+      {$ENDIF}
       ptColor: ;
-      ptEnumeration: ;
-      ptSet: ;
+      ptEnumeration: Value^.AsInteger := TypInfo.GetOrdProp(Self, Prop^.Name);
+      ptSet: Value^.AsInteger := TypInfo.GetOrdProp(Self, Prop^.Name);
       ptPointer: ;
       ptObjectLink: ;
       ptBinary: ;
       ptObject: ;
+      ptClass: ;
     end;
   end;
 end;
