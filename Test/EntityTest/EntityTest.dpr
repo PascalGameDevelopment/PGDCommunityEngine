@@ -43,6 +43,9 @@ type
     FAnsiStringProp: AnsiString;
     FStringProp: UnicodeString;
     FShortStringProp: ShortString;
+    FUTF8Str: UTF8String;
+    FUnicodeStr: UnicodeString;
+    FWStr: WideString;
   public
     function GetProperties(): TCEProperties; override;
     procedure SetProperties(const Properties: TCEProperties); override;
@@ -52,6 +55,9 @@ type
     property AnsiStringProp: AnsiString read FAnsiStringProp write FAnsiStringProp;
     property StringProp: UnicodeString read FStringProp write FStringProp;
     property ShortStringProp: ShortString read FShortStringProp write FShortStringProp;
+    property UTF8Str: UTF8String read FUTF8Str write FUTF8Str;
+    property WStr: WideString read FWStr write FWStr;
+    property UnicodeStr: UnicodeString read FUnicodeStr write FUnicodeStr;
   end;
 
   // Base class for all entity classes tests
@@ -61,8 +67,33 @@ type
     procedure TestWriteRead();
   end;
 
+function CreateTestEntity(): TTestEntity;
+begin
+  Result := TTestEntity.Create();
+  Result.IntProp := 10;
+  Result.SingleProp := 11.8;
+  Result.AnsiStringProp := 'Ansi string!';
+  Result.StringProp := 'Default стринг!';
+  Result.ShortStringProp := 'Short string!';
+  Result.FUTF8Str := 'UTF8 стринг!';
+  Result.WStr := 'Wide стринг!';
+  Result.UnicodeStr := 'Unicode стринг!';
+end;
+
+procedure CheckEqual(e1, e2: TTestEntity; const  Lbl: string);
+begin
+  Assert(_Check(e1.FIntProp = e2.FIntProp) and (e1.FSingleProp = e2.FSingleProp)), Lbl + 'Get/Set fail');
+
+  Assert(_Check(e1.FAnsiStringProp = e2.FAnsiStringProp),     Lbl + 'Ansi fail');
+  Assert(_Check(e1.FStringProp = e2.FStringProp),             Lbl + 'String fail');
+  Assert(_Check(e1.FShortStringProp = e2.FShortStringProp),   Lbl + 'Short fail');
+  Assert(_Check(e1.FUTF8Str = e2.FUTF8Str),                   Lbl + 'UTF8 fail');
+  Assert(_Check(e1.FWStr = e2.FWStr),                         Lbl + 'Wide fail');
+  Assert(_Check(e1.FUnicodeStr = e2.FUnicodeStr),             Lbl + 'Unicode fail');
+end;
+
 { TestEntity }
-
+
 function TTestEntity.GetProperties(): TCEProperties;
 begin
   Result := inherited GetProperties();
@@ -76,11 +107,14 @@ end;
 procedure TTestEntity.SetProperties(const Properties: TCEProperties);
 begin
 //  inherited SetProperties(Properties);
-  IntProp := Properties['IntProp']^.AsInteger;
+{  IntProp := Properties['IntProp']^.AsInteger;
   SingleProp := Properties['SingleProp']^.AsSingle;
   AnsiStringProp := Properties['AnsiStringProp']^.AsAnsiString;
   StringProp := Properties['StringProp']^.AsUnicodeString;
   ShortStringProp := Properties['ShortStringProp']^.AsShortString;
+  UTF8Str := Properties['UTF8Str']^.AsUnicodeString;
+  WStr := Properties['WStr']^.AsUnicodeString;
+  UnicodeStr := Properties['UnicodeStr']^.AsUnicodeString;}
 end;
 
 { TEntityTest }
@@ -90,19 +124,15 @@ var
   e1, e2: TTestEntity;
   Props: TCEProperties;
 begin
-  e1 := TTestEntity.Create();
-  e1.IntProp := 10;
-  e1.SingleProp := 11.8;
-  e1.AnsiStringProp := 'Ansi string!';
-  e1.StringProp := '”никодный string!';
-  e1.ShortStringProp := 'Short string!';
+  e1 := CreateTestEntity();
   e2 := TTestEntity.Create();
 
   Props := e1.GetProperties();
   e2.SetProperties(Props);
   Props.Free();
-  Assert(_Check((e1.FIntProp = e2.FIntProp) and (e1.FSingleProp = e2.FSingleProp)), GetName + ': Get/Set fail');
-  Assert(_Check((e1.FAnsiStringProp = e2.FAnsiStringProp) and (e1.FStringProp = e2.FStringProp) and (e1.FShortStringProp = e2.FShortStringProp)), GetName + ': Get/Set string fail');
+
+  CheckEqual(e1, e2, 'Get/Set ');
+
   e1.Free();
   e2.Free();
 end;
@@ -115,12 +145,7 @@ var
   ins: TCEFileInputStream;
   Filer: TCEPropertyFilerBase;
 begin
-  e1 := TTestEntity.Create();
-  e1.IntProp := 20;
-  e1.SingleProp := 21.8;
-  e1.AnsiStringProp := 'Ansi string!';
-  e1.StringProp := '”никодный string!';
-  e1.ShortStringProp := 'Short string!';
+  e1 := CreateTestEntity();
   e2 := TTestEntity.Create();
   Filer := TCESimplePropertyFiler.Create;
 
@@ -139,8 +164,8 @@ begin
   e2.SetProperties(Props2);
 
   Props2.Free();
-  Assert(_Check((e1.FIntProp = e2.FIntProp) and (e1.FSingleProp = e2.FSingleProp)), GetName + ': Read/Write fail');
-  Assert(_Check((e1.FAnsiStringProp = e2.FAnsiStringProp) and (e1.FStringProp = e2.FStringProp)), GetName + ': Get/Set string fail');
+
+  CheckEqual(e1, e2, 'Read/Write ');
   e1.Free();
   e2.Free();
 end;

@@ -35,7 +35,7 @@ uses SysUtils;
 
 type
   {$IF not Declared(UnicodeString)}
-    UnicodeString = UTF8String;
+    UnicodeString = WideString;
   {$IFEND}
   // Entity name type
   TCEEntityName = AnsiString;

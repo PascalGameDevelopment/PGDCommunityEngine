@@ -50,6 +50,10 @@ interface
     or returns False if such method not found }
   function InvokeCommand(Obj: TObject; const Name: TRTTIName): Boolean;
 
+  {$IFNDEF UNICODE_STRING}
+  function GetAnsiStrProp(Instance: TObject; PropInfo: PPropInfo): AnsiString;
+  {$ENDIF}
+
 implementation
 
 uses CECommon, CEBaseTypes;
@@ -57,10 +61,10 @@ uses CECommon, CEBaseTypes;
 function GetClassPropList(AClass: TClass; out PropInfos: PPropList): Integer;
 begin
   // Get count of published properties
-  Result := GetPropList(AClass.ClassInfo, tkProperties, nil);
+  Result := GetPropList(AClass.ClassInfo, tkProperties, nil, false);
   // Allocate memory for all data
   GetMem(PropInfos, Result * SizeOf(PPropInfo));
-  GetPropList(AClass.ClassInfo, tkProperties, PropInfos);
+  GetPropList(AClass.ClassInfo, tkProperties, PropInfos, false);
 end;
 
 function GetClassPropertyNames(AClass: TClass): TRTTINames;
@@ -129,7 +133,7 @@ function GetClassMethodNames(AClass: TClass; ScanParents: Boolean): TRTTINames;
 var
   MethodTable: PMethodNameTable;
 begin
-  MethodTable := PPointer(Cardinal(Pointer(AClass)) + vmtMethodTable)^;
+  MethodTable := PPointer(Integer(Pointer(AClass)) + vmtMethodTable)^;
   AddMethods(MethodTable, Result);
 
   AClass := AClass.ClassParent;
@@ -140,6 +144,13 @@ begin
     AClass := AClass.ClassParent;
   end;
 end;
+
+{$IFNDEF UNICODE_STRING}
+function GetAnsiStrProp(Instance: TObject; PropInfo: PPropInfo): AnsiString;
+begin
+  Result := TypInfo.GetStrProp(Instance, PropInfo);
+end;
+{$ENDIF}
 
 function InvokeCommand(Obj: TObject; const Name: TRTTIName): Boolean;
 var

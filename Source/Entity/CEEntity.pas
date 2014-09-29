@@ -94,50 +94,13 @@ begin
 end;
 
 function TCEBaseEntity.GetProperties(): TCEProperties;
-var
-  i: Integer;
-  Prop: PCEProperty;
-  Value: PCEPropertyValue;
 begin
-  Result := CEProperty.GetClassProperties(ClassType);
-  for i := 0 to Result.Count-1 do
-  begin
-    Prop := Result.PropByIndex[i];
-    Value := Result[Prop.Name];
-//    Writeln('Prop name: ', Prop^.Name, ', type: ', Prop^.TypeId);
-    case Prop^.TypeId of
-      ptBoolean:     Value^.AsBoolean := TypInfo.GetOrdProp(Self, Prop^.Name) = Ord(True);
-      ptInteger:     Value^.AsInteger := TypInfo.GetOrdProp(Self, Prop^.Name);
-      ptInt64:       Value^.AsInt64 := TypInfo.GetInt64Prop(Self, Prop^.Name);
-      ptSingle:      Value^.AsSingle := TypInfo.GetFloatProp(Self, Prop^.Name);
-      ptDouble:      Value^.AsDouble := TypInfo.GetFloatProp(Self, Prop^.Name);
-      ptShortString: Value^.AsShortString := TypInfo.GetStrProp(Self, Prop^.Name);
-      {$IFDEF UNICODE}
-        {$IFDEF FPC}
-        ptAnsiString:  Value^.AsAnsiString := TypInfo.GetStrProp(Self, Prop^.Name);
-        {$ELSE}
-        ptAnsiString:  Value^.AsAnsiString := TypInfo.GetAnsiStrProp(Self, Prop^.Name);
-        {$ENDIF}
-      ptString:      Value^.AsUnicodeString := TypInfo.GetStrProp(Self, Prop^.Name);
-      {$ELSE}
-      ptAnsiString:  Value^.AsAnsiString := TypInfo.GetStrProp(Self, Prop^.Name);
-      ptString:      Value^.AsUnicodeString := TypInfo.GetWideStrProp(Self, Prop^.Name);
-      {$ENDIF}
-      ptColor: ;
-      ptEnumeration: Value^.AsInteger := TypInfo.GetOrdProp(Self, Prop^.Name);
-      ptSet: Value^.AsInteger := TypInfo.GetOrdProp(Self, Prop^.Name);
-      ptPointer: ;
-      ptObjectLink: ;
-      ptBinary: ;
-      ptObject: ;
-      ptClass: ;
-    end;
-  end;
+  Result := CEProperty.GetClassPropertiesAndValues(ClassType, Self);
 end;
 
 procedure TCEBaseEntity.SetProperties(const Properties: TCEProperties);
 begin
-
+  CEProperty.SetClassPropertiesAndValues(Self, Properties);
 end;
 
 end.

@@ -56,8 +56,6 @@ type
     ptAnsiString,
     // Unicode string value
     ptString,
-    // ARGB color value
-    ptColor,
     // Enumerated value
     ptEnumeration,
     // Set of numbers [0..31]
@@ -88,7 +86,7 @@ type
       ptDouble: (AsDouble: Double);
       ptShortString: (AsShortString: ShortString);
       ptObject: (AsObject: TObject);
-      //ptClassRef: (AsClass: TClass);
+      ptClass: (AsClass: TClass);
       ptPointer: (AsPointer: Pointer);
 //        ptAnsiString: (AsPAnsiChar: PAnsiChar);
 //        ptString: (AsPUnicodeString: PUnicodeString);
@@ -136,7 +134,7 @@ type
     destructor Destroy; override;
 
     // Add property description
-    procedure AddProp(const Name: TPropertyName; TypeId: TCEPropertyType);
+    function AddProp(const Name: TPropertyName; TypeId: TCEPropertyType): PCEPropertyValue;
 
     procedure AddString(const Name: TPropertyName; const Value: string);
     procedure AddAnsiString(const Name: TPropertyName; const Value: AnsiString);
@@ -179,6 +177,10 @@ type
 
   // Builds list of property definitions for the given class using RTTI
   function GetClassProperties(AClass: TClass): TCEProperties;
+  // Builds list of property definitions for the given class using RTTI and fills values in the given object instance
+  function GetClassPropertiesAndValues(AClass: TClass; AObj: TObject): TCEProperties;
+  // Sets property values of the specified instance from the Properties
+  procedure SetClassPropertiesAndValues(AObj: TObject; Properties: TCEProperties);
 
 implementation
 
@@ -262,11 +264,13 @@ begin
   inherited;
 end;
 
-procedure TCEProperties.AddProp(const Name: TPropertyName; TypeId: TCEPropertyType);
+function TCEProperties.AddProp(const Name: TPropertyName; TypeId: TCEPropertyType): PCEPropertyValue;
 begin
+  Result := nil;
   if GetIndex(Name) = -1 then begin
     FProperties.Count := FProperties.Count+1;
     SetLength(FValues, FProperties.Count);
+    Result := @FValues[FProperties.Count-1];
     FProperties.ValuesPtr[FProperties.Count-1].Name := Name;
     FProperties.ValuesPtr[FProperties.Count-1].TypeId := TypeId;
   end;
@@ -362,12 +366,18 @@ begin
 end;
 
 function GetClassProperties(AClass: TClass): TCEProperties;
+begin
+  Result := GetClassPropertiesAndValues(AClass, nil);
+end;
+
+function GetClassPropertiesAndValues(AClass: TClass; AObj: TObject): TCEProperties;
 var
   PropInfos: PPropList;
   PropInfo: PPropInfo;
   Count, i: Integer;
-  td: PTypeData;
+  Value: PCEPropertyValue;
 begin
+  Assert(AObj.ClassType = AClass);
   Result := TCEProperties.Create();
   Count := CERttiUtil.GetClassPropList(AClass, PropInfos);
 
@@ -375,43 +385,122 @@ begin
     for i := 0 to Count - 1 do
     begin
       PropInfo := PropInfos^[i];
+      WriteLn('Prop: ', PropInfo^.Name, ', type: ', TypInfo.GetEnumName(TypeInfo(TTypeKind), Ord(PropInfo^.PropType^.Kind)), ', type name: ', PropInfo^.PropType^.Name);
       case PropInfo^.PropType^.Kind of
-        tkInteger: Result.AddProp(PropInfo^.Name, ptInteger);
+        tkInteger:
+        if PropInfo^.PropType^.Name = 'Boolean' then
+        begin
+          Value := Result.AddProp(PropInfo^.Name, ptBoolean);
+          if Assigned(AObj) then
+            Value^.AsBoolean := TypInfo.GetOrdProp(AObj, PropInfo) = Ord(True);
+        end else begin
+          Value := Result.AddProp(PropInfo^.Name, ptInteger);
+          if Assigned(AObj) then
+            Value^.AsInteger := TypInfo.GetOrdProp(AObj, PropInfo);
+        end;
+        tkInt64: begin
+          Value := Result.AddProp(PropInfo^.Name, ptInt64);
+          if Assigned(AObj) then
+            Value^.AsInt64 := TypInfo.GetInt64Prop(AObj, PropInfo);
+        end;
         tkFloat:
           if PropInfo^.PropType^.Name = 'Single' then
-            Result.AddProp(PropInfo^.Name, ptSingle)
+          begin
+            Value := Result.AddProp(PropInfo^.Name, ptSingle);
+            if Assigned(AObj) then
+              Value^.AsSingle := TypInfo.GetFloatProp(AObj, PropInfo);
+          end
           else if PropInfo^.PropType^.Name = 'Double' then
-            Result.AddProp(PropInfo^.Name, ptDouble)
-          else
-            raise ECEPropertyError.Create('Unsupported property type');
-        tkLString {$IFDEF FPC}, tkAString{$ENDIF}: Result.AddProp(PropInfo^.Name, ptAnsiString);
-        tkString:
-        begin
+          begin
+            Value := Result.AddProp(PropInfo^.Name, ptDouble);
+            if Assigned(AObj) then
+              Value^.AsDouble := TypInfo.GetFloatProp(AObj, PropInfo);
+          end else
+            raise ECEPropertyError.Create('Unsupported property type: ' + string(PropInfo^.PropType^.Name));
+        tkEnumeration: begin
+          Value := Result.AddProp(PropInfo^.Name, ptEnumeration);
+          if Assigned(AObj) then
+            Value^.AsInteger := TypInfo.GetOrdProp(AObj, PropInfo);
+        end;
+        tkSet: begin
+          Value := Result.AddProp(PropInfo^.Name, ptSet);
+          if Assigned(AObj) then
+            Value^.AsInteger := TypInfo.GetOrdProp(AObj, PropInfo);
+        end;
+        {$IF Declared(tkAString)}tkAString, {$IFEND}
+        tkLString: begin
+          if PropInfo^.PropType^.Name = 'UTF8String' then
+          begin
+            Value := Result.AddProp(PropInfo^.Name, ptString);
+            Value^.AsUnicodeString := UnicodeString(GetAnsiStrProp(AObj, PropInfo));
+          end else begin
+            Value := Result.AddProp(PropInfo^.Name, ptAnsiString);
+            Value^.AsAnsiString := GetAnsiStrProp(AObj, PropInfo);
+          end;
+        end;
+        {$IF Declared(tkUString)}tkUString, {$IFEND}
+        tkString: begin
           if PropInfo^.PropType^.Name = 'ShortString' then
           begin
-            Result.AddProp(PropInfo^.Name, ptShortString);
-          end
-          else
-          begin
+            Value := Result.AddProp(PropInfo^.Name, ptShortString);
+            Value^.AsShortString := TypInfo.GetStrProp(AObj, PropInfo);
+          end else begin
             {$IFDEF UNICODE}
-            Result.AddProp(PropInfo^.Name, ptString);
+              Value := Result.AddProp(PropInfo^.Name, ptString);
+              Value^.AsUnicodeString := TypInfo.GetStrProp(AObj, PropInfo);
             {$ELSE}
-            Result.AddProp(PropInfo^.Name, ptAnsiString);
+              Value := Result.AddProp(PropInfo^.Name, ptAnsiString);
+              Value^.AsAnsiString := GetAnsiStrProp(AObj, PropInfo);
             {$ENDIF}
           end;
         end;
-        {$IF Declared(tkUString)}tkUString, {$IFEND}tkWString: Result.AddProp(PropInfo^.Name, ptString);
-        tkClass: Result.AddProp(PropInfo^.Name, ptClass);
-        tkEnumeration: Result.AddProp(PropInfo^.Name, ptEnumeration);
-        tkSet: Result.AddProp(PropInfo^.Name, ptSet);
-        tkInt64: Result.AddProp(PropInfo^.Name, ptInt64);
-        else begin
-          raise ECEPropertyError.Create('Unsupported property type: ' + string(PropInfo^.PropType^.Name));
+        tkWString: begin
+          Value := Result.AddProp(PropInfo^.Name, ptString);
+          Value^.AsUnicodeString := TypInfo.GetWideStrProp(AObj, PropInfo);
         end;
+
+        tkClass: begin
+          Value := Result.AddProp(PropInfo^.Name, ptClass);
+//          Value^.AsClass := TClass(TypInfo.GetOrdProp(AObj, PropInfo));
+        end
+        else
+          raise ECEPropertyError.Create('Unsupported property type: ' + string(PropInfo^.PropType^.Name));
       end;
     end;
   finally
     FreeMem(PropInfos);
+  end;
+end;
+
+procedure SetClassPropertiesAndValues(AObj: TObject; Properties: TCEProperties);
+var
+  i: Integer;
+  Prop: TCEProperty;
+  Value: TCEPropertyValue;
+begin
+  for i := 0 to Properties.Count-1 do
+  begin
+    Prop := Properties.PropByIndex[i]^;
+    Value := Properties.GetValueByIndex(i)^;
+    case Prop.TypeId of
+      ptBoolean, ptInteger,
+      ptEnumeration, ptSet: TypInfo.SetOrdProp(AObj, Prop.Name, Value.AsInteger);
+      ptInt64: TypInfo.SetInt64Prop(AObj, Prop.Name, Value.AsInt64);
+      ptSingle: TypInfo.SetFloatProp(AObj, Prop.Name, Value.AsSingle);
+      ptDouble: TypInfo.SetFloatProp(AObj, Prop.Name, Value.AsDouble);
+
+      ptShortString: TypInfo.SetStrProp(AObj, Prop.Name, Value.AsShortString);
+      ptAnsiString: TypInfo.SetStrProp(AObj, Prop.Name, Value.AsAnsiString);
+      ptString: TypInfo.SetStrProp(AObj, Prop.Name, Value.AsUnicodeString);
+
+      ptPointer: ;
+      ptObjectLink: ;
+      ptBinary: ;
+      ptObject: ;
+      ptClass: ;
+      else
+        raise ECEPropertyError.Create('Unsupported property type: ' + TypInfo.GetEnumName(TypeInfo(TCEPropertyType), Ord(Prop.TypeId)));
+    end;
   end;
 end;
 

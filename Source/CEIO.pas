@@ -186,14 +186,16 @@ uses SysUtils;
     begin
       SetLength(UTF8, l);
       Result := InS.ReadCheck(Pointer(UTF8)^, l * SizeOf(AnsiChar));
-      {$IFDEF Unicode}
+      {$IFDEF UNICODE_STRING}
+      Str := UTF8ToUnicodeString(UTF8);
+      {$ELSE}
         {$IFDEF FPC}
         Str := UTF8Decode(UTF8);
+
         {$ELSE}
-        Str := UTF8ToUnicodeString(UTF8);
+        Str := UTF8Decode(UTF8);
+
         {$ENDIF}
-      {$ELSE}
-      Str := UTF8Decode(UTF8);
       {$ENDIF}
 {      SetLength(Str, l);
       Result := InS.ReadCheck(Pointer(Str)^, l * SizeOf(WideChar));}
