@@ -327,12 +327,15 @@ begin
     Prop := Properties.GetPropByIndex(i);
     Value := Properties.GetValueByIndex(i);
     case Prop^.TypeId of
-      ptInteger: if not IStream.ReadCheck(Value^.AsInteger, SizeOf(Value^.AsInteger)) then Exit;
+      ptBoolean, ptInteger,
+      ptEnumeration, ptSet: if not IStream.ReadCheck(Value^.AsInteger, SizeOf(Value^.AsInteger)) then Exit;
+      ptInt64: if not IStream.ReadCheck(Value^.AsInt64, SizeOf(Value^.AsInt64)) then Exit;
       ptSingle: if not IStream.ReadCheck(Value^.AsSingle, SizeOf(Value^.AsSingle)) then Exit;
+      ptDouble: if not IStream.ReadCheck(Value^.AsDouble, SizeOf(Value^.AsDouble)) then Exit;
       ptShortString: if not CEIO.ReadShortString(IStream, Value^.AsShortString) then Exit;
       ptAnsiString: if not CEIO.ReadAnsiString(IStream, Value^.AsAnsiString) then Exit;
       ptString: if not CEIO.ReadUnicodeString(IStream, Value^.AsUnicodeString) then Exit;
-      else Assert(False, 'Invalid property type');
+      else Assert(False, 'Invalid property type: ' + TypInfo.GetEnumName(TypeInfo(TCEPropertyType), Ord(Prop.TypeId)));
     end;
   end;
 
@@ -354,12 +357,15 @@ begin
     Prop := Properties.GetPropByIndex(i);
     Value := Properties.GetValueByIndex(i);
     case Prop^.TypeId of
-      ptInteger: Result := Result and OStream.WriteCheck(Value^.AsInteger, SizeOf(Value^.AsInteger));
+      ptBoolean, ptInteger,
+      ptEnumeration, ptSet: Result := Result and OStream.WriteCheck(Value^.AsInteger, SizeOf(Value^.AsInteger));
+      ptInt64: Result := Result and OStream.WriteCheck(Value^.AsInt64, SizeOf(Value^.AsInt64));
       ptSingle: Result := Result and OStream.WriteCheck(Value^.AsSingle, SizeOf(Value^.AsSingle));
+      ptDouble: Result := Result and OStream.WriteCheck(Value^.AsDouble, SizeOf(Value^.AsDouble));
       ptShortString: Result := Result and CEIO.WriteShortString(OStream, Value^.AsShortString);
       ptAnsiString: Result := Result and CEIO.WriteAnsiString(OStream, Value^.AsAnsiString);
       ptString: Result := Result and CEIO.WriteUnicodeString(OStream, Value^.AsUnicodeString);
-      else Assert(False, 'Invalid property type');
+      else Assert(False, 'Invalid property type: ' + TypInfo.GetEnumName(TypeInfo(TCEPropertyType), Ord(Prop.TypeId)));
     end;
   end;
   Result := Result and OStream.WriteCheck(SIMPLE_PROPERTIES_END_SIGNATURE, SizeOf(SIMPLE_PROPERTIES_END_SIGNATURE));
@@ -387,6 +393,9 @@ begin
       PropInfo := PropInfos^[i];
       WriteLn('Prop: ', PropInfo^.Name, ', type: ', TypInfo.GetEnumName(TypeInfo(TTypeKind), Ord(PropInfo^.PropType^.Kind)), ', type name: ', PropInfo^.PropType^.Name);
       case PropInfo^.PropType^.Kind of
+        {$IF Declared(tkBool)}
+        tkBool,
+        {$IFEND}
         tkInteger:
         if PropInfo^.PropType^.Name = 'Boolean' then
         begin

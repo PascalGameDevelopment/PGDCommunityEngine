@@ -36,8 +36,18 @@ uses
   SysUtils, CEBaseTypes, CEEntity, CECommon, CEProperty, CEIO, Tester;
 
 type
+  {$TYPEINFO ON}
+  TTestEnum = (tteOpt1, tteOpt2, tteOpt3);
+  TTestRange = 0..31;
+  TTestSet = set of TTestRange;
+  {$TYPEINFO OFF}
   TTestEntity = class(TCEBaseEntity)
   private
+    FBoolProp: Boolean;
+    FEnumProp: TTestEnum;
+    FSetProp: TTestSet;
+    FDoubleProp: Double;
+    FInt64Prop: Int64;
     FIntProp: Integer;
     FSingleProp: Single;
     FAnsiStringProp: AnsiString;
@@ -50,6 +60,11 @@ type
     function GetProperties(): TCEProperties; override;
     procedure SetProperties(const Properties: TCEProperties); override;
   published
+    property BoolProp: Boolean read FBoolProp write FBoolProp;
+    property EnumProp: TTestEnum read FEnumProp write FEnumProp;
+    property SetProp: TTestSet read FSetProp write FSetProp;
+    property DoubleProp: Double read FDoubleProp write FDoubleProp;
+    property Int64Prop: Int64 read FInt64Prop write FInt64Prop;
     property IntProp: Integer read FIntProp write FIntProp;
     property SingleProp: Single read FSingleProp write FSingleProp;
     property AnsiStringProp: AnsiString read FAnsiStringProp write FAnsiStringProp;
@@ -70,6 +85,11 @@ type
 function CreateTestEntity(): TTestEntity;
 begin
   Result := TTestEntity.Create();
+  Result.BoolProp := True;
+  Result.EnumProp := tteOpt2;
+  Result.SetProp := [5, 8, 3, 17];
+  Result.DoubleProp := 287.54;
+  Result.Int64Prop := Int64($FFFFFFFF) + Int64(1000000);
   Result.IntProp := 10;
   Result.SingleProp := 11.8;
   Result.AnsiStringProp := 'Ansi string!';
@@ -82,7 +102,15 @@ end;
 
 procedure CheckEqual(e1, e2: TTestEntity; const  Lbl: string);
 begin
-  Assert(_Check(e1.FIntProp = e2.FIntProp) and (e1.FSingleProp = e2.FSingleProp)), Lbl + 'Get/Set fail');
+  Assert(_Check(e1.FIntProp = e2.FIntProp),       Lbl + 'Int fail');
+  Assert(_Check(e1.FSingleProp = e2.FSingleProp), Lbl + 'Single fail');
+
+  Assert(_Check(e1.FBoolProp = e2.FBoolProp),     Lbl + 'Bool fail');
+  Assert(_Check(e1.FEnumProp = e2.FEnumProp),     Lbl + 'Enum fail');
+
+  Assert(_Check(e1.FSetProp = e2.FSetProp),       Lbl + 'Set fail');
+  Assert(_Check(e1.FDoubleProp = e2.FDoubleProp), Lbl + 'Double fail');
+  Assert(_Check(e1.FInt64Prop = e2.FInt64Prop),   Lbl + 'Int64 fail');
 
   Assert(_Check(e1.FAnsiStringProp = e2.FAnsiStringProp),     Lbl + 'Ansi fail');
   Assert(_Check(e1.FStringProp = e2.FStringProp),             Lbl + 'String fail');
@@ -106,7 +134,7 @@ end;
 
 procedure TTestEntity.SetProperties(const Properties: TCEProperties);
 begin
-//  inherited SetProperties(Properties);
+  inherited SetProperties(Properties);
 {  IntProp := Properties['IntProp']^.AsInteger;
   SingleProp := Properties['SingleProp']^.AsSingle;
   AnsiStringProp := Properties['AnsiStringProp']^.AsAnsiString;
