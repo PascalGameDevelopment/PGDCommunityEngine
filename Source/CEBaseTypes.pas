@@ -37,9 +37,20 @@ type
   {$IF not Declared(UnicodeString)}
     UnicodeString = WideString;
   {$IFEND}
+  {$IFDEF UNICODE_ONLY}
+  // Entity name type
+  TCEEntityName = UnicodeString;
+  PCEEntityName = PChar;
+  // Entity class name type
+  TCEEntityClassName = TCEEntityName;
+  {$ELSE}
   // Entity name type
   TCEEntityName = AnsiString;
   PCEEntityName = PAnsiChar;
+  // Entity class name type
+  TCEEntityClassName = TCEEntityName;
+  {$ENDIF}
+
   // Command - parameterless procedure method
   TCommand = procedure() of object;
 

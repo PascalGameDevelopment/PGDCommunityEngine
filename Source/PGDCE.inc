@@ -47,6 +47,8 @@
   {$INLINE ON}
 {$ENDIF}
 
+{.$DEFINE UNICODE_ONLY}          // Enable for mobile delphi compiler compatibility
+
 {$IFOPT D+}
   {$DEFINE DEBUG}
 {$ENDIF}

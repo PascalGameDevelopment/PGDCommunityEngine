@@ -34,7 +34,11 @@ interface
 uses
   CEBaseTypes, CETemplate, CEProperty, CEIO;
 
-type
+const
+  // Entity hierarchy delimiter
+  HierarchyDelimiter = '/';
+
+  type
   {$TYPEINFO ON}
   TCEBaseEntity = class;
   {$TYPEINFO OFF}
@@ -48,8 +52,15 @@ type
   TCEEntityList = _GenVector;
 
   TCEBaseEntityManager = class
+  private
+    fEntityClasses: array of CCEEntity;
   public
-    function GetEntityClass(const Name: string): CCEEntity; virtual; abstract;
+    // Registers an entity class. Only entities of registered classes can be saved/loaded or be linked to via an object link property.
+    procedure RegisterEntityClass(NewClass: CCEEntity);
+    // Registers an array of entity classes. Only entities of registered classes can be saved/loaded or be linked to via an object link property.
+    procedure RegisterEntityClasses(NewClasses: array of TClass);
+    // Returns an entity class by its name or nil if not registered
+    function GetEntityClass(const Name: TCEEntityClassName): CCEEntity;
   end;
 
   // Abstract class responsible for entities serialization / deserialization
@@ -81,6 +92,7 @@ type
   private
     procedure SetName(const Value: TCEEntityName);
     procedure SetParent(const Value: TCEBaseEntity);
+    function GetFullName: TCEEntityName;
   protected
     fName: TCEEntityName;
     fParent: TCEBaseEntity;
@@ -93,6 +105,7 @@ type
     // Creates and returns a clone of the item with all data and properties having the same value as in source.
     function Clone: TCEBaseEntity;
 
+    procedure AddChild(AEntity: TCEBaseEntity);
     { Retrieves a set of entity's properties and their values.
       The basic implementation retrieves published properties using RTTI.
       Descendant classes may override this method and modify the set of properties.
@@ -157,6 +170,27 @@ begin
   Result.Assign(Self);
 end;
 
+function TCEBaseEntity.GetFullName: TCEEntityName;
+var Entity: TCEBaseEntity;
+begin
+  Result := HierarchyDelimiter + Name;
+  Entity := Self.Parent;
+  while Entity <> nil do begin
+    Result := HierarchyDelimiter + Entity.Name + Result;
+    Entity := Entity.Parent;
+  end;
+end;
+
+procedure TCEBaseEntity.AddChild(AEntity: TCEBaseEntity);
+begin
+  Assert(Self <> nil);
+  Assert(AEntity <> nil);
+  Assert(not Assigned(AEntity.Parent), 'TCEBaseEntity.AddChild: entity "' + AEntity.GetFullName + '" already has a parent');
+  if not Assigned(fChilds) then fChilds := TCEEntityList.Create();
+
+  fChilds.Add(AEntity);
+end;
+
 function TCEBaseEntity.GetProperties(): TCEProperties;
 begin
   Result := CEProperty.GetClassPropertiesAndValues(ClassType, Self);
@@ -172,18 +206,23 @@ end;
 constructor TCESimpleEntityFiler.Create(AManager: TCEBaseEntityManager);
 begin
   FPropertyFiler := TCESimplePropertyFiler.Create();
+  inherited Create(AManager);
 end;
 
 function TCESimpleEntityFiler.ReadEntity(IStream: TCEInputStream): TCEBaseEntity;
 var
-  s: AnsiString;
+  s: TCEEntityClassName;
   EntityClass: CCEEntity;
   Props: TCEProperties;
   i, TotalChilds: Integer;
   Child: TCEBaseEntity;
 begin
   Result := nil;
+  {$IFDEF UNICODE_ONLY}
+  if not CEIO.ReadUnicodeString(IStream, s) then Exit;
+  {$ELSE}
   if not CEIO.ReadAnsiString(IStream, s) then Exit;
+  {$ENDIF}
 
   EntityClass := FManager.GetEntityClass(s);
   if EntityClass = nil then
@@ -218,12 +257,19 @@ var
   i, Count: Integer;
 begin
   Result := False;
-  if not CEIO.WriteAnsiString(OStream, AnsiString(Entity.ClassName)) then Exit;
+  {$IFDEF UNICODE_ONLY}
+  if not CEIO.WriteUnicodeString(OStream, TCEEntityClassName(Entity.ClassName)) then Exit;
+  {$ELSE}
+  if not CEIO.WriteAnsiString(OStream, TCEEntityClassName(Entity.ClassName)) then Exit;
+  {$ENDIF}
 
-  Entity.GetProperties();
+  Props := Entity.GetProperties();
   try
     if not FPropertyFiler.Write(OStream, Props) then Exit;
-//    Count := Entity.ChildCount;
+    if Assigned(Entity.Childs) then
+      Count := Entity.Childs.Count
+    else
+      Count := 0;
     if not OStream.WriteCheck(Count, SizeOf(Count)) then Exit;
 
     for i := 0 to Count-1 do if Assigned(Entity.Childs[i]) then
@@ -233,4 +279,36 @@ begin
   end;
 end;
 
+{ TCEBaseEntityManager }
+
+procedure TCEBaseEntityManager.RegisterEntityClass(NewClass: CCEEntity);
+begin
+  if GetEntityClass(TCEEntityClassName(NewClass.ClassName)) <> nil then
+  begin
+    //Log(ClassName + '.RegisterEntityClass: Class "' + NewClass.ClassName + '" already registered', lkWarning);
+    Exit;
+  end;
+  SetLength(fEntityClasses, Length(fEntityClasses) + 1);
+  fEntityClasses[High(fEntityClasses)] := NewClass;
+end;
+
+procedure TCEBaseEntityManager.RegisterEntityClasses(NewClasses: array of TClass);
+var i: Integer;
+begin
+  for i := 0 to High(NewClasses) do if NewClasses[i].InheritsFrom(TCEBaseEntity) then
+  begin
+    RegisterEntityClass(CCEEntity(NewClasses[i]));
+  end;
+end;
+
+function TCEBaseEntityManager.GetEntityClass(const Name: TCEEntityClassName): CCEEntity;
+var i: Integer;
+begin
+  Result := nil;
+  i := High(fEntityClasses);
+  while (i >= 0) and (fEntityClasses[i].ClassName <> Name) do Dec(i);
+  if i >= 0 then Result := fEntityClasses[i];
+end;
+
 end.
+

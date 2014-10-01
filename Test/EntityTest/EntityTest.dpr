@@ -36,11 +36,10 @@ uses
   SysUtils, CEBaseTypes, CEEntity, CECommon, CEProperty, CEIO, Tester;
 
 type
-  {$TYPEINFO ON}
   TTestEnum = (tteOpt1, tteOpt2, tteOpt3);
   TTestRange = 0..31;
   TTestSet = set of TTestRange;
-  {$TYPEINFO OFF}
+
   TTestEntity = class(TCEBaseEntity)
   private
     FBoolProp: Boolean;
@@ -75,11 +74,31 @@ type
     property UnicodeStr: UnicodeString read FUnicodeStr write FUnicodeStr;
   end;
 
+  TEntity1 = class(TCEBaseEntity)
+  private
+    fInt: Integer;
+    fStr: string;
+  published
+    property Int: Integer read fInt write fInt;
+    property Str: string read fStr write fStr;
+  end;
+
+  TEntity2 = class(TCEBaseEntity)
+  private
+    fDbl: Double;
+    fBigInt: Int64;
+  published
+    property Dbl: Double read fDbl write fDbl;
+    property BigInt: Int64 read fBigInt write fBigInt;
+  end;
+
   // Base class for all entity classes tests
   TEntityTest = class(TTestSuite)
+  private
   published
     procedure TestPropsGetSet();
     procedure TestWriteRead();
+    procedure TestSaveLoad;
   end;
 
 function CreateTestEntity(): TTestEntity;
@@ -178,12 +197,12 @@ begin
   Filer := TCESimplePropertyFiler.Create;
 
   Props1 := e1.GetProperties();
-  outs := TCEFileOutputStream.Create('0test.p');
+  outs := TCEFileOutputStream.Create('props.p');
   Filer.Write(outs, Props1);
   Props1.Free();
   outs.Free();
 
-  ins := TCEFileInputStream.Create('0test.p');
+  ins := TCEFileInputStream.Create('props.p');
   Props2 := e2.GetProperties();
   Filer.Read(ins, Props2);
   ins.Free();
@@ -196,6 +215,44 @@ begin
   CheckEqual(e1, e2, 'Read/Write ');
   e1.Free();
   e2.Free();
+end;
+
+procedure TEntityTest.TestSaveLoad;
+var
+  Parent: TEntity1;
+  Child: TEntity2;
+  Manager: TCEBaseEntityManager;
+  Filer: TCESimpleEntityFiler;
+  outs: TCEFileOutputStream;
+  ins: TCEFileInputStream;
+  Loaded: TCEBaseEntity;
+begin
+  Parent := TEntity1.Create();
+  Parent.Int := 1000;
+  Parent.Str := 'parent.Str';
+  Child := TEntity2.Create();
+  Child.Dbl := 0.800;
+  Child.BigInt := 1000000000000;
+  Parent.AddChild(Child);
+
+  Manager := TCEBaseEntityManager.Create();
+  Manager.RegisterEntityClasses([TEntity1, TEntity2]);
+
+  Filer := TCESimpleEntityFiler.Create(Manager);
+  outs := TCEFileOutputStream.Create('entity.pce');
+  Filer.WriteEntity(outs, Parent);
+  outs.Free();
+
+  ins := TCEFileInputStream.Create('entity.pce');
+  Loaded := Filer.ReadEntity(ins);
+  ins.Free();
+
+  Filer.Free();
+
+  Assert(_Check(Loaded is TEntity1), 'Load fail');
+  Assert(_Check(Loaded.Childs.Count = 1), 'Childs fail');
+  Assert(_Check(((Loaded as TEntity1).Int = Parent.Int) and ((Loaded as TEntity1).Str = Parent.Str)), 'Props1 fail');
+  Assert(_Check(((Loaded.Childs[0] as TEntity2).Dbl = Child.Dbl) and ((Loaded.Childs[0] as TEntity2).fBigInt = Child.BigInt)), 'Props2 fail');
 end;
 
 begin

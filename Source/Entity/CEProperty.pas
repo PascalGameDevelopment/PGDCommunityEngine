@@ -383,7 +383,7 @@ var
   Count, i: Integer;
   Value: PCEPropertyValue;
 begin
-  Assert(AObj.ClassType = AClass);
+  Assert((AObj = nil) or (AObj.ClassType = AClass));
   Result := TCEProperties.Create();
   Count := CERttiUtil.GetClassPropList(AClass, PropInfos);
 
@@ -441,10 +441,12 @@ begin
           if PropInfo^.PropType^.Name = 'UTF8String' then
           begin
             Value := Result.AddProp(PropInfo^.Name, ptString);
-            Value^.AsUnicodeString := UnicodeString(GetAnsiStrProp(AObj, PropInfo));
+            if Assigned(AObj) then
+              Value^.AsUnicodeString := UnicodeString(GetAnsiStrProp(AObj, PropInfo));
           end else begin
             Value := Result.AddProp(PropInfo^.Name, ptAnsiString);
-            Value^.AsAnsiString := GetAnsiStrProp(AObj, PropInfo);
+            if Assigned(AObj) then
+              Value^.AsAnsiString := GetAnsiStrProp(AObj, PropInfo);
           end;
         end;
         {$IF Declared(tkUString)}tkUString, {$IFEND}
@@ -452,20 +454,24 @@ begin
           if PropInfo^.PropType^.Name = 'ShortString' then
           begin
             Value := Result.AddProp(PropInfo^.Name, ptShortString);
-            Value^.AsShortString := TypInfo.GetStrProp(AObj, PropInfo);
+            if Assigned(AObj) then
+              Value^.AsShortString := TypInfo.GetStrProp(AObj, PropInfo);
           end else begin
             {$IFDEF UNICODE}
               Value := Result.AddProp(PropInfo^.Name, ptString);
-              Value^.AsUnicodeString := TypInfo.GetStrProp(AObj, PropInfo);
+              if Assigned(AObj) then
+                Value^.AsUnicodeString := TypInfo.GetStrProp(AObj, PropInfo);
             {$ELSE}
               Value := Result.AddProp(PropInfo^.Name, ptAnsiString);
-              Value^.AsAnsiString := GetAnsiStrProp(AObj, PropInfo);
+              if Assigned(AObj) then
+                Value^.AsAnsiString := GetAnsiStrProp(AObj, PropInfo);
             {$ENDIF}
           end;
         end;
         tkWString: begin
           Value := Result.AddProp(PropInfo^.Name, ptString);
-          Value^.AsUnicodeString := TypInfo.GetWideStrProp(AObj, PropInfo);
+          if Assigned(AObj) then
+            Value^.AsUnicodeString := TypInfo.GetWideStrProp(AObj, PropInfo);
         end;
 
         tkClass: begin
