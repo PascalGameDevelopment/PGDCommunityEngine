@@ -92,7 +92,6 @@ const
   private
     procedure SetName(const Value: TCEEntityName);
     procedure SetParent(const Value: TCEBaseEntity);
-    function GetFullName: TCEEntityName;
   protected
     fName: TCEEntityName;
     fParent: TCEBaseEntity;
@@ -105,6 +104,7 @@ const
     // Creates and returns a clone of the item with all data and properties having the same value as in source.
     function Clone: TCEBaseEntity;
 
+    function GetFullName: TCEEntityName;
     procedure AddChild(AEntity: TCEBaseEntity);
     { Retrieves a set of entity's properties and their values.
       The basic implementation retrieves published properties using RTTI.
@@ -156,8 +156,8 @@ procedure TCEBaseEntity.Assign(ASource: TCEBaseEntity);
 var
   Props: TCEProperties;
 begin
+  Props := ASource.GetProperties();
   try
-    Props := ASource.GetProperties();
     SetProperties(Props);
   finally
     Props.Free();
@@ -188,6 +188,7 @@ begin
   Assert(not Assigned(AEntity.Parent), 'TCEBaseEntity.AddChild: entity "' + AEntity.GetFullName + '" already has a parent');
   if not Assigned(fChilds) then fChilds := TCEEntityList.Create();
 
+  AEntity.Parent := Self;
   fChilds.Add(AEntity);
 end;
 
@@ -306,7 +307,7 @@ var i: Integer;
 begin
   Result := nil;
   i := High(fEntityClasses);
-  while (i >= 0) and (fEntityClasses[i].ClassName <> Name) do Dec(i);
+  while (i >= 0) and (TCEEntityClassName(fEntityClasses[i].ClassName) <> Name) do Dec(i);
   if i >= 0 then Result := fEntityClasses[i];
 end;
 

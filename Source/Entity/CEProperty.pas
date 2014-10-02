@@ -455,7 +455,7 @@ begin
           begin
             Value := Result.AddProp(PropInfo^.Name, ptShortString);
             if Assigned(AObj) then
-              Value^.AsShortString := TypInfo.GetStrProp(AObj, PropInfo);
+              Value^.AsShortString := ShortString(TypInfo.GetStrProp(AObj, PropInfo));
           end else begin
             {$IFDEF UNICODE}
               Value := Result.AddProp(PropInfo^.Name, ptString);
@@ -487,6 +487,7 @@ begin
   end;
 end;
 
+{$WARNINGS OFF}
 procedure SetClassPropertiesAndValues(AObj: TObject; Properties: TCEProperties);
 var
   i: Integer;
@@ -498,7 +499,7 @@ end;
     Prop := Properties.PropByIndex[i]^;
     Value := Properties.GetValueByIndex(i)^;
     case Prop.TypeId of
-      ptBoolean, ptInteger,
+      ptBoolean, ptInteger,
       ptEnumeration, ptSet: TypInfo.SetOrdProp(AObj, Prop.Name, Value.AsInteger);
       ptInt64: TypInfo.SetInt64Prop(AObj, Prop.Name, Value.AsInt64);
       ptSingle: TypInfo.SetFloatProp(AObj, Prop.Name, Value.AsSingle);
@@ -518,5 +519,6 @@ end;
     end;
   end;
 end;
+{$WARNINGS ON}
 
 end.

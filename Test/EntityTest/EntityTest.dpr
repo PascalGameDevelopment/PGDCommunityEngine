@@ -230,9 +230,11 @@ begin
   Parent := TEntity1.Create();
   Parent.Int := 1000;
   Parent.Str := 'parent.Str';
+  Parent.Name := 'Parent';
   Child := TEntity2.Create();
   Child.Dbl := 0.800;
   Child.BigInt := 1000000000000;
+  Child.Name := 'Child';
   Parent.AddChild(Child);
 
   Manager := TCEBaseEntityManager.Create();
@@ -249,8 +251,11 @@ begin
 
   Filer.Free();
 
+  Writeln('Full name: ' + Loaded.Childs[0].GetFullName());
+
   Assert(_Check(Loaded is TEntity1), 'Load fail');
   Assert(_Check(Loaded.Childs.Count = 1), 'Childs fail');
+  Assert(_Check(Loaded.Childs[0].Parent = Loaded), 'Parent fail');
   Assert(_Check(((Loaded as TEntity1).Int = Parent.Int) and ((Loaded as TEntity1).Str = Parent.Str)), 'Props1 fail');
   Assert(_Check(((Loaded.Childs[0] as TEntity2).Dbl = Child.Dbl) and ((Loaded.Childs[0] as TEntity2).fBigInt = Child.BigInt)), 'Props2 fail');
 end;
