@@ -25,12 +25,10 @@ This is test for template collections
 
 @author(George Bakhtadze (avagames@gmail.com))
 }
-
 {$Include PGDCE.inc}
 program EntityTest;
 
 {$APPTYPE CONSOLE}
-
 
 uses
   SysUtils, CEBaseTypes, CEEntity, CECommon, CEProperty, CEIO, Tester;
@@ -55,6 +53,8 @@ type
     FUTF8Str: UTF8String;
     FUnicodeStr: UnicodeString;
     FWStr: WideString;
+    FBinary: TDynamicArray;
+    FPointerProp: TPointerData;
   public
     function GetProperties(): TCEProperties; override;
     procedure SetProperties(const Properties: TCEProperties); override;
@@ -72,6 +72,8 @@ type
     property UTF8Str: UTF8String read FUTF8Str write FUTF8Str;
     property WStr: WideString read FWStr write FWStr;
     property UnicodeStr: UnicodeString read FUnicodeStr write FUnicodeStr;
+    property Binary: TDynamicArray read FBinary write FBinary;
+    property PointerProp: TPointerData read FPointerProp write FPointerProp;
   end;
 
   TEntity1 = class(TCEBaseEntity)
@@ -101,7 +103,19 @@ type
     procedure TestSaveLoad;
   end;
 
+const
+  TEST_DATA: array[0..10] of Byte = (10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+
+function BinaryDataEqual(p1, p2: Pointer; size1, Size2: Integer): Boolean;
+begin
+  Result := False;
+  if size1 <> size2 then Exit;
+  Result := CompareMem(p1, p2, size1);
+end;
+
 function CreateTestEntity(): TTestEntity;
+var
+  i: Integer;
 begin
   Result := TTestEntity.Create();
   Result.BoolProp := True;
@@ -114,13 +128,26 @@ begin
   Result.AnsiStringProp := 'Ansi string!';
   Result.StringProp := 'Default стринг!';
   Result.ShortStringProp := 'Short string!';
-  Result.FUTF8Str := 'UTF8 стринг!';
+  Result.UTF8Str := 'UTF8 стринг!';
   Result.WStr := 'Wide стринг!';
   Result.UnicodeStr := 'Unicode стринг!';
+
+  Result.Binary := TDynamicArray.Create();
+  SetLength(Result.Binary.Data, Length(TEST_DATA));
+  for i := 0 to High(Result.Binary.Data) do Result.Binary.Data[i] := TEST_DATA[i];
+
+  Result.PointerProp := TPointerData.Create();
+  Result.PointerProp.Allocate(SizeOf(TEST_DATA));
+  Move(TEST_DATA, Result.PointerProp.Data^, SizeOf(TEST_DATA));
 end;
 
-procedure CheckEqual(e1, e2: TTestEntity; const  Lbl: string);
-begin
+procedure CheckEqual(e1, e2: TTestEntity; const Lbl: string);
+begin
+  WriteLn('String: ' + e1.StringProp + ' = ' + e2.StringProp);
+  WriteLn('UString: ' + e1.UnicodeStr + ' = ' + e2.UnicodeStr);
+  WriteLn('WString: ' + e1.WStr + ' = ' + e2.WStr);
+  WriteLn('UTF8String: ' + e1.UTF8Str + ' = ' + e2.UTF8Str);
+
   Assert(_Check(e1.FIntProp = e2.FIntProp),       Lbl + 'Int fail');
   Assert(_Check(e1.FSingleProp = e2.FSingleProp), Lbl + 'Single fail');
 
@@ -131,12 +158,15 @@ procedure CheckEqual(e1, e2: TTestEntity; const  Lbl: string);
   Assert(_Check(e1.FDoubleProp = e2.FDoubleProp), Lbl + 'Double fail');
   Assert(_Check(e1.FInt64Prop = e2.FInt64Prop),   Lbl + 'Int64 fail');
 
-  Assert(_Check(e1.FAnsiStringProp = e2.FAnsiStringProp),     Lbl + 'Ansi fail');
-  Assert(_Check(e1.FStringProp = e2.FStringProp),             Lbl + 'String fail');
-  Assert(_Check(e1.FShortStringProp = e2.FShortStringProp),   Lbl + 'Short fail');
-  Assert(_Check(e1.FUTF8Str = e2.FUTF8Str),                   Lbl + 'UTF8 fail');
-  Assert(_Check(e1.FWStr = e2.FWStr),                         Lbl + 'Wide fail');
-  Assert(_Check(e1.FUnicodeStr = e2.FUnicodeStr),             Lbl + 'Unicode fail');
+  Assert(_Check(e1.FAnsiStringProp = e2.FAnsiStringProp),   Lbl + 'Ansi fail');
+  Assert(_Check(e1.FStringProp = e2.FStringProp),           Lbl + 'String fail');
+  Assert(_Check(e1.FShortStringProp = e2.FShortStringProp), Lbl + 'Short fail');
+  Assert(_Check(e1.FUTF8Str = e2.FUTF8Str),                 Lbl + 'UTF8 fail');
+  Assert(_Check(e1.FWStr = e2.FWStr),                       Lbl + 'Wide fail');
+  Assert(_Check(e1.FUnicodeStr = e2.FUnicodeStr),           Lbl + 'Unicode fail');
+
+  Assert(_Check(BinaryDataEqual(@e1.Binary.Data[0], @e2.Binary.Data[0], Length(e1.Binary.Data), Length(e2.Binary.Data))), Lbl + 'DynArray fail');
+  Assert(_Check(BinaryDataEqual(e1.PointerProp.Data, e2.PointerProp.Data, e1.PointerProp.Size, e2.PointerProp.Size)), Lbl + 'Pointer fail');
 end;
 
 { TestEntity }
@@ -144,24 +174,11 @@ end;
 function TTestEntity.GetProperties(): TCEProperties;
 begin
   Result := inherited GetProperties();
-{  Result := TCEProperties.Create();
-  Result.AddInt('IntProp', IntProp);
-  Result.AddSingle('SingleProp', SingleProp);
-  Result.AddAnsiString('AnsiStringProp', AnsiStringProp);
-  Result.AddString('StringProp', StringProp);}
 end;
 
 procedure TTestEntity.SetProperties(const Properties: TCEProperties);
 begin
   inherited SetProperties(Properties);
-{  IntProp := Properties['IntProp']^.AsInteger;
-  SingleProp := Properties['SingleProp']^.AsSingle;
-  AnsiStringProp := Properties['AnsiStringProp']^.AsAnsiString;
-  StringProp := Properties['StringProp']^.AsUnicodeString;
-  ShortStringProp := Properties['ShortStringProp']^.AsShortString;
-  UTF8Str := Properties['UTF8Str']^.AsUnicodeString;
-  WStr := Properties['WStr']^.AsUnicodeString;
-  UnicodeStr := Properties['UnicodeStr']^.AsUnicodeString;}
 end;
 
 { TEntityTest }
@@ -213,6 +230,7 @@ begin
   Props2.Free();
 
   CheckEqual(e1, e2, 'Read/Write ');
+
   e1.Free();
   e2.Free();
 end;
@@ -258,9 +276,16 @@ begin
   Assert(_Check(Loaded.Childs[0].Parent = Loaded), 'Parent fail');
   Assert(_Check(((Loaded as TEntity1).Int = Parent.Int) and ((Loaded as TEntity1).Str = Parent.Str)), 'Props1 fail');
   Assert(_Check(((Loaded.Childs[0] as TEntity2).Dbl = Child.Dbl) and ((Loaded.Childs[0] as TEntity2).fBigInt = Child.BigInt)), 'Props2 fail');
+
+  Loaded.Free();
+  Parent.Free();
+  Manager.Free();
 end;
 
 begin
+  {$IF Declared(ReportMemoryLeaksOnShutdown)}
+  ReportMemoryLeaksOnShutdown := True;
+  {$IFEND}
   RegisterSuites([TEntityTest]);
   Tester.RunTests();
   Readln;

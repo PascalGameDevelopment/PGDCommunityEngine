@@ -197,8 +197,6 @@ uses SysUtils;
 
         {$ENDIF}
       {$ENDIF}
-{      SetLength(Str, l);
-      Result := InS.ReadCheck(Pointer(Str)^, l * SizeOf(WideChar));}
     end;
   end;
 
@@ -212,10 +210,6 @@ uses SysUtils;
       Result := OutS.WriteCheck(l, SizeOf(l));
       if Result and (l > 0) then
         Result := OutS.WriteCheck(Pointer(UTF8)^, l * SizeOf(AnsiChar));
-{      l := Length(Str);
-      Result := OutS.WriteCheck(l, SizeOf(l));
-      if Result and (l > 0) then
-        Result := OutS.WriteCheck(Pointer(Str)^, l * SizeOf(WideChar));}
   end;
 
 { TCEStream }

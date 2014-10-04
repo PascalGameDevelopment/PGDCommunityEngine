@@ -39,12 +39,14 @@ interface
 
   { Fills the list of published properties of the given class and its parent classes.
     Returns number of such properties and the list of properties in PPropList. }
-  function GetClassPropList(AClass: TClass; out PropInfos: PPropList): Integer;
+  function GetClassPropList(AClass: TClass; out PropInfos: PPropList; PropType: TTypeKinds = tkProperties): Integer;
   // Returns array of published properties names of the given class and its parent classes
   function GetClassPropertyNames(AClass: TClass): TRTTINames;
   {  Returns array of published method names of the given class.
      If ScanParents is True published methods of parent classes are also included. }
   function GetClassMethodNames(AClass: TClass; ScanParents: Boolean): TRTTINames;
+  // Returns class of object property. Owner class is needed in FPC only.
+  function GetObjectPropClass(OwnerClass: TClass; PropInfo: PPropInfo): TClass;
 
   { Invokes parameterless procedure method with the given name of the given class and returns True
     or returns False if such method not found }
@@ -58,13 +60,13 @@ implementation
 
 uses CECommon, CEBaseTypes;
 
-function GetClassPropList(AClass: TClass; out PropInfos: PPropList): Integer;
+function GetClassPropList(AClass: TClass; out PropInfos: PPropList; PropType: TTypeKinds = tkProperties): Integer;
 begin
   // Get count of published properties
-  Result := GetPropList(AClass.ClassInfo, tkProperties, nil, false);
+  Result := GetPropList(AClass.ClassInfo, PropType, nil, false);
   // Allocate memory for all data
   GetMem(PropInfos, Result * SizeOf(PPropInfo));
-  GetPropList(AClass.ClassInfo, tkProperties, PropInfos, false);
+  GetPropList(AClass.ClassInfo, PropType, PropInfos, false);
 end;
 
 function GetClassPropertyNames(AClass: TClass): TRTTINames;
@@ -143,6 +145,15 @@ begin
     AddMethods(MethodTable, Result);
     AClass := AClass.ClassParent;
   end;
+end;
+
+function GetObjectPropClass(OwnerClass: TClass; PropInfo: PPropInfo): TClass;
+begin
+  {$IFDEF FPC}
+  Result := TypInfo.GetObjectPropClass(OwnerClass, PropInfo^.Name);
+  {$ELSE}
+  Result := TypInfo.GetObjectPropClass(PropInfo);
+  {$ENDIF}
 end;
 
 {$IFNDEF UNICODE_STRING}

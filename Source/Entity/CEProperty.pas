@@ -72,6 +72,46 @@ type
     ptClass
   );
 
+  { Type for serializable binary data.
+    Published properties of descendant types will be included during serialization and deserialization.
+    Actual type of such property should be always equal to its declared type.
+    During destruction of an entity destructors of all published properties of descendant types will be called. }
+  TCEBinaryData = class
+  public
+    // Indicates whether this instance is bound to an entity or must be destroyed by containing TCEProperties instance
+    Bound: Boolean;
+    // Init instance with data from the given instance
+    procedure Assign(AData: TCEBinaryData); virtual; abstract;
+    // Reads binary data from input stream and returns True if success.
+    function Read(IStream: TCEInputStream): Boolean; virtual; abstract;
+    // Writes binary data to output stream and returns True if success.
+    function Write(OStream: TCEOutputStream): Boolean; virtual; abstract;
+  end;
+  // Serializable binary data metaclass
+  CCEBinaryData = class of TCEBinaryData;
+
+  // Dynamic array if byte based binary data implementation
+  TDynamicArray = class(TCEBinaryData)
+  public
+    Data: array of Byte;
+    destructor Destroy(); override;
+    procedure Assign(AData: TCEBinaryData); override;
+    function Read(IStream: TCEInputStream): Boolean; override;
+    function Write(OStream: TCEOutputStream): Boolean; override;
+  end;
+
+  // Pointer based binary data implementation
+  TPointerData = class(TCEBinaryData)
+  public
+    Data: Pointer;
+    Size: Integer;
+    destructor Destroy(); override;
+    procedure Assign(AData: TCEBinaryData); override;
+    function Read(IStream: TCEInputStream): Boolean; override;
+    function Write(OStream: TCEOutputStream): Boolean; override;
+    procedure Allocate(ASize: Integer);
+  end;
+
   PCEPropertyValue = ^TCEPropertyValue;
   // Data structure representing a property value
   TCEPropertyValue = packed record
@@ -91,8 +131,8 @@ type
 //        ptAnsiString: (AsPAnsiChar: PAnsiChar);
 //        ptString: (AsPUnicodeString: PUnicodeString);
       ptObjectLink: (Linked: TObject; FQN: PCEEntityName);
-      ptBinary: (Data: Pointer; Size: Integer);
-      //ptDynArray, ptMethod, ptVariant, ptArray, ptRecord, ptInterface, ptProcedure: ();
+      ptBinary: (AsData: TCEBinaryData; BinDataClass: CCEBinaryData);
+      //, ptMethod, ptVariant, ptInterface: ();
   end;
 
   PCEProperty = ^TCEProperty;
@@ -198,6 +238,88 @@ begin
   Result := v1.Name = v2.Name;
 end;
 
+{ TDynamicArray }
+
+destructor TDynamicArray.Destroy;
+begin
+  SetLength(Data, 0);
+  Data := nil;
+  inherited;
+end;
+
+procedure TDynamicArray.Assign(AData: TCEBinaryData);
+begin
+  if AData <> nil then Data := TDynamicArray(AData).Data;
+end;
+
+function TDynamicArray.Read(IStream: TCEInputStream): Boolean;
+var DataSize: Integer;
+begin
+  Result := False;
+  if not IStream.ReadCheck(DataSize, SizeOf(DataSize)) then Exit;
+  SetLength(Data, DataSize);
+  if DataSize > 0 then
+    if not IStream.ReadCheck(Data[0], Length(Data)) then Exit;
+  Result := True;
+end;
+
+function TDynamicArray.Write(OStream: TCEOutputStream): Boolean;
+var DataSize: Integer;
+begin
+  Result := False;
+  DataSize := Length(Data);
+  if not OStream.WriteCheck(DataSize, SizeOf(DataSize)) then Exit;
+  if DataSize > 0 then
+    if not OStream.WriteCheck(Data[0], DataSize) then Exit;
+  Result := True;
+end;
+
+{ TPointerData }
+
+destructor TPointerData.Destroy;
+begin
+  if Assigned(Data) then FreeMem(Data, Size);
+  Data := nil;
+  inherited;
+end;
+
+procedure TPointerData.Assign(AData: TCEBinaryData);
+begin
+  if AData <> nil then
+  begin
+    Allocate(TPointerData(AData).Size);
+    Move(TPointerData(AData).Data^, Data^, Size);
+  end;
+end;
+
+function TPointerData.Read(IStream: TCEInputStream): Boolean;
+begin
+  Result := False;
+  if not IStream.ReadCheck(Size, SizeOf(Size)) then Exit;
+  Allocate(Size);
+  if Size > 0 then
+    if not IStream.ReadCheck(Data^, Size) then Exit;
+  Result := True;
+end;
+
+function TPointerData.Write(OStream: TCEOutputStream): Boolean;
+begin
+  Result := False;
+  if not OStream.WriteCheck(Size, SizeOf(Size)) then Exit;
+  if Size > 0 then
+    if not OStream.WriteCheck(Data^, Size) then Exit;
+  Result := True;
+end;
+
+procedure TPointerData.Allocate(ASize: Integer);
+begin
+  if Assigned(Data) then FreeMem(Data, Size);
+  Data := nil;
+  Size := ASize;
+  if Size > 0 then
+    GetMem(Data, Size);
+end;
+
 { TCEPropertyList }
 
 function TCEPropertyList.IndexOfName(const Name: TPropertyName): Integer;
@@ -258,7 +380,11 @@ begin
 end;
 
 destructor TCEProperties.Destroy;
+var i: Integer;
 begin
+  for i := 0 to FProperties.Count-1 do
+    if (FProperties[i].TypeId = ptBinary) and Assigned(FValues[i].AsData) and not FValues[i].AsData.Bound then
+      FValues[i].AsData.Free();
   FProperties.Free();
   FProperties := nil;
   inherited;
@@ -306,7 +432,7 @@ end;
 function TCESimplePropertyFiler.ReadArbitrary(IStream: TCEInputStream): TCEProperties;
 begin
   Result := nil;
-  raise ECEUnsupportedOperation.Create('Arbitrary properties deserialization isn''t supported');
+  raise ECEUnsupportedOperation.Create('Arbitrary properties deserialization not supported');
 end;
 
 function TCESimplePropertyFiler.Read(IStream: TCEInputStream; Properties: TCEProperties): Boolean;
@@ -335,6 +461,11 @@ begin
       ptShortString: if not CEIO.ReadShortString(IStream, Value^.AsShortString) then Exit;
       ptAnsiString: if not CEIO.ReadAnsiString(IStream, Value^.AsAnsiString) then Exit;
       ptString: if not CEIO.ReadUnicodeString(IStream, Value^.AsUnicodeString) then Exit;
+      ptBinary: begin
+        if not Assigned(Value^.AsData) or Value^.AsData.Bound then
+          Value^.AsData := Value^.BinDataClass.Create();
+        if not Value^.AsData.Read(IStream) then Exit;
+      end;
       else Assert(False, 'Invalid property type: ' + TypInfo.GetEnumName(TypeInfo(TCEPropertyType), Ord(Prop.TypeId)));
     end;
   end;
@@ -351,24 +482,28 @@ function TCESimplePropertyFiler.Write(OStream: TCEOutputStream; Properties: TCEP
   Prop: PCEProperty;
   Value: PCEPropertyValue;
 begin
-  Result := OStream.WriteCheck(SIMPLE_PROPERTIES_BEGIN_SIGNATURE, SizeOf(SIMPLE_PROPERTIES_BEGIN_SIGNATURE));
+  if Properties = nil then raise ECEInvalidArgument.Create('Properties argument is nil');
+  Result := False;
+  if not OStream.WriteCheck(SIMPLE_PROPERTIES_BEGIN_SIGNATURE, SizeOf(SIMPLE_PROPERTIES_BEGIN_SIGNATURE)) then Exit;
   for i := 0 to Properties.Count-1 do
   begin
     Prop := Properties.GetPropByIndex(i);
     Value := Properties.GetValueByIndex(i);
     case Prop^.TypeId of
       ptBoolean, ptInteger,
-      ptEnumeration, ptSet: Result := Result and OStream.WriteCheck(Value^.AsInteger, SizeOf(Value^.AsInteger));
-      ptInt64: Result := Result and OStream.WriteCheck(Value^.AsInt64, SizeOf(Value^.AsInt64));
-      ptSingle: Result := Result and OStream.WriteCheck(Value^.AsSingle, SizeOf(Value^.AsSingle));
-      ptDouble: Result := Result and OStream.WriteCheck(Value^.AsDouble, SizeOf(Value^.AsDouble));
-      ptShortString: Result := Result and CEIO.WriteShortString(OStream, Value^.AsShortString);
-      ptAnsiString: Result := Result and CEIO.WriteAnsiString(OStream, Value^.AsAnsiString);
-      ptString: Result := Result and CEIO.WriteUnicodeString(OStream, Value^.AsUnicodeString);
+      ptEnumeration, ptSet: if not OStream.WriteCheck(Value^.AsInteger, SizeOf(Value^.AsInteger)) then Exit;
+      ptInt64: if not OStream.WriteCheck(Value^.AsInt64, SizeOf(Value^.AsInt64)) then Exit;
+      ptSingle: if not OStream.WriteCheck(Value^.AsSingle, SizeOf(Value^.AsSingle)) then Exit;
+      ptDouble: if not OStream.WriteCheck(Value^.AsDouble, SizeOf(Value^.AsDouble)) then Exit;
+      ptShortString: if not CEIO.WriteShortString(OStream, Value^.AsShortString) then Exit;
+      ptAnsiString: if not CEIO.WriteAnsiString(OStream, Value^.AsAnsiString) then Exit;
+      ptString: if not CEIO.WriteUnicodeString(OStream, Value^.AsUnicodeString) then Exit;
+      ptBinary: if not Value^.AsData.Write(OStream) then Exit;
       else Assert(False, 'Invalid property type: ' + TypInfo.GetEnumName(TypeInfo(TCEPropertyType), Ord(Prop.TypeId)));
     end;
   end;
-  Result := Result and OStream.WriteCheck(SIMPLE_PROPERTIES_END_SIGNATURE, SizeOf(SIMPLE_PROPERTIES_END_SIGNATURE));
+  if not OStream.WriteCheck(SIMPLE_PROPERTIES_END_SIGNATURE, SizeOf(SIMPLE_PROPERTIES_END_SIGNATURE)) then Exit;
+  Result := True;
 end;
 
 function GetClassProperties(AClass: TClass): TCEProperties;
@@ -382,6 +517,7 @@ var
   PropInfo: PPropInfo;
   Count, i: Integer;
   Value: PCEPropertyValue;
+  OClass: TClass;
 begin
   Assert((AObj = nil) or (AObj.ClassType = AClass));
   Result := TCEProperties.Create();
@@ -475,9 +611,18 @@ begin
         end;
 
         tkClass: begin
-          Value := Result.AddProp(PropInfo^.Name, ptClass);
-//          Value^.AsClass := TClass(TypInfo.GetOrdProp(AObj, PropInfo));
-        end
+          OClass := CERttiUtil.GetObjectPropClass(AClass, PropInfo);
+          if OClass.InheritsFrom(TCEBinaryData) then
+          begin
+            Value := Result.AddProp(PropInfo^.Name, ptBinary);
+            Value^.BinDataClass := CCEBinaryData(OClass);
+            if Assigned(AObj) then
+            begin
+              Value^.AsData := Value^.BinDataClass.Create();
+              Value^.AsData.Assign(TCEBinaryData(TypInfo.GetObjectProp(AObj, PropInfo)));
+            end;
+          end;
+        end;
         else
           raise ECEPropertyError.Create('Unsupported property type: ' + string(PropInfo^.PropType^.Name));
       end;
@@ -511,7 +656,10 @@ end;
 
       ptPointer: ;
       ptObjectLink: ;
-      ptBinary: ;
+      ptBinary: begin
+        TypInfo.SetObjectProp(AObj, Prop.Name, Value.AsData);
+        Value.AsData.Bound := True;
+      end;
       ptObject: ;
       ptClass: ;
       else

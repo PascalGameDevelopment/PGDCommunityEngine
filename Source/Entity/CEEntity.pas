@@ -38,9 +38,10 @@ const
   // Entity hierarchy delimiter
   HierarchyDelimiter = '/';
 
-  type
+type
   {$TYPEINFO ON}
   TCEBaseEntity = class;
+  // Binary data record
   {$TYPEINFO OFF}
 
   CCEEntity = class of TCEBaseEntity;
@@ -51,9 +52,20 @@ const
   // Entity list
   TCEEntityList = _GenVector;
 
+{  TObjectLinkFlag = (lfAbsolute);
+  // @Exclude()
+  TObjectLinkFlags = set of TObjectLinkFlag;
+  // @Exclude() Item link property data
+  TObjectLink = record
+    Flags: TObjectLinkFlags;
+    PropName, ObjectName: AnsiString;
+    Item: TItem;
+    BaseClass: CItem;
+  end;}
+
   TCEBaseEntityManager = class
   private
-    fEntityClasses: array of CCEEntity;
+    FEntityClasses: array of CCEEntity;
   public
     // Registers an entity class. Only entities of registered classes can be saved/loaded or be linked to via an object link property.
     procedure RegisterEntityClass(NewClass: CCEEntity);
@@ -81,6 +93,7 @@ const
     FPropertyFiler: TCESimplePropertyFiler;
   public
     constructor Create(AManager: TCEBaseEntityManager);
+    destructor Destroy; override;
     function ReadEntity(IStream: TCEInputStream): TCEBaseEntity; override;
     function WriteEntity(OStream: TCEOutputStream; Entity: TCEBaseEntity): Boolean; override;
   end;
@@ -92,12 +105,20 @@ const
   private
     procedure SetName(const Value: TCEEntityName);
     procedure SetParent(const Value: TCEBaseEntity);
+    // Destroys all childs recursively
+    procedure DestroyChilds;
+    // Destroys all published binary data properties
+    procedure CleanupBinaryData;
   protected
-    fName: TCEEntityName;
-    fParent: TCEBaseEntity;
-    fChilds: TCEEntityList;
+    FName: TCEEntityName;
+    FParent: TCEBaseEntity;
+    FChilds: TCEEntityList;
   public
     class function GetClass: CCEEntity;
+    // Creates an empty property collection
+    constructor Create(); overload;
+    // Destroys the property collection
+    destructor Destroy; override;
     { Copies all data and properties from ASource to the item.
       Descendants should override this method in order to handle specific fields if any. }
     procedure Assign(ASource: TCEBaseEntity); virtual;
@@ -116,14 +137,16 @@ const
       Descendant classes may override this method to handle more properties. }
     procedure SetProperties(const Properties: TCEProperties); virtual;
 
-    property Parent: TCEBaseEntity read fParent write SetParent;
-    property Childs: TCEEntityList read fChilds;
+    property Parent: TCEBaseEntity read FParent write SetParent;
+    property Childs: TCEEntityList read FChilds;
   published
     // Name used for references to the entity
-    property Name: TCEEntityName read fName write SetName;
+    property Name: TCEEntityName read FName write SetName;
   end;
 
 implementation
+
+uses CERttiUtil, TypInfo;
 
 {$MESSAGE 'Instantiating TEntityList'}
 {$I tpl_coll_vector.inc}
@@ -139,17 +162,68 @@ end;
 
 procedure TCEBaseEntity.SetName(const Value: TCEEntityName);
 begin
-  fName := Value;
+  FName := Value;
 end;
 
 procedure TCEBaseEntity.SetParent(const Value: TCEBaseEntity);
 begin
-  fParent := Value;
+  FParent := Value;
+end;
+
+procedure TCEBaseEntity.CleanupBinaryData();
+var
+  PropInfos: PPropList;
+  PropInfo: PPropInfo;
+  Count, i: Integer;
+  BinaryData: TCEBinaryData;
+begin
+  Count := CERttiUtil.GetClassPropList(ClassType, PropInfos, [tkClass]);
+  try
+    for i := 0 to Count - 1 do
+    begin
+      PropInfo := PropInfos^[i];
+      if PropInfo^.PropType^.Kind = tkClass then
+      begin
+        if CERttiUtil.GetObjectPropClass(ClassType, PropInfo).InheritsFrom(TCEBinaryData) then
+        begin
+          BinaryData := TCEBinaryData(TypInfo.GetObjectProp(Self, PropInfo));
+          if Assigned(BinaryData) then
+            BinaryData.Free();
+        end;
+      end;
+    end;
+  finally
+    FreeMem(PropInfos);
+  end;
+end;
+
+procedure TCEBaseEntity.DestroyChilds;
+var i: Integer;
+begin
+  if not Assigned(FChilds) then Exit;
+  i := Childs.Count - 1;
+  while i >= 0 do begin
+    if Assigned(Childs[i]) then FChilds[i].Free();
+    Dec(i);
+  end;
 end;
 
 class function TCEBaseEntity.GetClass: CCEEntity;
 begin
   Result := Self;
+end;
+
+constructor TCEBaseEntity.Create;
+begin
+end;
+
+destructor TCEBaseEntity.Destroy;
+begin
+  DestroyChilds();
+  CleanupBinaryData();
+  FChilds.Free();
+  FChilds := nil;
+  inherited;
 end;
 
 procedure TCEBaseEntity.Assign(ASource: TCEBaseEntity);
@@ -186,10 +260,10 @@ begin
   Assert(Self <> nil);
   Assert(AEntity <> nil);
   Assert(not Assigned(AEntity.Parent), 'TCEBaseEntity.AddChild: entity "' + AEntity.GetFullName + '" already has a parent');
-  if not Assigned(fChilds) then fChilds := TCEEntityList.Create();
+  if not Assigned(FChilds) then FChilds := TCEEntityList.Create();
 
   AEntity.Parent := Self;
-  fChilds.Add(AEntity);
+  FChilds.Add(AEntity);
 end;
 
 function TCEBaseEntity.GetProperties(): TCEProperties;
@@ -208,6 +282,11 @@ constructor TCESimpleEntityFiler.Create(AManager: TCEBaseEntityManager);
 begin
   FPropertyFiler := TCESimplePropertyFiler.Create();
   inherited Create(AManager);
+end;
+
+destructor TCESimpleEntityFiler.Destroy();
+begin
+  if Assigned(FPropertyFiler) then FPropertyFiler.Free();
 end;
 
 function TCESimpleEntityFiler.ReadEntity(IStream: TCEInputStream): TCEBaseEntity;
@@ -289,8 +368,8 @@ begin
     //Log(ClassName + '.RegisterEntityClass: Class "' + NewClass.ClassName + '" already registered', lkWarning);
     Exit;
   end;
-  SetLength(fEntityClasses, Length(fEntityClasses) + 1);
-  fEntityClasses[High(fEntityClasses)] := NewClass;
+  SetLength(FEntityClasses, Length(FEntityClasses) + 1);
+  FEntityClasses[High(FEntityClasses)] := NewClass;
 end;
 
 procedure TCEBaseEntityManager.RegisterEntityClasses(NewClasses: array of TClass);
@@ -306,9 +385,9 @@ function TCEBaseEntityManager.GetEntityClass(const Name: TCEEntityClassName): CC
 var i: Integer;
 begin
   Result := nil;
-  i := High(fEntityClasses);
-  while (i >= 0) and (TCEEntityClassName(fEntityClasses[i].ClassName) <> Name) do Dec(i);
-  if i >= 0 then Result := fEntityClasses[i];
+  i := High(FEntityClasses);
+  while (i >= 0) and (TCEEntityClassName(FEntityClasses[i].ClassName) <> Name) do Dec(i);
+  if i >= 0 then Result := FEntityClasses[i];
 end;
 
 end.
