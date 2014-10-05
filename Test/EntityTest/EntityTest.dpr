@@ -239,7 +239,7 @@ procedure TEntityTest.TestSaveLoad;
 var
   Parent: TEntity1;
   Child: TEntity2;
-  Manager: TCEBaseEntityManager;
+  Manager: TCEEntityManager;
   Filer: TCESimpleEntityFiler;
   outs: TCEFileOutputStream;
   ins: TCEFileInputStream;
@@ -255,7 +255,7 @@ begin
   Child.Name := 'Child';
   Parent.AddChild(Child);
 
-  Manager := TCEBaseEntityManager.Create();
+  Manager := TCEEntityManager.Create();
   Manager.RegisterEntityClasses([TEntity1, TEntity2]);
 
   Filer := TCESimpleEntityFiler.Create(Manager);
@@ -276,6 +276,9 @@ begin
   Assert(_Check(Loaded.Childs[0].Parent = Loaded), 'Parent fail');
   Assert(_Check(((Loaded as TEntity1).Int = Parent.Int) and ((Loaded as TEntity1).Str = Parent.Str)), 'Props1 fail');
   Assert(_Check(((Loaded.Childs[0] as TEntity2).Dbl = Child.Dbl) and ((Loaded.Childs[0] as TEntity2).fBigInt = Child.BigInt)), 'Props2 fail');
+
+  Manager.Root := Parent;
+  Assert(_Check(Manager.Find('/Parent/Child') = Child), 'Find fail');
 
   Loaded.Free();
   Parent.Free();

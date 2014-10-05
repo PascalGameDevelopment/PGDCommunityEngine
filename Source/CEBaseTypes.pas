@@ -33,6 +33,10 @@ interface
 
 uses SysUtils;
 
+const
+  // Index of first character in strings
+  STRING_INDEX_BASE = 1;
+
 type
   {$IF not Declared(UnicodeString)}
     UnicodeString = WideString;

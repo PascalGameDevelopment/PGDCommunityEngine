@@ -36,7 +36,7 @@ uses
 
 const
   // Entity hierarchy delimiter
-  HierarchyDelimiter = '/';
+  HIERARCHY_DELIMITER = '/';
 
 type
   {$TYPEINFO ON}
@@ -73,6 +73,15 @@ type
     procedure RegisterEntityClasses(NewClasses: array of TClass);
     // Returns an entity class by its name or nil if not registered
     function GetEntityClass(const Name: TCEEntityClassName): CCEEntity;
+  end;
+
+  TCEEntityManager = class(TCEBaseEntityManager)
+  private
+    FRoot: TCEBaseEntity;
+  public
+    // Returns an entity in hierarchy by its full absolute (starting with "/") name or nil if not found
+    function Find(const FullName: TCEEntityName): TCEBaseEntity;
+    property Root: TCEBaseEntity read FRoot write FRoot;
   end;
 
   // Abstract class responsible for entities serialization / deserialization
@@ -125,8 +134,13 @@ type
     // Creates and returns a clone of the item with all data and properties having the same value as in source.
     function Clone: TCEBaseEntity;
 
+    // Returns entities name with its full path in hierarchy
     function GetFullName: TCEEntityName;
+    // Adds the specified entity as a child to this entity
     procedure AddChild(AEntity: TCEBaseEntity);
+    // Returns child with the given name or nil if there is no such child
+    function FindChild(const Name: TCEEntityName): TCEBaseEntity;
+
     { Retrieves a set of entity's properties and their values.
       The basic implementation retrieves published properties using RTTI.
       Descendant classes may override this method and modify the set of properties.
@@ -146,7 +160,7 @@ type
 
 implementation
 
-uses CERttiUtil, TypInfo;
+uses CERttiUtil, TypInfo, SysUtils;
 
 {$MESSAGE 'Instantiating TEntityList'}
 {$I tpl_coll_vector.inc}
@@ -247,10 +261,10 @@ end;
 function TCEBaseEntity.GetFullName: TCEEntityName;
 var Entity: TCEBaseEntity;
 begin
-  Result := HierarchyDelimiter + Name;
+  Result := HIERARCHY_DELIMITER + Name;
   Entity := Self.Parent;
   while Entity <> nil do begin
-    Result := HierarchyDelimiter + Entity.Name + Result;
+    Result := HIERARCHY_DELIMITER + Entity.Name + Result;
     Entity := Entity.Parent;
   end;
 end;
@@ -264,6 +278,15 @@ begin
 
   AEntity.Parent := Self;
   FChilds.Add(AEntity);
+end;
+
+function TCEBaseEntity.FindChild(const Name: TCEEntityName): TCEBaseEntity;
+var i: Integer;
+begin
+  Result := nil;
+  i := FChilds.Count-1;
+  while (i >= 0) and (FChilds[i].Name <> Name) do Dec(i);
+  if i >= 0 then Result := FChilds[i];
 end;
 
 function TCEBaseEntity.GetProperties(): TCEProperties;
@@ -388,6 +411,46 @@ begin
   i := High(FEntityClasses);
   while (i >= 0) and (TCEEntityClassName(FEntityClasses[i].ClassName) <> Name) do Dec(i);
   if i >= 0 then Result := FEntityClasses[i];
+end;
+
+function CharPos(const ch: AnsiChar; const s: AnsiString; const Start: Integer ): Integer;
+begin       // TODO: optimize
+  Result := Pos(ch, Copy(s, Start, Length(s)));
+  if Result >= STRING_INDEX_BASE then
+    Result := Result + Start
+  else
+    Result := -1;
+end;
+
+function GetNextIndex(const s: TCEEntityName; PrevI, len: Integer): Integer; {$I inline.inc}
+begin
+  Result := CharPos(HIERARCHY_DELIMITER, s, PrevI);
+  if Result < 0 then Result := len;
+end;
+
+function TCEEntityManager.Find(const FullName: TCEEntityName): TCEBaseEntity;
+var
+  Cur: TCEBaseEntity;
+  pi, ni, len: Integer;
+begin
+  Result := FRoot;
+  if not Assigned(FRoot) then Exit;
+  pi := STRING_INDEX_BASE + 1 + Length(FRoot.Name) + 1;
+  {$IFDEF DEBUG}
+  if Copy(FullName, STRING_INDEX_BASE, pi - STRING_INDEX_BASE - 1) <> HIERARCHY_DELIMITER + FRoot.Name then
+    raise ECEInvalidArgument.Create('Absolute name should start with "' + HIERARCHY_DELIMITER + '<root entity name>"');
+  {$ENDIF}
+  len := Length(FullName) + STRING_INDEX_BASE;
+  ni := GetNextIndex(FullName, pi, len);
+  while ni < len do
+  begin
+    Result := Result.FindChild(Copy(FullName, pi, ni - pi));
+    if Result = nil then Exit;
+
+    pi := ni + 1;
+    ni := GetNextIndex(FullName, pi, len);
+  end;
+  Result := Result.FindChild(Copy(FullName, pi, ni - pi));
 end;
 
 end.
