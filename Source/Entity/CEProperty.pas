@@ -10,7 +10,7 @@
   either express or implied.  See the license for the specific language governing
   rights and limitations under the license.
 
-  The Original Code is CEEntity.pas
+  The Original Code is CEProperty.pas
 
   The Initial Developer of the Original Code is documented in the accompanying
   help file PGDCE.chm.  Portions created by these individuals are Copyright (C)
@@ -128,9 +128,7 @@ type
       ptObject: (AsObject: TObject);
       ptClass: (AsClass: TClass);
       ptPointer: (AsPointer: Pointer);
-//        ptAnsiString: (AsPAnsiChar: PAnsiChar);
-//        ptString: (AsPUnicodeString: PUnicodeString);
-      ptObjectLink: (Linked: TObject; FQN: PCEEntityName);
+      ptObjectLink: (Linked: TObject; LinkedClass: CCEAbstractEntity);
       ptBinary: (AsData: TCEBinaryData; BinDataClass: CCEBinaryData);
       //, ptMethod, ptVariant, ptInterface: ();
   end;
@@ -466,6 +464,7 @@ begin
           Value^.AsData := Value^.BinDataClass.Create();
         if not Value^.AsData.Read(IStream) then Exit;
       end;
+      ptObjectLink: if not CEIO.ReadAnsiString(IStream, Value^.AsAnsiString) then Exit;
       else Assert(False, 'Invalid property type: ' + TypInfo.GetEnumName(TypeInfo(TCEPropertyType), Ord(Prop.TypeId)));
     end;
   end;
@@ -499,6 +498,7 @@ begin
       ptAnsiString: if not CEIO.WriteAnsiString(OStream, Value^.AsAnsiString) then Exit;
       ptString: if not CEIO.WriteUnicodeString(OStream, Value^.AsUnicodeString) then Exit;
       ptBinary: if not Value^.AsData.Write(OStream) then Exit;
+      ptObjectLink: if not CEIO.WriteAnsiString(OStream, Value^.AsAnsiString) then Exit;
       else Assert(False, 'Invalid property type: ' + TypInfo.GetEnumName(TypeInfo(TCEPropertyType), Ord(Prop.TypeId)));
     end;
   end;
@@ -612,7 +612,7 @@ begin
 
         tkClass: begin
           OClass := CERttiUtil.GetObjectPropClass(AClass, PropInfo);
-          if OClass.InheritsFrom(TCEBinaryData) then
+          if OClass.InheritsFrom(TCEBinaryData) then                    // Binary data case
           begin
             Value := Result.AddProp(PropInfo^.Name, ptBinary);
             Value^.BinDataClass := CCEBinaryData(OClass);
@@ -621,7 +621,17 @@ begin
               Value^.AsData := Value^.BinDataClass.Create();
               Value^.AsData.Assign(TCEBinaryData(TypInfo.GetObjectProp(AObj, PropInfo)));
             end;
-          end;
+          end else if OClass.InheritsFrom(TCEAbstractEntity) then       // Object link case
+          begin
+            Value := Result.AddProp(PropInfo^.Name, ptObjectLink);
+            Value^.LinkedClass := CCEAbstractEntity(OClass);
+            if Assigned(AObj) then
+            begin
+              Value^.Linked := TypInfo.GetObjectProp(AObj, PropInfo);
+              Value^.AsAnsiString := TCEAbstractEntity(Value^.Linked).GetFullName();
+            end;
+          end else
+            raise ECEPropertyError.Create('Property of unsupported class: ' + string(OClass.ClassName));
         end;
         else
           raise ECEPropertyError.Create('Unsupported property type: ' + string(PropInfo^.PropType^.Name));
@@ -655,7 +665,15 @@ end;
       ptString: TypInfo.SetStrProp(AObj, Prop.Name, Value.AsUnicodeString);
 
       ptPointer: ;
-      ptObjectLink: ;
+      ptObjectLink: begin
+        if ((Value.LinkedClass <> nil) and (Value.Linked is Value.LinkedClass)) or (Value.Linked is TCEAbstractEntity) then
+          TypInfo.SetObjectProp(AObj, Prop.Name, Value.Linked)
+        else
+          if AObj is TCEAbstractEntity then
+            TCEAbstractEntity(AObj).SetObjectLink(Prop.Name, Value.AsAnsiString)
+          else
+            raise ECEPropertyError.Create('Class doesn''t support object links: ' + string(AObj.ClassName));
+      end;
       ptBinary: begin
         TypInfo.SetObjectProp(AObj, Prop.Name, Value.AsData);
         Value.AsData.Bound := True;

@@ -10,7 +10,7 @@
   either express or implied.  See the license for the specific language governing
   rights and limitations under the license.
 
-  The Original Code is CECore.pas
+  The Original Code is CEBaseTypes.pas
 
   The Initial Developer of the Original Code is documented in the accompanying
   help file PGDCE.chm.  Portions created by these individuals are Copyright (C)
@@ -68,6 +68,17 @@ type
   // Occurs when an invalid argument passed to a method or routine
   ECEInvalidArgument = class(ECEError)
   end;
+
+  // Abstract class for any kind of entities with most generic properties
+  TCEAbstractEntity = class
+  public
+    // Should return unique name of this entity
+    function GetFullName: TCEEntityName; virtual; abstract;
+    // Set full name of a linked object so it can be resolved in future
+    procedure SetObjectLink(const PropertyName: string; const FullName: TCEEntityName); virtual; abstract;
+  end;
+  // Abstract entity metaclass
+  CCEAbstractEntity = class of TCEAbstractEntity;
 
   // Pointer to source code location
   PCodeLocation = ^TCodeLocation;

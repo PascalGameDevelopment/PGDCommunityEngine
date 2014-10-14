@@ -44,6 +44,7 @@ type
   // Binary data record
   {$TYPEINFO OFF}
 
+  // Entity metaclass
   CCEEntity = class of TCEBaseEntity;
 
   _VectorValueType = TCEBaseEntity;
@@ -52,16 +53,12 @@ type
   // Entity list
   TCEEntityList = _GenVector;
 
-{  TObjectLinkFlag = (lfAbsolute);
-  // @Exclude()
-  TObjectLinkFlags = set of TObjectLinkFlag;
-  // @Exclude() Item link property data
-  TObjectLink = record
-    Flags: TObjectLinkFlags;
-    PropName, ObjectName: AnsiString;
-    Item: TItem;
-    BaseClass: CItem;
-  end;}
+  {$MESSAGE 'Instantiating TStringEntityNameMap interface'}
+  _HashMapKeyType = string;
+  _HashMapValueType = TCEEntityName;
+  {$I tpl_coll_hashmap.inc}
+  // Maps property name to full entity name
+  TStringEntityNameMap = _GenHashMap;
 
   TCEBaseEntityManager = class
   private
@@ -78,18 +75,19 @@ type
   TCEEntityManager = class(TCEBaseEntityManager)
   private
     FRoot: TCEBaseEntity;
+    procedure SetRoot(ARoot: TCEBaseEntity);
   public
     // Returns an entity in hierarchy by its full absolute (starting with "/") name or nil if not found
     function Find(const FullName: TCEEntityName): TCEBaseEntity;
-    property Root: TCEBaseEntity read FRoot write FRoot;
+    property Root: TCEBaseEntity read FRoot write SetRoot;
   end;
 
   // Abstract class responsible for entities serialization / deserialization
   TCEBaseEntityFiler = class
   protected
-    FManager: TCEBaseEntityManager;
+    FManager: TCEEntityManager;
   public
-    constructor Create(AManager: TCEBaseEntityManager);
+    constructor Create(AManager: TCEEntityManager);
     // Reads and fills values of specified in Properties list of properties from input stream and returns True if success.
     function ReadEntity(IStream: TCEInputStream): TCEBaseEntity; virtual; abstract;
     // Writes properties to output stream and returns True if success.
@@ -101,7 +99,7 @@ type
   private
     FPropertyFiler: TCESimplePropertyFiler;
   public
-    constructor Create(AManager: TCEBaseEntityManager);
+    constructor Create(AManager: TCEEntityManager);
     destructor Destroy; override;
     function ReadEntity(IStream: TCEInputStream): TCEBaseEntity; override;
     function WriteEntity(OStream: TCEOutputStream; Entity: TCEBaseEntity): Boolean; override;
@@ -110,8 +108,9 @@ type
   { @Abstract(Base entity class)
     Responsible for hierarchy and serialization
     }
-  TCEBaseEntity = class
+  TCEBaseEntity = class(TCEAbstractEntity)
   private
+    FEntityLinkMap: TStringEntityNameMap;
     procedure SetName(const Value: TCEEntityName);
     procedure SetParent(const Value: TCEBaseEntity);
     // Destroys all childs recursively
@@ -122,6 +121,7 @@ type
     FName: TCEEntityName;
     FParent: TCEBaseEntity;
     FChilds: TCEEntityList;
+    FManager: TCEEntityManager;
   public
     class function GetClass: CCEEntity;
     // Creates an empty property collection
@@ -134,8 +134,12 @@ type
     // Creates and returns a clone of the item with all data and properties having the same value as in source.
     function Clone: TCEBaseEntity;
 
-    // Returns entities name with its full path in hierarchy
-    function GetFullName: TCEEntityName;
+    // Returns name of this entity with its full path in hierarchy
+    function GetFullName: TCEEntityName; override;
+    // Resolves and returns entity link or nil if resolve failed
+    function ResolveObjectLink(const PropertyName: string): TCEBaseEntity;
+    // Sets entity link value and attempts to resolve it
+    procedure SetObjectLink(const PropertyName: string; const FullName: TCEEntityName); override;
     // Adds the specified entity as a child to this entity
     procedure AddChild(AEntity: TCEBaseEntity);
     // Returns child with the given name or nil if there is no such child
@@ -160,14 +164,17 @@ type
 
 implementation
 
-uses CERttiUtil, TypInfo, SysUtils;
+uses CECommon, CERttiUtil, TypInfo, SysUtils;
 
 {$MESSAGE 'Instantiating TEntityList'}
 {$I tpl_coll_vector.inc}
 
+{$MESSAGE 'Instantiating TStringEntityNameMap'}
+{$I tpl_coll_hashmap.inc}
+
 { TCEBaseEntityFiler }
 
-constructor TCEBaseEntityFiler.Create(AManager: TCEBaseEntityManager);
+constructor TCEBaseEntityFiler.Create(AManager: TCEEntityManager);
 begin
   FManager := AManager;
 end;
@@ -177,6 +184,23 @@ end;
 procedure TCEBaseEntity.SetName(const Value: TCEEntityName);
 begin
   FName := Value;
+end;
+
+function TCEBaseEntity.ResolveObjectLink(const PropertyName: string): TCEBaseEntity;
+begin
+  Result := nil;
+  if not Assigned(FManager) then Exit;
+  Result := FManager.Find(FEntityLinkMap[PropertyName]);
+  if Assigned(Result) then
+    FEntityLinkMap[PropertyName] := '';                 // Link was resolved so no need to store full name
+end;
+
+procedure TCEBaseEntity.SetObjectLink(const PropertyName: string; const FullName: TCEEntityName);
+begin
+  if not Assigned(FEntityLinkMap) then
+    FEntityLinkMap := TStringEntityNameMap.Create();
+  FEntityLinkMap[PropertyName] := FullName;
+  ResolveObjectLink(PropertyName);
 end;
 
 procedure TCEBaseEntity.SetParent(const Value: TCEBaseEntity);
@@ -237,6 +261,8 @@ begin
   CleanupBinaryData();
   FChilds.Free();
   FChilds := nil;
+  if Assigned(FEntityLinkMap) then
+    FEntityLinkMap.Free();
   inherited;
 end;
 
@@ -277,6 +303,7 @@ begin
   if not Assigned(FChilds) then FChilds := TCEEntityList.Create();
 
   AEntity.Parent := Self;
+  AEntity.FManager := FManager;
   FChilds.Add(AEntity);
 end;
 
@@ -301,7 +328,7 @@ end;
 
 { TCESimpleEntityFiler }
 
-constructor TCESimpleEntityFiler.Create(AManager: TCEBaseEntityManager);
+constructor TCESimpleEntityFiler.Create(AManager: TCEEntityManager);
 begin
   FPropertyFiler := TCESimplePropertyFiler.Create();
   inherited Create(AManager);
@@ -330,11 +357,14 @@ begin
   EntityClass := FManager.GetEntityClass(s);
   if EntityClass = nil then
   begin
-//    Log(ClassName + '.LoadItem: Unknown item class "' + s + '". Substitued by TItem', lkError);
+// TODO:   Log(ClassName + '.LoadItem: Unknown item class "' + s + '". Substitued by TItem', lkError);
     EntityClass := TCEBaseEntity;  // TPropertyEntity;
   end;
 
   Result := EntityClass.Create();
+
+  if not Assigned(FManager.Root) then
+    FManager.Root := Result;
 
   Props := CEProperty.GetClassProperties(EntityClass);
   try
@@ -380,6 +410,7 @@ begin
   finally
     Props.Free();
   end;
+  Result := True;
 end;
 
 { TCEBaseEntityManager }
@@ -413,13 +444,13 @@ begin
   if i >= 0 then Result := FEntityClasses[i];
 end;
 
-function CharPos(const ch: AnsiChar; const s: AnsiString; const Start: Integer ): Integer;
-begin       // TODO: optimize
-  Result := Pos(ch, Copy(s, Start, Length(s)));
-  if Result >= STRING_INDEX_BASE then
-    Result := Result + Start
-  else
-    Result := -1;
+{ TCEEntityManager }
+
+procedure TCEEntityManager.SetRoot(ARoot: TCEBaseEntity);
+begin
+  FRoot := ARoot;
+  if Assigned(FRoot) then
+    FRoot.FManager := Self;
 end;
 
 function GetNextIndex(const s: TCEEntityName; PrevI, len: Integer): Integer; {$I inline.inc}
