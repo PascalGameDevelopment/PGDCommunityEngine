@@ -94,6 +94,14 @@ type
     property BigInt: Int64 read fBigInt write fBigInt;
   end;
 
+  TLinkingEntity = class(TCEBaseEntity)
+  private
+    FLinked: TEntity2;
+    function GetLinked: TEntity2;
+  published
+    property Linked: TEntity2 read GetLinked write FLinked;
+  end;
+
   // Base class for all entity classes tests
   TEntityTest = class(TTestSuite)
   private
@@ -188,17 +196,19 @@ var
   e1, e2: TTestEntity;
   Props: TCEProperties;
 begin
-  e1 := CreateTestEntity();
-  e2 := TTestEntity.Create();
+  with CreateRefcountedContainer() do
+  begin
+    e1 := CreateTestEntity();
+    Managed.AddObject(e1);
+    e2 := TTestEntity.Create();
+    Managed.AddObject(e2);
 
-  Props := e1.GetProperties();
-  e2.SetProperties(Props);
-  Props.Free();
+    Props := e1.GetProperties();
+    Managed.AddObject(Props);
+    e2.SetProperties(Props);
 
-  CheckEqual(e1, e2, 'Get/Set ');
-
-  e1.Free();
-  e2.Free();
+    CheckEqual(e1, e2, 'Get/Set ');
+  end;
 end;
 
 procedure TEntityTest.TestWriteRead;
@@ -209,80 +219,111 @@ var
   ins: TCEFileInputStream;
   Filer: TCEPropertyFilerBase;
 begin
-  e1 := CreateTestEntity();
-  e2 := TTestEntity.Create();
-  Filer := TCESimplePropertyFiler.Create;
+  with CreateRefcountedContainer() do
+  begin
+    e1 := CreateTestEntity();
+    Managed.AddObject(e1);
+    e2 := TTestEntity.Create();
+    Managed.AddObject(e2);
+    Filer := TCESimplePropertyFiler.Create;
+    Managed.AddObject(Filer);
 
-  Props1 := e1.GetProperties();
-  outs := TCEFileOutputStream.Create('props.p');
-  Filer.Write(outs, Props1);
-  Props1.Free();
-  outs.Free();
+    Props1 := e1.GetProperties();
+    Managed.AddObject(Props1);
 
-  ins := TCEFileInputStream.Create('props.p');
-  Props2 := e2.GetProperties();
-  Filer.Read(ins, Props2);
-  ins.Free();
+    outs := TCEFileOutputStream.Create('props.p');
+    Managed.AddObject(outs);
+    Filer.Write(outs, Props1);
+    outs.Close();
 
-  Filer.Free();
-  e2.SetProperties(Props2);
+    ins := TCEFileInputStream.Create('props.p');
+    Managed.AddObject(ins);
+    Props2 := e2.GetProperties();
+    Managed.AddObject(Props2);
+    Filer.Read(ins, Props2);
 
-  Props2.Free();
+    e2.SetProperties(Props2);
 
-  CheckEqual(e1, e2, 'Read/Write ');
-
-  e1.Free();
-  e2.Free();
+    CheckEqual(e1, e2, 'Read/Write ');
+  end;
 end;
 
 procedure TEntityTest.TestSaveLoad;
 var
   Parent: TEntity1;
   Child: TEntity2;
-  Manager: TCEEntityManager;
-  Filer: TCESimpleEntityFiler;
+  Linking: TLinkingEntity;
+  Manager, Manager2: TCEEntityManager;
+  Filer, Filer2: TCESimpleEntityFiler;
   outs: TCEFileOutputStream;
   ins: TCEFileInputStream;
   Loaded: TCEBaseEntity;
 begin
-  Parent := TEntity1.Create();
-  Parent.Int := 1000;
-  Parent.Str := 'parent.Str';
-  Parent.Name := 'Parent';
-  Child := TEntity2.Create();
-  Child.Dbl := 0.800;
-  Child.BigInt := 1000000000000;
-  Child.Name := 'Child';
-  Parent.AddChild(Child);
+  with CreateRefcountedContainer() do
+  begin
+    Parent := TEntity1.Create();
+    Managed.AddObject(Parent);
+    Parent.Int := 1000;
+    Parent.Str := 'parent.Str';
+    Parent.Name := 'Parent';
+    Child := TEntity2.Create();
+    Child.Dbl := 0.800;
+    Child.BigInt := 1000000000000;
+    Child.Name := 'Child';
+    Parent.AddChild(Child);
 
-  Manager := TCEEntityManager.Create();
-  Manager.RegisterEntityClasses([TEntity1, TEntity2]);
+    Linking := TLinkingEntity.Create();
+    Linking.Name := 'Linking';
+    Linking.Linked := Child;
+    Parent.AddChild(Linking);
 
-  Filer := TCESimpleEntityFiler.Create(Manager);
-  outs := TCEFileOutputStream.Create('entity.pce');
-  Filer.WriteEntity(outs, Parent);
-  outs.Free();
+    Manager := TCEEntityManager.Create();
+    Managed.AddObject(Manager);
+    Manager.RegisterEntityClasses([TEntity1, TEntity2, TLinkingEntity]);
 
-  ins := TCEFileInputStream.Create('entity.pce');
-  Loaded := Filer.ReadEntity(ins);
-  ins.Free();
+    Manager.Root := Parent;
+    Assert(_Check(Manager.Find('/Parent/Child') = Child), 'Find fail');
 
-  Filer.Free();
+    Filer := TCESimpleEntityFiler.Create(Manager);
+    Managed.AddObject(Filer);
+    outs := TCEFileOutputStream.Create('entity.pce');
+    Managed.AddObject(outs);
+    Assert(_Check(Filer.WriteEntity(outs, Parent)), 'Write fail');
 
-  Writeln('Full name: ' + Loaded.Childs[0].GetFullName());
+    outs.Close();
 
-  Assert(_Check(Loaded is TEntity1), 'Load fail');
-  Assert(_Check(Loaded.Childs.Count = 1), 'Childs fail');
-  Assert(_Check(Loaded.Childs[0].Parent = Loaded), 'Parent fail');
-  Assert(_Check(((Loaded as TEntity1).Int = Parent.Int) and ((Loaded as TEntity1).Str = Parent.Str)), 'Props1 fail');
-  Assert(_Check(((Loaded.Childs[0] as TEntity2).Dbl = Child.Dbl) and ((Loaded.Childs[0] as TEntity2).fBigInt = Child.BigInt)), 'Props2 fail');
+    Manager2 := TCEEntityManager.Create();
+    Managed.AddObject(Manager2);
+    Manager2.RegisterEntityClasses([TEntity1, TEntity2, TLinkingEntity]);
+    Filer2 := TCESimpleEntityFiler.Create(Manager2);
+    Managed.AddObject(Filer2);
 
-  Manager.Root := Parent;
-  Assert(_Check(Manager.Find('/Parent/Child') = Child), 'Find fail');
+    ins := TCEFileInputStream.Create('entity.pce');
+    Managed.AddObject(ins);
+    Loaded := Filer2.ReadEntity(ins);
+    Managed.AddObject(Loaded);
 
-  Loaded.Free();
-  Parent.Free();
-  Manager.Free();
+    Manager2.Root := Loaded;
+
+    Writeln('Full name: ' + Loaded.Childs[0].GetFullName());
+
+    Assert(_Check(Loaded is TEntity1), 'Load fail');
+    Assert(_Check(Loaded.Childs.Count = 2), 'Childs fail');
+    Assert(_Check(Loaded.Childs[0].Parent = Loaded), 'Parent fail');
+    Assert(_Check(((Loaded as TEntity1).Int = Parent.Int) and ((Loaded as TEntity1).Str = Parent.Str)), 'Props1 fail');
+    Assert(_Check(((Loaded.Childs[0] as TEntity2).Dbl = Child.Dbl) and ((Loaded.Childs[0] as TEntity2).fBigInt = Child.BigInt)), 'Props2 fail');
+
+    Assert(_Check(Manager2.Find('/Parent/Child') = TLinkingEntity(Manager2.Find('/Parent/Linking')).Linked), 'Link fail');
+  end;
+end;
+
+{ TLinkingEntity }
+
+function TLinkingEntity.GetLinked: TEntity2;
+begin
+  if not Assigned(FLinked) then
+    FLinked := ResolveObjectLink('Linked') as TEntity2;
+  Result := FLinked;
 end;
 
 begin
