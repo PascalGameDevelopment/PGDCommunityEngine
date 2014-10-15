@@ -74,7 +74,7 @@ type
   public
     // Should return unique name of this entity
     function GetFullName: TCEEntityName; virtual; abstract;
-    // Set full name of a linked object so it can be resolved in future
+    // Set full name of a linked object so it can be resolved in future. See @Link(ResolveObjectLink).
     procedure SetObjectLink(const PropertyName: string; const FullName: TCEEntityName); virtual; abstract;
   end;
   // Abstract entity metaclass

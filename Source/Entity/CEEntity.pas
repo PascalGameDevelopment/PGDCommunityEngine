@@ -128,15 +128,28 @@ type
     constructor Create(); overload;
     // Destroys the property collection
     destructor Destroy; override;
-    { Copies all data and properties from ASource to the item.
+    { Copies all properties from ASource to the item.
       Descendants should override this method in order to handle specific fields if any. }
     procedure Assign(ASource: TCEBaseEntity); virtual;
-    // Creates and returns a clone of the item with all data and properties having the same value as in source.
+    // Creates and returns a clone of the item with all properties having the same value as in source.
     function Clone: TCEBaseEntity;
 
     // Returns name of this entity with its full path in hierarchy
     function GetFullName: TCEEntityName; override;
-    // Resolves and returns entity link or nil if resolve failed
+    { Resolves and returns entity link or nil if resolve failed.
+      Each published property of type descendant from TCEBaseEntity is an entity link.
+      Such properties should have getter like the following:
+
+      function TLinkingEntity.GetLinked: TLinkedEntity;
+      begin
+        if not Assigned(FLinked) then
+          FLinked := ResolveObjectLink('Linked') as TLinkedEntity;
+        Result := FLinked;
+      end;
+
+      Where TLinkingEntity - class descendant from TCEBaseEntity with a published property of class TLinkedEntity.
+      TLinkedEntity - class descendant from TCEBaseEntity.
+    }
     function ResolveObjectLink(const PropertyName: string): TCEBaseEntity;
     // Sets entity link value and attempts to resolve it
     procedure SetObjectLink(const PropertyName: string; const FullName: TCEEntityName); override;
