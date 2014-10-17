@@ -22,12 +22,15 @@
       // Float hash key
       const K = 0.6180339887; // (Sqrt(5) - 1) / 2
       begin
+        {$Q-}
         Result := Trunc(maxint * (Frac(Key * K)));
       end;
     {$ELSE}
       // Integer or pointer hash key
       const K = 0.6180339887; // (Sqrt(5) - 1) / 2
       begin
+        {$Q-}
+        {$R-}
         Result := Trunc(maxint * (Frac(Integer(Key) * K)));
       end;
     {$ENDIF}

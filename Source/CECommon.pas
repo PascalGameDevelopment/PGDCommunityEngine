@@ -42,6 +42,9 @@ uses
   // Returns base pointer shifted by offset
   function PtrOffs(Base: Pointer; Offset: Integer): Pointer; {$I inline.inc}
 
+  // Returns positions of ch within the given string starting from Start or -1 if not found
+  function CharPos(const ch: AnsiChar; const s: AnsiString; const Start: Integer ): Integer;
+
 type
   { @Abstract(Pseudo-random numbers generator)
     Generates a sequence of pseudo-random numbers.
@@ -79,7 +82,7 @@ type
     Usage:
     with CreateRefcountedContainer do begin
       obj := TSomeObject.Create();
-      Container.AddObject(obj);
+      Managed.AddObject(obj);
     end;
     The container and all added objects will be destroyed after the current routine execution (but not after "with" statement end). }
   IRefcountedContainer = interface
@@ -118,6 +121,15 @@ function PtrOffs(Base: Pointer; Offset: Integer): Pointer; {$I inline.inc}
 begin
   Result := Base;
   Inc(PByte(Result), Offset);
+end;
+
+function CharPos(const ch: AnsiChar; const s: AnsiString; const Start: Integer): Integer;
+begin       // TODO: optimize
+  Result := Pos(ch, Copy(s, Start, Length(s)));
+  if Result >= STRING_INDEX_BASE then
+    Result := Result + Start
+  else
+    Result := -1;
 end;
 
 const
@@ -200,7 +212,11 @@ var i: Integer;
 begin
   for i := ObjCount-1 downto 0 do if Assigned(ObjList[i]) then
   begin
-    FreeAndNil(ObjList[i]);
+    try
+      FreeAndNil(ObjList[i]);
+    except
+      // TODO: log
+    end;
   end;
   for i := PtrCount-1 downto 0 do if Assigned(PtrList[i]) then
   begin

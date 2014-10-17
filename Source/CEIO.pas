@@ -10,7 +10,7 @@
   either express or implied.  See the license for the specific language governing
   rights and limitations under the license.
 
-  The Original Code is CECore.pas
+  The Original Code is CEIO.pas
 
   The Initial Developer of the Original Code is documented in the accompanying
   help file PGDCE.chm.  Portions created by these individuals are Copyright (C)
@@ -295,8 +295,10 @@ end;
 
 procedure TCEFile.Close;
 begin
+  if FClosed then Exit;
+{$I-}
   CloseFile(F);
-  FClosed := True;
+  FClosed := IOResult = 0;
 end;
 
 function TCEFile.Seek(const NewPos: Int64): Boolean;
