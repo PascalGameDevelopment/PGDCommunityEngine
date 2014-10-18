@@ -77,15 +77,18 @@ type
     Actual type of such property should be always equal to its declared type.
     During destruction of an entity destructors of all published properties of descendant types will be called. }
   TCEBinaryData = class
-  public
+  private
     // Indicates whether this instance is bound to an entity or must be destroyed by containing TCEProperties instance
     Bound: Boolean;
+  public
     // Init instance with data from the given instance
     procedure Assign(AData: TCEBinaryData); virtual; abstract;
     // Reads binary data from input stream and returns True if success.
     function Read(IStream: TCEInputStream): Boolean; virtual; abstract;
     // Writes binary data to output stream and returns True if success.
     function Write(OStream: TCEOutputStream): Boolean; virtual; abstract;
+    // Returns pointer to data
+    function GetData(): Pointer; virtual; abstract;
   end;
   // Serializable binary data metaclass
   CCEBinaryData = class of TCEBinaryData;
@@ -98,6 +101,7 @@ type
     procedure Assign(AData: TCEBinaryData); override;
     function Read(IStream: TCEInputStream): Boolean; override;
     function Write(OStream: TCEOutputStream): Boolean; override;
+    function GetData(): Pointer; override;
   end;
 
   // Pointer based binary data implementation
@@ -109,6 +113,7 @@ type
     procedure Assign(AData: TCEBinaryData); override;
     function Read(IStream: TCEInputStream): Boolean; override;
     function Write(OStream: TCEOutputStream): Boolean; override;
+    function GetData(): Pointer; override;
     procedure Allocate(ASize: Integer);
   end;
 
@@ -272,6 +277,14 @@ begin
   Result := True;
 end;
 
+function TDynamicArray.GetData: Pointer;
+begin
+  if Data <> nil then
+    Result := @Data[0]
+  else
+    Result := nil;
+end;
+
 { TPointerData }
 
 destructor TPointerData.Destroy;
@@ -307,6 +320,11 @@ begin
   if Size > 0 then
     if not OStream.WriteCheck(Data^, Size) then Exit;
   Result := True;
+end;
+
+function TPointerData.GetData: Pointer;
+begin
+  Result := Data;
 end;
 
 procedure TPointerData.Allocate(ASize: Integer);
