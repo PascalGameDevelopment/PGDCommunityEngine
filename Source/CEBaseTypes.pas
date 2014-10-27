@@ -58,6 +58,13 @@ type
   // Command - parameterless procedure method
   TCommand = procedure() of object;
 
+  // Signature
+  TSignature = record
+  case Integer of
+    0: (Bytes: array[0..3] of Byte;);
+    1: (DWord: Longword;);
+  end;
+
   // Base error class
   ECEError = Exception;
 

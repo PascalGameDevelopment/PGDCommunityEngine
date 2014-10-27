@@ -229,12 +229,9 @@ implementation
 
 uses SysUtils, TypInfo;
 
-type
-  TSignature = array[0..3] of AnsiChar;
-
 const
-  SIMPLE_PROPERTIES_BEGIN_SIGNATURE: TSignature = 'SP_B';
-  SIMPLE_PROPERTIES_END_SIGNATURE: TSignature = 'SP_E';
+  SIMPLE_PROPERTIES_BEGIN_SIGNATURE: TSignature = (Bytes: (Ord('S'), Ord('P'), Ord('_'), Ord('B')));
+  SIMPLE_PROPERTIES_END_SIGNATURE: TSignature = (Bytes: (Ord('S'), Ord('P'), Ord('_'), Ord('E')));
 
 function _VectorEquals(const v1, v2: TCEProperty): Boolean; {$I inline.inc}
 begin
@@ -461,8 +458,8 @@ begin
   if Properties = nil then raise ECEInvalidArgument.Create('Properties argument is nil');
   Result := false;
 
-  if not IStream.ReadCheck(Sign, SizeOf(SIMPLE_PROPERTIES_BEGIN_SIGNATURE)) then Exit;
-  if Sign <> SIMPLE_PROPERTIES_BEGIN_SIGNATURE then Exit;
+  if not IStream.ReadCheck(Sign.DWord, SizeOf(SIMPLE_PROPERTIES_BEGIN_SIGNATURE.DWord)) then Exit;
+  if Sign.DWord <> SIMPLE_PROPERTIES_BEGIN_SIGNATURE.DWord then Exit;
 
   for i := 0 to Properties.Count-1 do
   begin
@@ -487,8 +484,8 @@ begin
     end;
   end;
 
-  if not IStream.ReadCheck(Sign, SizeOf(SIMPLE_PROPERTIES_END_SIGNATURE)) then Exit;
-  if Sign <> SIMPLE_PROPERTIES_END_SIGNATURE then Exit;
+  if not IStream.ReadCheck(Sign.DWord, SizeOf(SIMPLE_PROPERTIES_END_SIGNATURE.DWord)) then Exit;
+  if Sign.DWord <> SIMPLE_PROPERTIES_END_SIGNATURE.DWord then Exit;
 
   Result := True;
 end;
@@ -501,7 +498,7 @@ function TCESimplePropertyFiler.Write(OStream: TCEOutputStream; Properties: TCEP
 begin
   if Properties = nil then raise ECEInvalidArgument.Create('Properties argument is nil');
   Result := False;
-  if not OStream.WriteCheck(SIMPLE_PROPERTIES_BEGIN_SIGNATURE, SizeOf(SIMPLE_PROPERTIES_BEGIN_SIGNATURE)) then Exit;
+  if not OStream.WriteCheck(SIMPLE_PROPERTIES_BEGIN_SIGNATURE.DWord, SizeOf(SIMPLE_PROPERTIES_BEGIN_SIGNATURE.DWord)) then Exit;
   for i := 0 to Properties.Count-1 do
   begin
     Prop := Properties.GetPropByIndex(i);
@@ -520,7 +517,7 @@ begin
       else Assert(False, 'Invalid property type: ' + TypInfo.GetEnumName(TypeInfo(TCEPropertyType), Ord(Prop.TypeId)));
     end;
   end;
-  if not OStream.WriteCheck(SIMPLE_PROPERTIES_END_SIGNATURE, SizeOf(SIMPLE_PROPERTIES_END_SIGNATURE)) then Exit;
+  if not OStream.WriteCheck(SIMPLE_PROPERTIES_END_SIGNATURE.DWord, SizeOf(SIMPLE_PROPERTIES_END_SIGNATURE.DWord)) then Exit;
   Result := True;
 end;
 
