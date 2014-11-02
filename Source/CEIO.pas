@@ -135,6 +135,8 @@ type
   function ReadUnicodeString(InS: TCEInputStream; out Str: UnicodeString): Boolean;
   function WriteUnicodeString(OutS: TCEOutputStream; const Str: UnicodeString): Boolean;
 
+  function GetFileModifiedTime(const FileName: string): TDateTime;
+
 implementation
 
 uses SysUtils;
@@ -211,6 +213,21 @@ uses SysUtils;
       if Result and (l > 0) then
         Result := OutS.WriteCheck(Pointer(UTF8)^, l * SizeOf(AnsiChar));
   end;
+
+function GetFileModifiedTime(const FileName: string): TDateTime;
+var sr: TSearchRec;
+begin
+  Result := 0;
+  if SysUtils.FindFirst(FileName, faDirectory, sr) = 0 then
+  begin
+    {$IFDEF DELPHIXE}
+      Result := sr.TimeStamp;
+    {$ELSE}
+      Result := SysUtils.FileDateToDateTime(sr.Time);
+    {$ENDIF}
+  end;
+  SysUtils.FindClose(sr);
+end;
 
 { TCEStream }
 

@@ -50,17 +50,18 @@ type
     FLastModified: TDateTime;
     function GetData: Pointer;
     procedure SetDataHolder(const Value: TPointerData);
-    function SaveToCarrier: Boolean;
-    function LoadFromCarrier(NewerOnly: Boolean): Boolean;
-    procedure SetCarrierURL(const Value: string);
   public
+    // Loads resource specified by CarrierURL using resource carriers facility and returns True if success
+    function LoadFromCarrier(NewerOnly: Boolean): Boolean;
     // Performs conversion from old format to a new one and return True if the conversion is possible and successful
     function Convert(const OldFormat, NewFormat: TCEFormat): Boolean;
-
+    // Pointer to resource data
     property Data: Pointer read GetData;
   published
+    // Binary data holder instance
     property DataHolder: TPointerData read FDataHolder write SetDataHolder;
-    property CarrierURL: string read FCarrierURL write SetCarrierURL;
+    //
+    property CarrierURL: string read FCarrierURL write FCarrierURL;
   end;
 
   // Base class for resource convertor
@@ -70,61 +71,15 @@ type
     function Convert(const Resource: TCEResource; const NewFormat: TCEFormat): Boolean; virtual; abstract;
   end;
 
-  // Variables of this type are resource type identifiers i.e. bitmap, .obj model, etc
-  TCEResourceTypeID = TSignature;
-
-  // Array of resource type IDs
-  TResTypeList = array of TCEResourceTypeID;
-
-  // Abstract class descendants of which should load resources of a certain class
-  TCEResourceLoader = class
-  protected
-    // List of types the carrier can load
-    LoadingTypes: TResTypeList;
-    // Sets carrier URL for the specified resource without trying to load it immediately
-    procedure SetCarrierURL(AResource: TCEResource; const ACarrierURL: string);
-    // Should perform actual resource load
-    function DoLoad(Stream: TCEInputStream; const AURL: string; var Resource: TCEResource): Boolean; virtual; abstract;
-    // Should fill LoadingTypes
-    procedure Init; virtual;
-  public
-    // Calls Init() and logs supported formats
-    constructor Create;
-    // Returns True if the carrier can load resources of the specified type
-    function CanLoad(ResType: TCEResourceTypeID): Boolean;
-    // Returns resource class which the carrier can handle
-    function GetResourceClass: CCEEntity; virtual; abstract;
-    { Checks if class of the resource matches type of the data stream and calls DoLoad() to load the resource.
-      If Resource is nil the function creates a new resource of appropriate class.
-      Some streams can contain multiple resources and even other items (e.g. mesh file).
-      Carriers which handles those kind of resources can create hierarchies of items.
-      For this Resource.Manager should be assigned. Otherwise only Resource data will be loaded.
-      Returns True on success. }
-    function Load(Stream: TCEInputStream; const AURL: string; var Resource: TCEResource   ): Boolean;
-  end;
-
 implementation
 
-type
-  // Singleton class which registers and manages carriers classes for various resource types
-  TResourceLinker = class
-  private
-    FCarriers: array of TCEResourceLoader;
-  public
-    constructor Create;
-    destructor Destroy; override;
-    // Returns carrier class which can load resources of the specified type or nil if such a carrier was not registered
-    function GetLoader(const ResType: TCEResourceTypeID): TCEResourceLoader;
-    // Adds a registered carrier. The latter registered carriers will override previously registered ones if those can handle same resource types
-    procedure RegisterCarrier(Carrier: TCEResourceLoader);
-  end;
-
+uses CEResourceCarrier;
 
 { TCEResource }
 
 function TCEResource.GetData: Pointer;
 begin
-
+  Result := FDataHolder.Data;
 end;
 
 procedure TCEResource.SetDataHolder(const Value: TPointerData);
@@ -132,15 +87,40 @@ begin
   FDataHolder := Value;
 end;
 
-function TCEResource.SaveToCarrier: Boolean;
-begin
-
-end;
-
 
 function TCEResource.LoadFromCarrier(NewerOnly: Boolean): Boolean;
+var
+  LCarrier: TCEResourceCarrier;
+  Stream: TCEInputStream;
+  CarrierModified: TDateTime;
 begin
+  Result := False;
+  if FCarrierURL = '' then Exit;
+  LCarrier := CEResourceCarrier.GetResourceLoader(GetResourceTypeIDFromUrl(FCarrierURL));
+  if not Assigned(LCarrier) then
+  begin
+    //Log(ClassName + '.LoadFromCarrier: No appropriate loader found for URL: "' + FCarrierURL + '"', lkWarning);
+    Exit;
+  end;
+  CarrierModified := GetResourceModificationTime(FCarrierURL);
+  if NewerOnly and (CarrierModified <= FLastModified) then
+  begin
+    //Log(' *** Resource: ' + DateTimeToStr(FLastModified) + ', carrier: ' + DateTimeToStr(CarrierModified), lkDebug);
+    Exit;
+  end;
+  FLastModified := CarrierModified;
 
+  try
+    Stream := GetResourceInputStream(FCarrierURL);
+    if not Assigned(Stream) then
+    begin
+      // Log
+    end;
+    Result := LCarrier.Load(Stream, FCarrierURL, Self);
+    //if Result then SendMessage(TResourceModifyMsg.Create(Self), nil, [mfCore]);
+  finally
+    Stream.Free();
+  end;
 end;
 
 
@@ -155,3 +135,4 @@ begin
 end;
 
 end.
+

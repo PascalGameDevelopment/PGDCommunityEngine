@@ -44,6 +44,8 @@ uses
 
   // Returns positions of ch within the given string starting from Start or -1 if not found
   function CharPos(const ch: AnsiChar; const s: AnsiString; const Start: Integer ): Integer;
+  // Returns extension part of file name
+  function GetFileExt(const FileName: string): string;
 
 type
   { @Abstract(Pseudo-random numbers generator)
@@ -130,6 +132,24 @@ begin       // TODO: optimize
     Result := Result + Start
   else
     Result := -1;
+end;
+
+function GetFileExt(const FileName: string): string;
+var i, ind: Integer;
+begin
+  ind := -1;
+  for i := 1 to Length(FileName) do
+  begin
+    if FileName[i] = '.' then
+      ind := i
+    else if FileName[i] = '\' then
+      ind := -1;
+  end;
+
+  if ind = -1 then
+    Result := ''
+  else
+    Result := Copy(FileName, ind+1, Length(FileName));
 end;
 
 const
