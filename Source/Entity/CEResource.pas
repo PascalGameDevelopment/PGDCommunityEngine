@@ -46,34 +46,28 @@ type
     FFormat: TCEFormat;
     FDataHolder: TPointerData;
     DataOffsetInStream: Integer;
-    FCarrierURL: string;
+    FDataURL: string;
     FLastModified: TDateTime;
     function GetData: Pointer;
     procedure SetDataHolder(const Value: TPointerData);
   public
-    // Loads resource specified by CarrierURL using resource carriers facility and returns True if success
+    // Attempts to load resource data specified by DataURL using resource carriers facility and returns True if success
     function LoadFromCarrier(NewerOnly: Boolean): Boolean;
-    // Performs conversion from old format to a new one and return True if the conversion is possible and successful
-    function Convert(const OldFormat, NewFormat: TCEFormat): Boolean;
+    // Performs conversion from old format to a new one using data converters facility.
+    // Return True if the conversion was successful.
+    function Convert(const OldFormat, NewFormat: TCEFormat): Boolean; virtual;
     // Pointer to resource data
     property Data: Pointer read GetData;
   published
     // Binary data holder instance
     property DataHolder: TPointerData read FDataHolder write SetDataHolder;
-    //
-    property CarrierURL: string read FCarrierURL write FCarrierURL;
-  end;
-
-  // Base class for resource convertor
-  TCEBaseResourceConverter = class
-  public
-    function CanConvert(const OldFormat, NewFormat: TCEFormat): Boolean; virtual; abstract;
-    function Convert(const Resource: TCEResource; const NewFormat: TCEFormat): Boolean; virtual; abstract;
+    // External data URL
+    property DataURL: string read FDataURL write FDataURL;
   end;
 
 implementation
 
-uses CEResourceCarrier;
+uses CEResourceCarrier, CEDataConverter;
 
 { TCEResource }
 
@@ -87,7 +81,6 @@ begin
   FDataHolder := Value;
 end;
 
-
 function TCEResource.LoadFromCarrier(NewerOnly: Boolean): Boolean;
 var
   LCarrier: TCEResourceCarrier;
@@ -95,14 +88,14 @@ var
   CarrierModified: TDateTime;
 begin
   Result := False;
-  if FCarrierURL = '' then Exit;
-  LCarrier := CEResourceCarrier.GetResourceLoader(GetResourceTypeIDFromUrl(FCarrierURL));
+  if FDataURL = '' then Exit;
+  LCarrier := CEResourceCarrier.GetResourceLoader(GetResourceTypeIDFromUrl(FDataURL));
   if not Assigned(LCarrier) then
   begin
-    //Log(ClassName + '.LoadFromCarrier: No appropriate loader found for URL: "' + FCarrierURL + '"', lkWarning);
+    //Log(ClassName + '.LoadFromCarrier: No appropriate loader found for URL: "' + FDataURL + '"', lkWarning);
     Exit;
   end;
-  CarrierModified := GetResourceModificationTime(FCarrierURL);
+  CarrierModified := GetResourceModificationTime(FDataURL);
   if NewerOnly and (CarrierModified <= FLastModified) then
   begin
     //Log(' *** Resource: ' + DateTimeToStr(FLastModified) + ', carrier: ' + DateTimeToStr(CarrierModified), lkDebug);
@@ -111,27 +104,39 @@ begin
   FLastModified := CarrierModified;
 
   try
-    Stream := GetResourceInputStream(FCarrierURL);
+    Stream := GetResourceInputStream(FDataURL);
     if not Assigned(Stream) then
     begin
       // Log
     end;
-    Result := LCarrier.Load(Stream, FCarrierURL, Self);
+    Result := LCarrier.Load(Stream, FDataURL, Self);
     //if Result then SendMessage(TResourceModifyMsg.Create(Self), nil, [mfCore]);
   finally
     Stream.Free();
   end;
 end;
 
-
-procedure TCEResource.SetCarrierURL(const Value: string);
-begin
-
-end;
-
 function TCEResource.Convert(const OldFormat, NewFormat: TCEFormat): Boolean;
+var
+  Conversion: TCEDataConversion;
+  Converter: TCEDataConverter;
+  Dest: TCEDataPackage;
 begin
+  Conversion.SrcFormat := OldFormat;
+  Conversion.DestFormat := NewFormat;
+  Converter := CEDataConverter.GetDataConverter(Conversion);
+  if not Assigned(Converter) then
+  begin
+    // TODO: log
+    Exit;
+  end;
 
+  Dest := GetDataPackage(NewFormat, nil, 0);
+  if Converter.Convert(GetDataPackage(FFormat, FDataHolder.Data, FDataHolder.Size, Self), Dest) then
+  begin
+  end else begin
+    // TODO: log
+  end;
 end;
 
 end.

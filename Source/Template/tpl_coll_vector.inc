@@ -5,11 +5,13 @@
 Usage:
   type
     _VectorValueType = <some type>;
+    // Optional search type if Search() method is needed
+    [_VectorSearchType = <some type>;]
     {$MESSAGE 'Instantiating TIntegerVector interface'}
     {$I tpl_coll_vector.inc}
 
     T<xxx>Vector = _GenVector;
-    
+
   implementation
 
     // Optional equals function:
@@ -18,9 +20,15 @@ Usage:
       Result := v1 = v2;
     end;]
 
+    // Search function if search type was specified:
+    [function _VectorFound(const v: _VectorValueType; const Pattern: _VectorSearchType): Boolean;
+    begin
+      Result := ...
+    end;]
+
     // a compiler message with explanation which type is being instantiated would be very helpful:
     {$MESSAGE 'Instantiating TIntegerVector'}
-    {$I tpl_coll_vector.inc}    
+    {$I tpl_coll_vector.inc}
 *)
 
 {$IF Declared(_VectorOptions)}
@@ -79,6 +87,12 @@ Usage:
     function Contains(const e: _VectorValueType): Boolean;
     // Calls the delegate for each element in the collection
     procedure ForEach(Delegate: _VectorDelegate; Data: Pointer);
+    {$IF Declared(_VectorSearchType)}
+    // Searches for element which satisfies the condition _VectorFound(element, Pattern) and returns its index or -1 if no such element.
+    function Find(const Pattern: _VectorSearchType): __CollectionIndexType;
+    // Searches for element which satisfies the condition _VectorFound(element, Pattern) starting from last one and returns its index or -1 if no such element.
+    function FindLast(const Pattern: _VectorSearchType): __CollectionIndexType;
+    {$IFEND}
     // Appends the element as the last element of the vector and returns True
     function Add(const e: _VectorValueType): Boolean; {$I inline.inc}
     {/ Removes the specified element from the collection.
@@ -209,6 +223,23 @@ Usage:
     for i := 0 to FCount-1 do Delegate(FValues[i], Data);
   end;
 
+  {$IF Declared(_VectorSearchType)}
+  function _GenVector.Find(const Pattern: _VectorSearchType): __CollectionIndexType;
+  begin
+    Result := 0;
+    while (Result < FCount) do
+      if _VectorFound(FValues[Result], Pattern) then Break else Inc(Result);
+    if Result >= FCount then Result := -1;
+  end;
+
+  function _GenVector.FindLast(const Pattern: _VectorSearchType): __CollectionIndexType;
+  begin
+    Result := FCount-1;
+    while (Result >= 0) do
+      if _VectorFound(FValues[Result], Pattern) then Break else Dec(Result);
+  end;
+  {$IFEND}
+
   function _GenVector.Add(const e: _VectorValueType): Boolean;
   begin
     EnsureCapacity(FCount+1);
@@ -287,7 +318,6 @@ Usage:
       {$ELSE}
         if (FValues[Result] = e) then Break else Inc(Result);
       {$IFEND}
-
     if Result >= FCount then Result := -1;
   end;
 

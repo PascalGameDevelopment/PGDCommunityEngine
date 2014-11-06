@@ -94,7 +94,7 @@ type
   const _VectorOptions = [];
 
   // Search callback. Returns True if the given carrier can load resouces specified by Data.
-  function _VectorFound(const v: TCEResourceCarrier; ResourceTypeID: TCEResourceTypeID): Boolean; {$I inline.inc}
+  function _VectorFound(const v: TCEResourceCarrier; const ResourceTypeID: TCEResourceTypeID): Boolean; {$I inline.inc}
   begin
      Result := v.CanLoad(ResourceTypeID);
   end;
@@ -110,7 +110,7 @@ var
 function GetResourceLoader(const ResType: TCEResourceTypeID): TCEResourceCarrier;
 var i: Integer;
 begin
-  i := LCarriers.Search(ResType);
+  i := LCarriers.FindLast(ResType);
   if i >= 0 then
     Result := LCarriers.Get(i)
   else
