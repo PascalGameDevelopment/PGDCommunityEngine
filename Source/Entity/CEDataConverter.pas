@@ -10,7 +10,7 @@
   either express or implied.  See the license for the specific language governing
   rights and limitations under the license.
 
-  The Original Code is CEDataConverter.pas.pas
+  The Original Code is CEDataConverter.pas
 
   The Initial Developer of the Original Code is documented in the accompanying
   help file PGDCE.chm.  Portions created by these individuals are Copyright (C)
@@ -69,15 +69,15 @@ type
     constructor Create;
     // Returns True if the converter can perform the specified conversion
     function CanConvert(const Conversion: TCEDataConversion): Boolean;
-    { Checks if the converter can perform the specified conversion and calls DoConvert
+    { Checks if the converter can perform the specified conversion and calls DoConvert.
       Returns True on success. }
     function Convert(const Source: TCEDataPackage; var Destination: TCEDataPackage): Boolean;
   end;
 
-  // Returns class which can perform the specified conversion
+  // Returns class which can perform the specified conversion or nil if such a class was not registered
   function GetDataConverter(const Conversion: TCEDataConversion): TCEDataConverter;
   // Register a data converter class. The latter registered converters will override previously registered ones if those can handle same resource types.
-  procedure RegisterConverter(const Converter: TCEDataConverter);
+  procedure RegisterDataConverter(const Converter: TCEDataConverter);
 
   // Creates a data package record
   function GetDataPackage(const Format: TCEFormat; Data: Pointer; Size: Integer; Metadata: Pointer = nil): TCEDataPackage;
@@ -112,8 +112,6 @@ begin
   Result.Metadata := Metadata;
 end;
 
-{ Resource linker }
-
 var
   LConverters: TCEDataConverters;
 
@@ -127,7 +125,7 @@ begin
     Result := nil;  // TODO: log warning
 end;
 
-procedure RegisterConverter(const Converter: TCEDataConverter);
+procedure RegisterDataConverter(const Converter: TCEDataConverter);
 begin
   LConverters.Add(Converter);
 end;

@@ -36,6 +36,8 @@ uses SysUtils;
 const
   // Index of first character in strings
   STRING_INDEX_BASE = 1;
+  // Number of bits per byte
+  BITS_IN_BYTE = 8;
 
 type
   {$IF not Declared(UnicodeString)}
@@ -64,6 +66,12 @@ type
     0: (Bytes: array[0..3] of Byte;);
     1: (DWord: Longword;);
   end;
+
+  // Rectangle data. Last pixel convention: not include.
+  TRect = packed record
+    Left, Top, Right, Bottom: Integer;
+  end;
+  PRect = ^TRect;
 
   // Base error class
   ECEError = Exception;
@@ -107,6 +115,10 @@ type
   function IntToStr(v: Integer): string;
   // Returns ResTrue if cond and ResFalse otherwise
   function IFF(Cond: Boolean; const ResTrue, ResFalse: string): string; overload; {$I inline.inc}
+  // Fills the specified rectangle record and returns it in Result
+  procedure Rect(ALeft, ATop, ARight, ABottom: Integer; out Result: TRect); {$I inline.inc}
+  // Returns the specified by its bounds rectangle record
+  function GetRect(ALeft, ATop, ARight, ABottom: Integer): TRect; {$I inline.inc}
   // Returns filled code location structure
   function GetCodeLoc(const ASourceFilename, AUnitName, AProcedureName: string; ALineNumber: Integer; AAddress: Pointer): TCodeLocation;
   // Converts code location to a readable string
@@ -153,6 +165,19 @@ end;
 function IFF(Cond: Boolean; const ResTrue, ResFalse: string): string; overload; {$I inline.inc}
 begin
   if Cond then Result := ResTrue else Result := ResFalse;
+end;
+
+procedure Rect(ALeft, ATop, ARight, ABottom: Integer; out Result: TRect);
+begin
+  with Result do begin
+    Left := ALeft; Top := ATop;
+    Right:= ARight; Bottom := ABottom;
+  end;
+end;
+
+function GetRect(ALeft, ATop, ARight, ABottom: Integer): TRect;
+begin
+  Rect(ALeft, ATop, ARight, ABottom, Result);
 end;
 
 function GetCodeLoc(const ASourceFilename, AUnitName, AProcedureName: string; ALineNumber: Integer; AAddress: Pointer): TCodeLocation;
