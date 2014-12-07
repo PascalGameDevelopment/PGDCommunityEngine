@@ -31,7 +31,7 @@ program EntityTest;
 {$APPTYPE CONSOLE}
 
 uses
-  SysUtils, CEBaseTypes, CEEntity, CECommon, CEProperty, CEIO, Tester;
+  SysUtils, CEBaseTypes, CEEntity, CECommon, CEProperty, CEIO, Tester, CEResource, CEImageResource;
 
 type
   TTestEnum = (tteOpt1, tteOpt2, tteOpt3);
@@ -78,10 +78,10 @@ type
 
   TEntity1 = class(TCEBaseEntity)
   private
-    fInt: Integer;
+    fInt: TCEFormat;
     fStr: string;
   published
-    property Int: Integer read fInt write fInt;
+    property Int: TCEFormat read fInt write fInt;
     property Str: string read fStr write fStr;
   end;
 

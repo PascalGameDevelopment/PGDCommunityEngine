@@ -267,7 +267,9 @@ begin
     end;
 
     if Assigned(Resampler) then
-      Resampler.Resample(r, PtrOffs(Data, LevelInfo[k].Offset), PtrOffs(Data, LevelInfo[k+1].Offset));
+      Resampler.Resample(r, PtrOffs(Data, LevelInfo[k].Offset), PtrOffs(Data, LevelInfo[k+1].Offset))
+    else
+      ;//TODO log
   end;
 
 //  {$IFDEF DEBUGMODE} Log('TImageResource.GenerateMipLevels: Image "' + Name + '"'); {$ENDIF}
