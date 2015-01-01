@@ -110,7 +110,12 @@ type
     }
   TCEBaseEntity = class(TCEAbstractEntity)
   private
+    // These private members most likely will be moved to separate record
     FEntityLinkMap: TStringEntityNameMap;
+    FName: TCEEntityName;
+    FParent: TCEBaseEntity;
+    FChilds: TCEEntityList;
+    FManager: TCEEntityManager;
     procedure SetName(const Value: TCEEntityName);
     procedure SetParent(const Value: TCEBaseEntity);
     // Destroys all childs recursively
@@ -118,10 +123,6 @@ type
     // Destroys all published binary data properties
     procedure CleanupBinaryData;
   protected
-    FName: TCEEntityName;
-    FParent: TCEBaseEntity;
-    FChilds: TCEEntityList;
-    FManager: TCEEntityManager;
   public
     class function GetClass: CCEEntity;
     // Creates an empty property collection
@@ -461,7 +462,6 @@ end;
 
 function TCEEntityManager.Find(const FullName: TCEEntityName): TCEBaseEntity;
 var
-  Cur: TCEBaseEntity;
   pi, ni, len: Integer;
 begin
   Result := FRoot;
