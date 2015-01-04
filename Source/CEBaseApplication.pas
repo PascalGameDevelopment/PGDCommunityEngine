@@ -24,25 +24,78 @@
 Base definition for the application class within PGDCE that will sit between the
 rest of the engine and the platform/operating system
 
-@author(<INSERT YOUR NAME HERE> (<INSERT YOUR EMAIL ADDRESS OR WEBSITE HERE>))
+@author(George Bakhtadze (avagames@gmail.com))
 }
 
+{$Include PGDCE.inc}
 unit CEBaseApplication;
 
 interface
 
+uses
+  CEProperty;
+
 type
   TCEBaseApplication = class
   private
-    {Private declarations}
+    FConfig: TCEProperties;
+    FActive: Boolean;
+    function GetCfg(const Name: TPropertyName): string;
+    procedure SetCfg(const Name: TPropertyName; const Value: string);
   protected
-    {Protected declarations}
+    FName: string;
+    FTerminated: Boolean;
+    // Actual window creation
+    procedure DoCreateWindow(); virtual; abstract;
+    // Actual window destruction
+    procedure DoDestroyWindow(); virtual; abstract;
   public
-    {Public declarations}
-  published
-    {Published declarations}
+    constructor Create();
+    destructor Destroy(); override;
+    // Should be called in main cycle
+    procedure Process(); virtual; abstract;
+    // Application name
+    property Name: string read FName write FName;
+    // When True application is terninated
+    property Terminated: Boolean read FTerminated write FTerminated;
+    // True if the application is on the foreground
+    property Active: Boolean read FActive write FActive;
+    // Provides access to configuration specified in command line, config file etc
+    property Cfg[const Name: TPropertyName]: string read GetCfg write SetCfg;
   end;
 
 implementation
 
+{ TCEBaseApplication }
+
+function TCEBaseApplication.GetCfg(const Name: TPropertyName): string;
+var
+  Value: PCEPropertyValue;
+begin
+  if not Assigned(FConfig) then Exit;
+  Value := FConfig.Value[Name];
+  if Assigned(Value) then
+    Result := Value^.AsUnicodeString
+  else
+    Result := '';
+end;
+
+procedure TCEBaseApplication.SetCfg(const Name: TPropertyName; const Value: string);
+begin
+  if Assigned(FConfig) then
+    FConfig.AddString(Name, Value);
+end;
+
+constructor TCEBaseApplication.Create;
+begin
+  DoCreateWindow();
+end;
+
+destructor TCEBaseApplication.Destroy;
+begin
+  inherited;
+  DoDestroyWindow();
+end;
+
 end.
+
