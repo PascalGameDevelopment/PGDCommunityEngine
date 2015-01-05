@@ -124,7 +124,7 @@ begin
     Writeln('TCEWindowsApplication.DoCreateWindow: Window creation failed');
     Exit;
   end;
-  Cfg.SetInt64('Windows.WindowHandle', FWindowHandle);
+  Cfg.SetInt64(CFG_WINDOW_HANDLE, FWindowHandle);
 
   ShowWindow(FWindowHandle, SW_NORMAL);
   App := Self;
@@ -133,6 +133,8 @@ end;
 procedure TCEWindowsApplication.DoDestroyWindow;
 begin
   if FWindowHandle <> 0 then DestroyWindow(FWindowHandle);
+  FWindowHandle := 0;
+  Cfg.Remove(CFG_WINDOW_HANDLE);
   if not UnRegisterClass(@FWindowClassName, hInstance) then
   //Log('Error unregistering window class: ' + GetOSErrorStr(GetLastError), lkError);
 end;

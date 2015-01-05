@@ -27,25 +27,47 @@ rest of the engine and the chosen graphics API
 @author(<INSERT YOUR NAME HERE> (<INSERT YOUR EMAIL ADDRESS OR WEBSITE HERE>))
 }
 
+{$Include PGDCE.inc}
 unit CEBaseRenderer;
 
 interface
 
+uses
+  CEBaseApplication;
+
 type
-
-  { TCEBaseRenderer }
-
   TCEBaseRenderer = class
   private
-    {Private declarations}
+
   protected
-    {Protected declarations}
+    // One time initialization
+    procedure DoInit(); virtual; abstract;
+    // Initialization of GAPI - render context or device
+    function DoInitGAPI(App: TCEBaseApplication): Boolean; virtual; abstract;
+    // Finalization of GAPI - render context or device
+    procedure DoFinalizeGAPI(); virtual; abstract;
   public
-    {Public declarations}
-  published
-    {Published declarations}
+    constructor Create(App: TCEBaseApplication);
+    destructor Destroy(); override;
+    // Performs necessary GAPI calls to finish and present current frame
+    procedure NextFrame(); virtual; abstract;
   end;
 
 implementation
 
+{ TCEBaseRenderer }
+
+constructor TCEBaseRenderer.Create(App: TCEBaseApplication);
+begin
+  DoInit();
+  DoInitGAPI(App);
+end;
+
+destructor TCEBaseRenderer.Destroy;
+begin
+  DoFinalizeGAPI();
+  inherited;
+end;
+
 end.
+
