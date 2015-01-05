@@ -48,7 +48,7 @@ type
     // Application window handle
     FWindowHandle: Cardinal;
     // Current window class
-    WindowClass: TWndClass;
+    WindowClass: TWndClassW;
     FWindowClassName: string;
   protected
     // Should be set to False in ProcessWinMessage() to prevent default message handler call
@@ -102,9 +102,11 @@ begin
   WindowClass.hbrBackground := 0;//GetStockObject(WHITE_BRUSH);
   WindowClass.lpszMenuName := nil;
   FWindowClassName := ClassName + '.WindowClass';
-  WindowClass.lpszClassName := @FWindowClassName;
+  WindowClass.lpszClassName := PWideChar(FWindowClassName);
 
-  if RegisterClass(WindowClass) = 0 then
+  Cfg['Windows.ClassName'] := FWindowClassName;
+
+  if RegisterClassW(WindowClass) = 0 then
   begin
     Writeln('TCEWindowsApplication.DoCreateWindow: Window class registration failed');
     Exit;
@@ -114,7 +116,7 @@ begin
   if ScreenX = 0 then ScreenX := 640;
   if ScreenY = 0 then ScreenY := 480;
 
-  FWindowHandle := Windows.CreateWindow(WindowClass.lpszClassName, @FName, WindowStyle,
+  FWindowHandle := Windows.CreateWindowW(WindowClass.lpszClassName, PWideChar(FName), WindowStyle,
                                         (ScreenX - 1024) div 2+300, (ScreenY - 768) div 2, 1024+4, 768+28,
                                         0, 0, HInstance, nil);
   if FWindowHandle = 0 then
@@ -122,6 +124,7 @@ begin
     Writeln('TCEWindowsApplication.DoCreateWindow: Window creation failed');
     Exit;
   end;
+  Cfg.SetInt64('Windows.WindowHandle', FWindowHandle);
 
   ShowWindow(FWindowHandle, SW_NORMAL);
   App := Self;
