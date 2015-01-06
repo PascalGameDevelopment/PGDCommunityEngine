@@ -32,7 +32,8 @@ unit CEOpenGL4Renderer;
 interface
 
 uses
-  CEBaseRenderer, CEBaseApplication, dglOpenGL
+  CEBaseTypes, CEBaseRenderer, CEBaseApplication, CEMesh,
+  dglOpenGL
   {$IFDEF WINDOWS}
   , Windows
   {$ENDIF}
@@ -46,6 +47,8 @@ type
       FOGLDC: HDC;
       FRenderWindowHandle: HWND;
     {$ENDIF}
+    VertexData: Pointer;
+    VBO: GLUInt;
   protected
     procedure DoInit(); override;
     function DoInitGAPI(App: TCEBaseApplication): Boolean; override;
@@ -53,6 +56,8 @@ type
     procedure DoFinalizeGAPI(); override;
     procedure DoFinalizeGAPIWin();
   public
+    procedure RenderMesh(Mesh: TCEMesh); override;
+    procedure Clear(Flags: TCEClearFlags; Color: TCEColor; Z: Single; Stencil: Cardinal); override;
     procedure NextFrame(); override;
   end;
 
@@ -63,6 +68,7 @@ implementation
 procedure TCEOpenGL4Renderer.DoInit;
 begin
   dglOpenGL.InitOpenGL();
+  dglOpenGL.ReadExtensions();
 end;
 
 function TCEOpenGL4Renderer.DoInitGAPI(App: TCEBaseApplication): Boolean;
@@ -92,6 +98,8 @@ begin
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_NORMALIZE);
   glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+
+  GetMem(VertexData, 1000);
 
   Result := True;
 end;
@@ -125,6 +133,8 @@ end;
 
 procedure TCEOpenGL4Renderer.DoFinalizeGAPI();
 begin
+  if Assigned(VertexData) then
+    FreeMem(VertexData);
   {$IFDEF WINDOWS}
   DoFinalizeGAPIWin();
   {$ELSE}
@@ -141,8 +151,45 @@ begin
   FOGLDC := 0;
 end;
 
+procedure TCEOpenGL4Renderer.Clear(Flags: TCEClearFlags; Color: TCEColor; Z: Single; Stencil: Cardinal);
+begin
+  if (Flags = []) or not Active then Exit;
+
+  glDepthMask(True);
+  glClearColor(Color.R * OneOver255, Color.G * OneOver255, Color.B * OneOver255, Color.A * OneOver255);
+  glClearDepth(Z);
+  glClearStencil(Stencil);
+
+  glClear(GL_COLOR_BUFFER_BIT * Ord(cfColor in Flags) or GL_DEPTH_BUFFER_BIT * Ord(cfDepth in Flags) or GL_STENCIL_BITS * Ord(cfStencil in Flags));
+end;
+
+procedure TCEOpenGL4Renderer.RenderMesh(Mesh: TCEMesh);
+var
+  ts: PTesselationStatus;
+begin
+  if not Active then Exit;
+  ts := CEMesh.GetVB(Mesh);
+
+  if ts^.BufferIndex = -1 then begin  // Create buffer
+    glGenBuffers(1, @VBO);
+    ts^.BufferIndex := VBO;
+    ts^.Status := tsMaxSizeChanged;   // Not tesselated yet as vertex buffer is just created
+  end;
+
+  glBindBuffer(GL_ARRAY_BUFFER, ts^.BufferIndex);
+  if ts^.Status <> tsTesselated then begin
+    Mesh.FillVertexBuffer(VertexData);
+    glBufferData(GL_ARRAY_BUFFER, Mesh.VerticesCount * 3*SizeOf(TGLFloat), VertexData, GL_STATIC_DRAW);
+  end;
+
+  glVertexAttribPointer(0, Mesh.VerticesCount, GL_FLOAT, False, 0, nil);
+  glEnableVertexAttribArray(0);
+  glDrawArrays(GL_TRIANGLES, 0, Mesh.VerticesCount);
+end;
+
 procedure TCEOpenGL4Renderer.NextFrame;
 begin
+  if not Active then Exit;
   {$IFDEF WINDOWS}
   SwapBuffers(FOGLDC);                  // Display the scene
   {$ENDIF}

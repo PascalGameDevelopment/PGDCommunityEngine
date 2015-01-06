@@ -36,6 +36,7 @@ uses SysUtils;
 const
   // Index of first character in strings
   STRING_INDEX_BASE = 1;
+  OneOver255 = 1/255;
 
 type
   {$IF not Declared(UnicodeString)}
@@ -54,6 +55,15 @@ type
   // Entity class name type
   TCEEntityClassName = TCEEntityName;
   {$ENDIF}
+
+  // Pointer to 32-bit color
+  PCEColor = ^TCEColor;
+  // 32-bit color (A8R8G8B8)
+  TCEColor = packed record
+    case Boolean of
+      False: (C: Longword);
+      True: (B, G, R, A: Byte);
+  end;
 
   // Command - parameterless procedure method
   TCommand = procedure() of object;
@@ -96,8 +106,10 @@ type
     LineNumber: Integer;
   end;
 
+  function GetColor(const R, G, B, A: Byte): TCEColor; overload; {$I inline.inc}
+  function GetColor(const C: Longword): TCEColor; overload; {$I inline.inc}
   // Converts int to string
-  function IntToStr(v: Integer): string;
+  function IntToStr(v: Int64): string;
   // Returns ResTrue if cond and ResFalse otherwise
   function IFF(Cond: Boolean; const ResTrue, ResFalse: string): string; overload; {$I inline.inc}
   // Returns filled code location structure
@@ -136,7 +148,20 @@ implementation
   uses SyncObjs;
 {$ENDIF}
 
-function IntToStr(v: Integer): string;
+function GetColor(const R, G, B, A: Byte): TCEColor; {$I inline.inc}
+begin
+  Result.R := R;
+  Result.G := G;
+  Result.B := B;
+  Result.A := A;
+end;
+
+function GetColor(const C: Longword): TCEColor; {$I inline.inc}
+begin
+  Result.C := C;
+end;
+
+function IntToStr(v: Int64): string;
 var s: ShortString;
 begin
   Str(v, s);

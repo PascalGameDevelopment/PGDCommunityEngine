@@ -33,13 +33,18 @@ unit CEBaseRenderer;
 interface
 
 uses
-  CEBaseApplication;
+  CEBaseTypes, CEBaseApplication, CEMesh;
 
 type
+  // Render target clear flags
+  TCEClearFlag = (cfColor, cfDepth, cfStencil);
+  // Render target clear flag set
+  TCEClearFlags = set of TCEClearFlag;
+
   TCEBaseRenderer = class
   private
-
   protected
+    FActive: Boolean;
     // One time initialization
     procedure DoInit(); virtual; abstract;
     // Initialization of GAPI - render context or device
@@ -49,8 +54,14 @@ type
   public
     constructor Create(App: TCEBaseApplication);
     destructor Destroy(); override;
+    // Performs necessary draw calls to render the given geometry
+    procedure RenderMesh(Mesh: TCEMesh); virtual; abstract;
+    // Clear current render target
+    procedure Clear(Flags: TCEClearFlags; Color: TCEColor; Z: Single; Stencil: Cardinal); virtual; abstract;
     // Performs necessary GAPI calls to finish and present current frame
     procedure NextFrame(); virtual; abstract;
+    // Determines if the renderer should render anything
+    property Active: Boolean read FActive write FActive;
   end;
 
 implementation
@@ -60,7 +71,7 @@ implementation
 constructor TCEBaseRenderer.Create(App: TCEBaseApplication);
 begin
   DoInit();
-  DoInitGAPI(App);
+  Active := DoInitGAPI(App);
 end;
 
 destructor TCEBaseRenderer.Destroy;
