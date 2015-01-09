@@ -2,38 +2,33 @@
 
 ## Core Classes ##
 
-- TCEBaseApplication - Base application class to separate the engine from the target platform.  Descendants:-
+- TCEBaseApplication - Base application class to separate the engine from the target platform. Example of descendants:
 	- TCEWindowsApplication
 	- TCEIOSApplication
 	- TCEAndroidApplication
 	- TCEOSXApplication
-- TCEBaseRenderer - Base renderer class to separate the engine from the target graphics API (GAPI).  Descendants:-
-	- TCEOpenGLRenderer - Should support Windows, Mac OSX and Linux
-	- TCEOpenGLESRenderer - Should support Android and iOS
-	- TCEDirectXRenderer - Should support Windows
+- TCEBaseRenderer - Base renderer class to separate the engine from the target graphics API (GAPI). Example of descendants:
+	- TCEOpenGL4Renderer - OpenGL 4.xx based renderer. Should support Windows, Mac OSX and Linux.
+	- TCEOpenGLES2Renderer - OpenGL ES 2.0 based renderer. Should support Android and iOS.
+	- TCEDirectX10Renderer - DirectX 10 based renderer. Should support Windows.
 - TCECore - Core engine class, uses platform/API specific classes to perform required actions
-- TCEBaseInput - Base input handling class.  Uses instances of platform specific handler classes to handle user input.  The appropriate base classes should be created by descendants to TCEBaseApplication.  
-	- TCEBaseMouseInput - Base mouse input class
-		- TCEWindowsMouseInput
-		- TCEOSXMouseInput
-		- etc.
-	- TCEBaseKeyboardInput - Base keyboard input class
-		- TCEWindowsKeyboardInput
-		- TCEOSXKeyboardInput
-		- etc.
-- TCEBaseAudio - Base audio handling class.  Descendants:-
+- TCEBaseInput - Base input handling class.  Uses instances of platform specific handler classes to handle user input.  The appropriate base classes should be created by descendants to TCEBaseInput. Example of descendants:
+	- TCEOSMessagesInput - Platform independent input class based on OS messages handling
+	- TCEDirectInputInput - DirectInput based implementation
+	- etc.
+- TCEBaseAudio - Base audio handling class. Example of descendants:
 	- TCEOpenALAudio
-- TCEBasePhysics - Base physics handling class.  Descendants should implement specific physics APIs.
-	- TCENewtonPhysics
+- TCEBasePhysics - Base physics handling class. Example of descendants:
+	- TCENewton3Physics
+	- TCEBox2DPhysics
 - TCE2D - 2D handling class.  Uses the chosen renderer to implement a 2D environment for sprites etc.
 - TCEGUI - Graphical User Interface (GUI) handling class.
 	- TCEConsole - Provides a simple text based console
-- TCEBaseNetwork - Base network interface class
+- TCEBaseNetwork - Base network interface class. Example of descendants:
 	- TCEIndyNetwork - Indy implementation of the network interface
 	- TCESynapseNetwork - Synapse implementation of the network interface
 - TCEEntityManager - System entity manager class
 - TCESceneGraphDatabase - System scene graph database class
-- TCEMediaLibrary - System media library class.  Implements file system handling via the application class.
 - TCESubsystemManager - Provides a means by which the user application can query the available sub-systems (for operating preferences choices for example).  All sub-system classes are descended from TCESubSystem which registers the descendant class with the manager.  The manager then allows simple queries such as 'findAudioInterfaces', 'findRenderers' to be performed. 
 
 ## Core Class Hierarchy ##
