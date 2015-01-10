@@ -33,7 +33,7 @@ unit CEBaseApplication;
 interface
 
 uses
-  CEProperty;
+  CEProperty, CEMessage;
 
 const
   // Window handle config parameter name
@@ -64,6 +64,7 @@ type
   protected
     FName: UnicodeString;
     FTerminated: Boolean;
+    FMessageHandler: TCEMessageHandler;
     // Actual window creation
     procedure DoCreateWindow(); virtual; abstract;
     // Actual window destruction
@@ -81,6 +82,8 @@ type
     property Active: Boolean read FActive write FActive;
     // Provides access to configuration specified in command line, config file etc
     property Cfg: TCEConfig read FConfig;
+    // Handler for handling OS messages converted to PGDCE messages
+    property MessageHandler: TCEMessageHandler read FMessageHandler write FMessageHandler;
   end;
 
 implementation

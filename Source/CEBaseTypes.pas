@@ -65,6 +65,20 @@ type
       True: (B, G, R, A: Byte);
   end;
 
+  // Identifier of a virtual key which may be a key on keyboard, mouse etc
+  TCEVirtualKey = Byte;
+  // Button action
+  TButtonAction = (baUp, baDown);
+  // Mouse buttons
+  TMouseButton = (// Left mouse button
+                  mbLeft,
+                  // Right mouse button
+                  mbRight,
+                  // Middle mouse button
+                  mbMiddle,
+                  // 4-th mouse button
+                  mbCustom1);
+
   // Command - parameterless procedure method
   TCommand = procedure() of object;
 

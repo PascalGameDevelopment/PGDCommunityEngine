@@ -33,8 +33,6 @@ interface
 const ToRad = 0.0174532925199433;  // (PI / 180) = Deg To Rad
       ToDeg = 57.295779513082321;  // (180 / PI) = Rad To Deg
 
-//type
-
 implementation
 
 end.

@@ -32,8 +32,8 @@ unit CEWindowsApplication;
 interface
 
 uses
-  Windows,
-  CEBaseApplication;
+  Windows, Messages,
+  CEBaseTypes, CEMessage, CEBaseApplication;
 
 const
   // Sleep time when there is no messages in queue and application is deactived
@@ -48,7 +48,7 @@ type
     // Application window handle
     FWindowHandle: Cardinal;
     // Current window class
-    WindowClass: TWndClassW;
+    FWindowClass: TWndClassW;
     FWindowClassName: string;
   protected
     // Should be set to False in ProcessWinMessage() to prevent default message handler call
@@ -56,18 +56,68 @@ type
     procedure DoCreateWindow(); override;
     procedure DoDestroyWindow(); override;
     // Windows message processing
-    function ProcessWinMessage(Msg: Longword; wParam: Integer; lParam: Integer): Integer;
+    function ProcessWinMessage(Msg: UINT; wParam: WPARAM; lParam: LPARAM): Integer;
   public
     procedure Process(); override;
   end;
 
+  function WMToMessage(Msg: UINT; wParam: WPARAM; lParam: LPARAM): TCEMessage; overload;
+  function WMToMessage(const Msg: Messages.TMessage): TCEMessage; overload;
+
 implementation
 
 uses
-  SysUtils, Messages;
+  SysUtils, CEInputMessage;
 
 var
   App: TCEWindowsApplication;
+
+function WMToMessage(Msg: UINT; wParam: WPARAM; lParam: LPARAM): TCEMessage; overload;
+const CHANGED_MASK = 1 shl 30;
+
+function GetX(v: Windows.LPARAM): Single;
+begin
+  Result := SmallInt(v and $FFFF);
+end;
+
+function GetY(v: Windows.LPARAM): Single;
+begin
+  Result := SmallInt((v shr 16) and $FFFF);
+end;
+
+begin
+  Result := nil;
+  case Msg of
+    WM_ACTIVATEAPP: begin
+      if wParam = 0 then Result := TAppDeactivateMsg.Create else Result := TAppActivateMsg.Create;
+    end;
+    WM_SIZE: begin
+      if wParam = SIZE_MINIMIZED then
+        Result := TWindowMinimizeMsg.Create
+      else
+        Result := TWindowResizeMsg.Create(0, 0, lParam and 65535, lParam shr 16);
+    end;
+    WM_MOVE:    Result := TWindowMoveMsg.Create(lParam and 65535, lParam shr 16);
+    WM_CHAR:    Result := TCharInputMsg.Create(Chr(wParam), lParam);
+    WM_KEYUP:   Result := TKeyboardMsg.Create(baUp, wParam, (lParam shr 16) and $FF);
+    WM_KEYDOWN, WM_SYSKEYDOWN: if lParam and CHANGED_MASK = 0 then
+      Result := TKeyboardMsg.Create(baDown, wParam, (lParam shr 16) and $FF);
+    WM_LBUTTONDOWN: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), baDown, mbLeft);
+    WM_MBUTTONDOWN: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), baDown, mbMiddle);
+    WM_RBUTTONDOWN: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), baDown, mbRight);
+    WM_LBUTTONUP: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), baUp, mbLeft);
+    WM_MBUTTONUP: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), baUp, mbMiddle);
+    WM_RBUTTONUP: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), baUp, mbRight);
+    WM_MOUSEMOVE: Result := TMouseMoveMsg.Create(GetX(lParam), GetY(lParam));
+  end;
+  if Assigned(Result) then
+    Result.Flags := Result.Flags + [mfCore];
+end;
+
+function WMToMessage(const Msg: Messages.TMessage): TCEMessage; overload;
+begin
+  Result := WMToMessage(Msg.Msg, Msg.WParam, Msg.LParam);
+end;
 
 // Standard window procedure
 function StdWindowProc(WHandle: HWND; Msg: UINT; wParam: WPARAM; lParam: LPARAM): LRESULT; stdcall;
@@ -92,21 +142,21 @@ var
 begin
   WindowStyle := WS_OVERLAPPED or WS_CAPTION or WS_THICKFRAME or WS_MINIMIZEBOX or WS_MAXIMIZEBOX or WS_SIZEBOX or WS_SYSMENU;
 //  WindowStyle := WS_OVERLAPPEDWINDOW{ or WS_SYSMENU or WS_MINIMIZEBOX or WS_MAXIMIZEBOX or WS_SIZEBOX};
-  WindowClass.style := 0;//CS_VREDRAW or CS_HREDRAW or CS_OWNDC;
-  WindowClass.lpfnWndProc := @StdWindowProc;
-  WindowClass.cbClsExtra := 0;
-  WindowClass.cbWndExtra := 0;
-  WindowClass.hIcon := LoadIcon(hInstance, 'MAINICON');
-  WindowClass.hCursor := LoadCursor(WindowClass.hInstance*0, IDC_ARROW);
-  WindowClass.hInstance := HInstance;
-  WindowClass.hbrBackground := 0;//GetStockObject(WHITE_BRUSH);
-  WindowClass.lpszMenuName := nil;
+  FWindowClass.style := 0;//CS_VREDRAW or CS_HREDRAW or CS_OWNDC;
+  FWindowClass.lpfnWndProc := @StdWindowProc;
+  FWindowClass.cbClsExtra := 0;
+  FWindowClass.cbWndExtra := 0;
+  FWindowClass.hIcon := LoadIcon(hInstance, 'MAINICON');
+  FWindowClass.hCursor := LoadCursor(FWindowClass.hInstance*0, IDC_ARROW);
+  FWindowClass.hInstance := HInstance;
+  FWindowClass.hbrBackground := 0;//GetStockObject(WHITE_BRUSH);
+  FWindowClass.lpszMenuName := nil;
   FWindowClassName := ClassName + '.WindowClass';
-  WindowClass.lpszClassName := PWideChar(FWindowClassName);
+  FWindowClass.lpszClassName := PWideChar(FWindowClassName);
 
   Cfg['Windows.ClassName'] := FWindowClassName;
 
-  if RegisterClassW(WindowClass) = 0 then
+  if RegisterClassW(FWindowClass) = 0 then
   begin
     Writeln('TCEWindowsApplication.DoCreateWindow: Window class registration failed');
     Exit;
@@ -116,7 +166,7 @@ begin
   if ScreenX = 0 then ScreenX := 640;
   if ScreenY = 0 then ScreenY := 480;
 
-  FWindowHandle := Windows.CreateWindowW(WindowClass.lpszClassName, PWideChar(FName), WindowStyle,
+  FWindowHandle := Windows.CreateWindowW(FWindowClass.lpszClassName, PWideChar(FName), WindowStyle,
                                         (ScreenX - 1024) div 2+300, (ScreenY - 768) div 2, 1024+4, 768+28,
                                         0, 0, HInstance, nil);
   if FWindowHandle = 0 then
@@ -150,14 +200,17 @@ begin
         TranslateMessage(Msg);
       DispatchMessage(Msg);
     until not PeekMessage(Msg, FWindowHandle, 0, 0, PM_REMOVE);
-  end else if not Active then
+  end
+  else if not Active then
   begin
     Sleep(INACTIVE_SLEEP_MS);
     Active := GetActiveWindow = FWindowHandle;
   end;
 end;
 
-function TCEWindowsApplication.ProcessWinMessage(Msg: Longword; wParam, lParam: Integer): Integer;
+function TCEWindowsApplication.ProcessWinMessage(Msg: UINT; wParam: WPARAM; lParam: LPARAM): Integer;
+var
+  CEMsg: TCEMessage;
 begin
   Result := 1;
   case Msg of
@@ -171,6 +224,11 @@ begin
       if wParam and 65535 = WA_INACTIVE then
         Active := False;
     end;
+  end;
+  if Assigned(MessageHandler) then begin
+    CEMsg := WMToMessage(Msg, wParam, lParam);
+    if Assigned(CEMsg) then
+      MessageHandler(CEMsg);
   end;
 end;
 
