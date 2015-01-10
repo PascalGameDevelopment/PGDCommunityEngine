@@ -39,6 +39,8 @@ const
   // Number of bits per byte
   BITS_IN_BYTE = 8;
 
+  ONE_OVER_255 = 1/255;
+
 type
   {$IF not Declared(UnicodeString)}
     UnicodeString = WideString;
@@ -56,6 +58,29 @@ type
   // Entity class name type
   TCEEntityClassName = TCEEntityName;
   {$ENDIF}
+
+  // Pointer to 32-bit color
+  PCEColor = ^TCEColor;
+  // 32-bit color (A8R8G8B8)
+  TCEColor = packed record
+    case Boolean of
+      False: (C: Longword);
+      True: (B, G, R, A: Byte);
+  end;
+
+  // Identifier of a virtual key which may be a key on keyboard, mouse etc
+  TCEVirtualKey = Byte;
+  // Button action
+  TButtonAction = (baUp, baDown);
+  // Mouse buttons
+  TMouseButton = (// Left mouse button
+                  mbLeft,
+                  // Right mouse button
+                  mbRight,
+                  // Middle mouse button
+                  mbMiddle,
+                  // 4-th mouse button
+                  mbCustom1);
 
   // Command - parameterless procedure method
   TCommand = procedure() of object;
@@ -111,8 +136,10 @@ type
     LineNumber: Integer;
   end;
 
+  function GetColor(const R, G, B, A: Byte): TCEColor; overload; {$I inline.inc}
+  function GetColor(const C: Longword): TCEColor; overload; {$I inline.inc}
   // Converts int to string
-  function IntToStr(v: Integer): string;
+  function IntToStr(v: Int64): string;
   // Returns ResTrue if cond and ResFalse otherwise
   function IFF(Cond: Boolean; const ResTrue, ResFalse: string): string; overload; {$I inline.inc}
   // Fills the specified rectangle record and returns it in Result
@@ -155,7 +182,20 @@ implementation
   uses SyncObjs;
 {$ENDIF}
 
-function IntToStr(v: Integer): string;
+function GetColor(const R, G, B, A: Byte): TCEColor; {$I inline.inc}
+begin
+  Result.R := R;
+  Result.G := G;
+  Result.B := B;
+  Result.A := A;
+end;
+
+function GetColor(const C: Longword): TCEColor; {$I inline.inc}
+begin
+  Result.C := C;
+end;
+
+function IntToStr(v: Int64): string;
 var s: ShortString;
 begin
   Str(v, s);

@@ -176,12 +176,13 @@ type
     // Destroys the property collection
     destructor Destroy; override;
 
-    // Add property description
+    // Add a property or reset an existing one
     function AddProp(const Name: TPropertyName; TypeId: TCEPropertyType): PCEPropertyValue;
 
     procedure AddString(const Name: TPropertyName; const Value: string);
     procedure AddAnsiString(const Name: TPropertyName; const Value: AnsiString);
     procedure AddInt(const Name: TPropertyName; const Value: Integer);
+    procedure AddInt64(const Name: TPropertyName; const Value: Int64);
     procedure AddSingle(const Name: TPropertyName; const Value: Single);
 
     // Property definitions
@@ -404,39 +405,45 @@ begin
 end;
 
 function TCEProperties.AddProp(const Name: TPropertyName; TypeId: TCEPropertyType): PCEPropertyValue;
+var
+  Index: Integer;
 begin
   Result := nil;
-  if GetIndex(Name) = -1 then begin
-    FProperties.Count := FProperties.Count+1;
+  Index := GetIndex(Name);
+  if Index = -1 then begin
+    Index := FProperties.Count;
+    FProperties.Count := Index + 1;
     SetLength(FValues, FProperties.Count);
-    Result := @FValues[FProperties.Count-1];
-    FProperties.ValuesPtr[FProperties.Count-1].Name := Name;
-    FProperties.ValuesPtr[FProperties.Count-1].TypeId := TypeId;
-  end;
+  end else
+    Finalize(FValues[Index]);               // reset existing values
+  Result := @FValues[Index];
+  FProperties.ValuesPtr[Index].Name := Name;
+  FProperties.ValuesPtr[Index].TypeId := TypeId;
 end;
 
 procedure TCEProperties.AddString(const Name: TPropertyName; const Value: string);
 begin
-  AddProp(Name, ptString);
-  FValues[FProperties.Count-1].AsUnicodeString := Value;
+  AddProp(Name, ptString)^.AsUnicodeString := Value;
 end;
 
 procedure TCEProperties.AddAnsiString(const Name: TPropertyName; const Value: AnsiString);
 begin
-  AddProp(Name, ptAnsiString);
-  FValues[FProperties.Count-1].AsAnsiString := Value;
+  AddProp(Name, ptAnsiString)^.AsAnsiString := Value;
 end;
 
 procedure TCEProperties.AddInt(const Name: TPropertyName; const Value: Integer);
 begin
-  AddProp(Name, ptInteger);
-  FValues[FProperties.Count-1].AsInteger := Value;
+  AddProp(Name, ptInteger)^.AsInteger := Value;
+end;
+
+procedure TCEProperties.AddInt64(const Name: TPropertyName; const Value: Int64);
+begin
+  AddProp(Name, ptInt64)^.AsInt64 := Value;
 end;
 
 procedure TCEProperties.AddSingle(const Name: TPropertyName; const Value: Single);
 begin
-  AddProp(Name, ptSingle);
-  FValues[FProperties.Count-1].AsSingle := Value;
+  AddProp(Name, ptSingle)^.AsSingle := Value;
 end;
 
 

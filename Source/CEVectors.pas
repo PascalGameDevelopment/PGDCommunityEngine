@@ -27,6 +27,7 @@ Vector, matrix and quaternion math for PGDCE.
 @author(Zaflis (v.teemu@gmail.com))
 }
 
+{$I PGDCE.inc}
 unit CEVectors;
 
 interface
@@ -43,13 +44,29 @@ type
   TCEVector4f = packed record
     x, y, z, w: single;
   end;
-  TCEVector = TCEVector3f;
-  
+
+  TCEVector3fArray = array[0..$FFFFFF] of TCEVector3f;
+
   TCEMatrix3 = array[0..2, 0..2] of single;
   TCEMatrix4 = array[0..3, 0..3] of single;
   TCEMatrix = TCEMatrix4;
 
+  function Vec3f(x, y, z: Single): TCEVector3f; overload;
+  procedure Vec3f(x, y, z: Single; out dest: TCEVector3f); overload;
+
 implementation
+
+function Vec3f(x, y, z: Single): TCEVector3f;
+begin
+  Vec3f(x, y, z, Result);
+end;
+
+procedure Vec3f(x, y, z: Single; out dest: TCEVector3f);
+begin
+  dest.x := x;
+  dest.y := y;
+  dest.z := z;
+end;
 
 end.
 

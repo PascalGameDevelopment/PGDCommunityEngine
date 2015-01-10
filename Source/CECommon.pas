@@ -34,12 +34,18 @@ interface
 uses
   CEBaseTypes;
 
-  // Returns max pf the two arguments
-  function Max(V1, V2: Integer): Integer; {$I inline.inc}
-  // Returns min pf the two arguments
-  function Min(V1, V2: Integer): Integer; {$I inline.inc}
+  // Returns max of the two arguments
+  function MaxI(V1, V2: Integer): Integer; {$I inline.inc}
+  // Returns min of the two arguments
+  function MinI(V1, V2: Integer): Integer; {$I inline.inc}
   // Clamp the value to range
-  function Clamp(V, Min, Max: Integer): Integer; {$I inline.inc}
+  function ClampI(V, Min, Max: Integer): Integer; {$I inline.inc}
+  // Returns max of the two arguments. Doesn't take in account NaNs etc.
+  function MaxS(V1, V2: Single): Single; {$I inline.inc}
+  // Returns min of the two arguments. Doesn't take in account NaNs etc.
+  function MinS(V1, V2: Single): Single; {$I inline.inc}
+  // Clamps value to the specified bounds. Doesn't take in account NaNs etc.
+  function ClampS(V, Min, Max: Single): Single; {$I inline.inc}
 
   // Returns base pointer shifted by offset
   function PtrOffs(Base: Pointer; Offset: Integer): Pointer; {$I inline.inc}
@@ -111,21 +117,34 @@ implementation
 
 uses SysUtils;
 
-function Max(V1, V2: Integer): Integer; {$I inline.inc}
+function MaxI(V1, V2: Integer): Integer; {$I inline.inc}
 begin
   Result := V1 * Ord(V1 >= V2) + V2 * Ord(V1 < V2);
 end;
 
-function Min(V1, V2: Integer): Integer; {$I inline.inc}
+function MinI(V1, V2: Integer): Integer; {$I inline.inc}
 begin
   Result := V1 * Ord(V1 <= V2) + V2 * Ord(V1 > V2);
 end;
 
-function Clamp(V, Min, Max: Integer): Integer; {$I inline.inc}
+function ClampI(V, Min, Max: Integer): Integer; {$I inline.inc}
 begin
-//  if V < B1 then Result := B1 else if V > B2 then Result := B2 else Result := V;
-  Result := V + (Min - V) * Ord(V < Min) - (V - Max) * Ord(V > Max);
-  Assert((Result >= Min) and (Result <= Max));
+  Result := V + Ord(V < Min) * (Min - V) - Ord(V > Max) * (V - Max);
+end;
+
+function MaxS(V1, V2: Single): Single;
+begin
+  if V1 > V2 then Result := V1 else Result := V2;
+end;
+
+function MinS(V1, V2: Single): Single;
+begin
+  if V1 < V2 then Result := V1 else Result := V2;
+end;
+
+function ClampS(V, Min, Max: Single): Single; {$I inline.inc}
+begin
+  Result := MinS(MaxS(V, Min), Max);
 end;
 
 function PtrOffs(Base: Pointer; Offset: Integer): Pointer; {$I inline.inc}
@@ -216,7 +235,7 @@ end;
 
 function TRandomGenerator.RndI(Range: Integer): Integer;
 begin
-  Result := Round(Rnd(Max(0, Range-1)));
+  Result := Round(Rnd(MaxI(0, Range-1)));
 end;
 
 procedure TRandomGenerator.SetMaxSequence(AMaxSequence: Integer);
@@ -261,7 +280,7 @@ begin
   Inc(ObjCount);
   if ObjCount > Length(ObjList) then
   begin
-    SetLength(ObjList, Max(MinRefCContainerLength, Length(ObjList) * 2));
+    SetLength(ObjList, MaxI(MinRefCContainerLength, Length(ObjList) * 2));
   end;
   ObjList[ObjCount-1] := Obj;
   Result := Obj;
@@ -272,7 +291,7 @@ begin
   Inc(PtrCount);
   if PtrCount > Length(PtrList) then
   begin
-    SetLength(PtrList, Max(MinRefCContainerLength, Length(PtrList) * 2));
+    SetLength(PtrList, MaxI(MinRefCContainerLength, Length(PtrList) * 2));
   end;
   PtrList[PtrCount-1] := Ptr;
   Result := Ptr;
@@ -301,3 +320,4 @@ begin
 end;
 
 end.
+

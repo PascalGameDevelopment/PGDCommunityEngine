@@ -27,25 +27,58 @@ rest of the engine and the chosen graphics API
 @author(<INSERT YOUR NAME HERE> (<INSERT YOUR EMAIL ADDRESS OR WEBSITE HERE>))
 }
 
+{$Include PGDCE.inc}
 unit CEBaseRenderer;
 
 interface
 
-type
+uses
+  CEBaseTypes, CEBaseApplication, CEMesh;
 
-  { TCEBaseRenderer }
+type
+  // Render target clear flags
+  TCEClearFlag = (cfColor, cfDepth, cfStencil);
+  // Render target clear flag set
+  TCEClearFlags = set of TCEClearFlag;
 
   TCEBaseRenderer = class
   private
-    {Private declarations}
   protected
-    {Protected declarations}
+    FActive: Boolean;
+    // One time initialization
+    procedure DoInit(); virtual; abstract;
+    // Initialization of GAPI - render context or device
+    function DoInitGAPI(App: TCEBaseApplication): Boolean; virtual; abstract;
+    // Finalization of GAPI - render context or device
+    procedure DoFinalizeGAPI(); virtual; abstract;
   public
-    {Public declarations}
-  published
-    {Published declarations}
+    constructor Create(App: TCEBaseApplication);
+    destructor Destroy(); override;
+    // Performs necessary draw calls to render the given geometry
+    procedure RenderMesh(Mesh: TCEMesh); virtual; abstract;
+    // Clear current render target
+    procedure Clear(Flags: TCEClearFlags; Color: TCEColor; Z: Single; Stencil: Cardinal); virtual; abstract;
+    // Performs necessary GAPI calls to finish and present current frame
+    procedure NextFrame(); virtual; abstract;
+    // Determines if the renderer should render anything
+    property Active: Boolean read FActive write FActive;
   end;
 
 implementation
 
+{ TCEBaseRenderer }
+
+constructor TCEBaseRenderer.Create(App: TCEBaseApplication);
+begin
+  DoInit();
+  Active := DoInitGAPI(App);
+end;
+
+destructor TCEBaseRenderer.Destroy;
+begin
+  DoFinalizeGAPI();
+  inherited;
+end;
+
 end.
+
