@@ -156,7 +156,7 @@ begin
   if (Flags = []) or not Active then Exit;
 
   glDepthMask(True);
-  glClearColor(Color.R * OneOver255, Color.G * OneOver255, Color.B * OneOver255, Color.A * OneOver255);
+  glClearColor(Color.R * ONE_OVER_255, Color.G * ONE_OVER_255, Color.B * ONE_OVER_255, Color.A * ONE_OVER_255);
   glClearDepth(Z);
   glClearStencil(Stencil);
 
