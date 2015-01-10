@@ -32,8 +32,9 @@ program wintest;
 
 uses
   SysUtils, dglOpenGL, Windows,
-  CEWindowsApplication, CEBaseRenderer, CEOpenGL4Renderer, CEMesh,
-  CEBaseTypes, CEVectors;
+  CEWindowsApplication, CEBaseRenderer, CEOpenGL4Renderer, CEBaseInput, CEOSMessageInput,
+  CEMesh, CECommon,
+  CEBaseTypes, CEMessage, CEInputMessage, CEVectors;
 
 type
   // Example mesh class
@@ -69,29 +70,43 @@ end;
 var
   App: TCEWindowsApplication;
   Renderer: TCEOpenGL4Renderer;
+  Input: TCEOSMessageInput;
   Mesh: TCERotatingTriangleMesh;
+  speed: Single;
 begin
   {$IF Declared(ReportMemoryLeaksOnShutdown)}
   ReportMemoryLeaksOnShutdown := True;
   {$IFEND}
   App := TCEWindowsApplication.Create();
   Renderer := TCEOpenGL4Renderer.Create(App);
+  Input := TCEOSMessageInput.Create();
   Mesh := TCERotatingTriangleMesh.Create();
+
+  App.MessageHandler := Input.HandleMessage;
 
   glLoadIdentity;
   glTranslatef(0, 0, -3);
 
+  speed := 0.1;
+
   while not App.Terminated do begin
-      Renderer.Clear([cfColor, cfDepth], GetColor(0, 0, 0, 0), 1.0, 0);
+    Renderer.Clear([cfColor, cfDepth], GetColor(0, 0, 0, 0), 1.0, 0);
 
-      App.Process();
-      Mesh.Angle := (GetTickCount mod 3600) * 0.1;
-      Renderer.RenderMesh(Mesh);
+    App.Process();
+    Mesh.Angle := Mesh.Angle + speed;
+    Renderer.RenderMesh(Mesh);
 
-      Renderer.NextFrame();
+    Renderer.NextFrame();
+
+    if Input.Pressed[vkNUMPAD6] or (Input.MouseState.Buttons[mbLeft] = baDown) then speed := speed + 0.1;
+    if Input.Pressed[vkNUMPAD4] or (Input.MouseState.Buttons[mbRight] = baDown) then speed := speed - 0.1;
+    speed := Clamps(speed, -10, 10);
+
+    if Input.Pressed[vkALT] and Input.Pressed[vkX] then App.Terminated := True;
   end;
 
   Mesh.Free();
+  Input.Free();
   Renderer.Free();
   App.Free();
   Readln;

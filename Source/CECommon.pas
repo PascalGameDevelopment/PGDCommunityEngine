@@ -34,10 +34,16 @@ interface
 uses
   CEBaseTypes;
 
-  // Returns max pf the two arguments
+  // Returns max of the two arguments
   function MaxI(V1, V2: Integer): Integer; {$I inline.inc}
-  // Returns min pf the two arguments
+  // Returns min of the two arguments
   function MinI(V1, V2: Integer): Integer; {$I inline.inc}
+  // Returns max of the two arguments. Doesn't take in account NaNs etc.
+  function MaxS(V1, V2: Single): Single; {$I inline.inc}
+  // Returns min of the two arguments. Doesn't take in account NaNs etc.
+  function MinS(V1, V2: Single): Single; {$I inline.inc}
+  // Clamps value to the specified bounds. Doesn't take in account NaNs etc.
+  function ClampS(V, Min, Max: Single): Single; {$I inline.inc}
 
   // Returns base pointer shifted by offset
   function PtrOffs(Base: Pointer; Offset: Integer): Pointer; {$I inline.inc}
@@ -115,6 +121,21 @@ end;
 function MinI(V1, V2: Integer): Integer; {$I inline.inc}
 begin
   Result := V1 * Ord(V1 <= V2) + V2 * Ord(V1 > V2);
+end;
+
+function MaxS(V1, V2: Single): Single;
+begin
+  if V1 > V2 then Result := V1 else Result := V2;
+end;
+
+function MinS(V1, V2: Single): Single;
+begin
+  if V1 < V2 then Result := V1 else Result := V2;
+end;
+
+function ClampS(V, Min, Max: Single): Single; {$I inline.inc}
+begin
+  Result := MinS(MaxS(V, Min), Max);
 end;
 
 function PtrOffs(Base: Pointer; Offset: Integer): Pointer; {$I inline.inc}
