@@ -38,14 +38,31 @@ type
   // Resource format type
   TCEFormat = Cardinal;
 
-  // Base resource class for all resources: texts, images, textures, shaders, sounds, etc
+  // Resource state
+  TCEResourceState = (
+    // Resource is invalid state (e.g. format was changed but data not yet changed)
+    rsInvalid,
+    // Resource is not loaded
+    rsNotLoaded,
+    // Resource is currently loading
+    rsLoading,
+    // Resource is loaded into memory
+    rsMemory,
+    // Resource is loaded into target (e.g. video memory for textures etc)
+    rsTarget,
+    // // Resource is loaded both into memory and target
+    rsFull
+  );
+
+  // Load target. In future it will be a structure to support multiple targets.
+  TCELoadTarget = Pointer;
+
+  // Base resource class for all resources: images, texts, shaders, sounds etc
   TCEResource = class(TCEBaseEntity)
   private
-    FLoaded: Boolean;
-    FExternal: Boolean;
+    FState: TCEResourceState;
     FFormat: TCEFormat;
     FDataHolder: TPointerData;
-    DataOffsetInStream: Integer;
     FDataURL: string;
     FLastModified: TDateTime;
     function GetData: Pointer;
@@ -59,17 +76,21 @@ type
     // Sets already allocated and probably ready to use data
     procedure SetAllocated(ASize: Integer; AData: Pointer);
   public
-    // Attempts to load resource data specified by DataURL using resource carriers facility and returns True if success
-    function LoadFromCarrier(NewerOnly: Boolean): Boolean;
+    { Attempts to load resource data specified by DataURL using resource carriers facility and returns True if success.
+      If NewerOnly is True resource will be loaded only if it was changed since last load.
+      If Target is specified loading will be performed directly into Target. }
+    function LoadFromCarrier(NewerOnly: Boolean; const Target: TCELoadTarget = nil): Boolean;
     // Performs conversion from old format to a new one using data converters facility.
     // Return True if the conversion was successful.
     function Convert(const OldFormat, NewFormat: TCEFormat): Boolean;
     // Pointer to resource data
     property Data: Pointer read GetData;
   published
+    // Resource state
+    property State: TCEResourceState read FState write FState;
     // Resource data format
     property Format: TCEFormat read FFormat;
-    // Binary data holder instance
+    // Binary data holder instance which stores data in memory
     property DataHolder: TPointerData read FDataHolder write SetDataHolder;
     // External data URL
     property DataURL: string read FDataURL write FDataURL;
@@ -104,7 +125,7 @@ begin
   OldData := FDataHolder.Data;
   ReallocMem(FDataHolder.Data, ASize);
   FDataHolder.Size := ASize;
-  FLoaded := True;
+  FState := rsNotLoaded;
   //if Assigned(FManager) and (FData <> OldData) then SendMessage(TDataAdressChangeMsg.Create(OldData, FData, OldData <> nil), nil, [mfCore, mfBroadcast]);
 end;
 
@@ -116,12 +137,12 @@ begin
   FDataHolder.Size := ASize;
   if (FDataHolder.Data <> AData) and (FDataHolder.Data <> nil) then FreeMem(FDataHolder.Data);
   FDataHolder.Data := AData;
-  FLoaded := True;
+  FState := rsMemory;
   FLastModified := Now;
   //if Assigned(FManager) and (FDataHolder.Data <> OldData) then SendMessage(TDataAdressChangeMsg.Create(OldData, FData, True), nil, [mfCore, mfBroadcast]);
 end;
 
-function TCEResource.LoadFromCarrier(NewerOnly: Boolean): Boolean;
+function TCEResource.LoadFromCarrier(NewerOnly: Boolean; const Target: TCELoadTarget = nil): Boolean;
 var
   LCarrier: TCEResourceCarrier;
   Stream: TCEInputStream;

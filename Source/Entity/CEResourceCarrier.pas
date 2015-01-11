@@ -50,8 +50,9 @@ type
   protected
     // List of types the carrier can load
     FLoadingTypes: TResTypeList;
-    // Should perform actual resource load
-    function DoLoad(Stream: TCEInputStream; const AURL: string; var Resource: TCEResource): Boolean; virtual; abstract;
+    { Should perform actual resource load
+    URL format (filename is mandatory): protocol://address/path/filename.ext }
+    function DoLoad(Stream: TCEInputStream; const AURL: string; var Resource: TCEResource; const Target: TCELoadTarget = nil): Boolean; virtual; abstract;
     // Should fill LoadingTypes
     procedure Init; virtual;
   public
@@ -67,7 +68,7 @@ type
       Carriers which handles those kind of resources can create hierarchies of items.
       For this Resource.Manager should be assigned. Otherwise only Resource data will be loaded.
       Returns True on success. }
-    function Load(Stream: TCEInputStream; const AURL: string; var Resource: TCEResource): Boolean;
+    function Load(Stream: TCEInputStream; const AURL: string; var Resource: TCEResource; const Target: TCELoadTarget = nil): Boolean;
   end;
 
   // Returns class which can load resources of the specified type or nil if such a class was not registered
@@ -189,7 +190,7 @@ begin
   Result := i >= 0;
 end;
 
-function TCEResourceCarrier.Load(Stream: TCEInputStream; const AURL: string; var Resource: TCEResource): Boolean;
+function TCEResourceCarrier.Load(Stream: TCEInputStream; const AURL: string; var Resource: TCEResource; const Target: TCELoadTarget = nil): Boolean;
 begin
   Result := False;
   if not Assigned(Resource) then
@@ -202,7 +203,14 @@ begin
     //Log(Format('%S.%S: incompatible classes "%s" and "%s"', [ClassName, 'Load', Resource.ClassName, GetResourceClass.ClassName]), lkError);
     Exit;
   end;
-  Result := DoLoad(Stream, AURL, Resource);
+  Resource.State := rsLoading;
+  if DoLoad(Stream, AURL, Resource, Target) then
+  begin
+    if Assigned(Target) then
+      Resource.State := rsTarget
+    else
+      Resource.State := rsMemory;
+  end;
 end;
 
 end.

@@ -107,11 +107,11 @@ begin
   Levels^[0].Offset := 0;
 
   Result := 1;
-  MaxDim := Max(Width, Height);
+  MaxDim := MaxI(Width, Height);
   while MaxDim > 1 do
   begin
-    Levels^[Result].Width  := Max(1, Levels^[Result-1].Width  div 2);
-    Levels^[Result].Height := Max(1, Levels^[Result-1].Height div 2);
+    Levels^[Result].Width  := MaxI(1, Levels^[Result-1].Width  div 2);
+    Levels^[Result].Height := MaxI(1, Levels^[Result-1].Height div 2);
     Levels^[Result].Offset := Levels^[Result-1].Offset + Levels^[Result-1].Size;
     Levels^[Result].Size   := Levels^[Result].Width * Levels^[Result].Height * GetBitsPerPixel(Format) * BITS_IN_BYTE;
     Inc(Result);

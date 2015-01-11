@@ -125,7 +125,7 @@ begin
       Exit;
     end;
 
-    Move(DataHolder.Data^, NewData^, Min(OldSize, NewSize));
+    Move(DataHolder.Data^, NewData^, MinI(OldSize, NewSize));
     SetAllocated(NewSize, NewData);
   end;
 
@@ -190,7 +190,7 @@ begin
     if Assigned(DataHolder.Data) and (DataHolder.Size <> NewSize) and (GetBitsPerPixel(PFormat) <> 0) then
     begin
       GetMem(NewData, NewSize);
-      Move(DataHolder.Data^, NewData^, Min(DataHolder.Size, NewSize));
+      Move(DataHolder.Data^, NewData^, MinI(DataHolder.Size, NewSize));
 //      ResizeImage(GetRect(0, 0, Width, Height), GetRect(0, 0, AWidth, AHeight), AWidth, NewData);
       SetAllocated(NewSize, NewData);
       //{$IFDEF DEBUGMODE} Log(SysUtils.Format('%S("%S").%S: Image dimensions changed', [ClassName, Name, 'SetDimensions']), lkWarning); {$ENDIF}
@@ -211,8 +211,8 @@ procedure TCEImageResource.GenerateMipLevels(ARect: CEBaseTypes.TRect);
   begin
     LRect.Left   := LRect.Left - Ord(Odd(LRect.Left));
     LRect.Top    := LRect.Top  - Ord(Odd(LRect.Top));
-    LRect.Right  := Min(LevelInfo[Level].Width,  LRect.Right  + Ord(Odd(LRect.Right)));
-    LRect.Bottom := Min(LevelInfo[Level].Height, LRect.Bottom + Ord(Odd(LRect.Bottom)));
+    LRect.Right  := MinI(LevelInfo[Level].Width,  LRect.Right  + Ord(Odd(LRect.Right)));
+    LRect.Bottom := MinI(LevelInfo[Level].Height, LRect.Bottom + Ord(Odd(LRect.Bottom)));
   end;
 
 var
@@ -223,10 +223,10 @@ var
 begin
   if not Assigned(Data) or (FMipPolicy = mpNoMips) then Exit;
 
-  ARect.Left   := Clamp(ARect.Left,   0, Width);
-  ARect.Top    := Clamp(ARect.Top,    0, Height);
-  ARect.Right  := Clamp(ARect.Right,  0, Width);
-  ARect.Bottom := Clamp(ARect.Bottom, 0, Height);
+  ARect.Left   := ClampI(ARect.Left,   0, Width);
+  ARect.Top    := ClampI(ARect.Top,    0, Height);
+  ARect.Right  := ClampI(ARect.Right,  0, Width);
+  ARect.Bottom := ClampI(ARect.Bottom, 0, Height);
 
   ORect := ARect;
   CorrectRect(ORect, 0);
@@ -255,8 +255,8 @@ begin
     h := LRect.Bottom - LRect.Top;
 
     if (w = 0) and (h = 0) then Break;
-    w := Max(1, w);
-    h := Max(1, h);
+    w := MaxI(1, w);
+    h := MaxI(1, h);
 
     Resampler := GetImageResampler(r);
     if not Assigned(Resampler) and (roAllowFilterFallback in r.Options) then
