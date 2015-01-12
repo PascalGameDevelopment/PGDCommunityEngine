@@ -408,7 +408,6 @@ function TCEProperties.AddProp(const Name: TPropertyName; TypeId: TCEPropertyTyp
 var
   Index: Integer;
 begin
-  Result := nil;
   Index := GetIndex(Name);
   if Index = -1 then begin
     Index := FProperties.Count;

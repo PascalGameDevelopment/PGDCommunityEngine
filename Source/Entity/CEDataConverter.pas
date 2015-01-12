@@ -90,9 +90,9 @@ uses
 type
   _VectorValueType = TCEDataConverter;
   _VectorSearchType = TCEDataConversion;
-  {$MESSAGE 'Instantiating TCEDataConverters interface'}
+  {$MESSAGE 'Instantiating TDataConverters interface'}
   {$I tpl_coll_vector.inc}
-  TCEDataConverters = _GenVector;
+  TDataConverters = _GenVector;
 
   const _VectorOptions = [];
 
@@ -101,7 +101,7 @@ type
   begin
      Result := v.CanConvert(Conversion);
   end;
-  {$MESSAGE 'Instantiating TCEDataConverters'}
+  {$MESSAGE 'Instantiating TDataConverters'}
   {$I tpl_coll_vector.inc}
 
 function GetDataPackage(const Format: TCEFormat; Data: Pointer; Size: Integer; Metadata: Pointer = nil): TCEDataPackage;
@@ -113,7 +113,7 @@ begin
 end;
 
 var
-  LConverters: TCEDataConverters;
+  LConverters: TDataConverters;
 
 function GetDataConverter(const Conversion: TCEDataConversion): TCEDataConverter;
 var i: Integer;
@@ -158,5 +158,9 @@ begin
   Result := DoConvert(Source, Destination);
 end;
 
+initialization
+  LConverters := TDataConverters.Create();
+finalization
+  LConverters.Free();
 end.
 

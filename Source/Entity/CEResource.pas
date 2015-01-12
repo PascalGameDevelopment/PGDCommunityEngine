@@ -32,7 +32,7 @@ unit CEResource;
 interface
 
 uses
-  CEBaseTypes, CEEntity, CEIO, CEProperty;
+  CEBaseTypes, CEEntity, CEIO, CEProperty, CEDataDecoder;
 
 type
   // Resource format type
@@ -54,9 +54,6 @@ type
     rsFull
   );
 
-  // Load target. In future it will be a structure to support multiple targets.
-  TCELoadTarget = Pointer;
-
   // Base resource class for all resources: images, texts, shaders, sounds etc
   TCEResource = class(TCEBaseEntity)
   private
@@ -76,10 +73,10 @@ type
     // Sets already allocated and probably ready to use data
     procedure SetAllocated(ASize: Integer; AData: Pointer);
   public
-    { Attempts to load resource data specified by DataURL using resource carriers facility and returns True if success.
+    { Attempts to load resource data specified by DataURL using data loader and data decoder facilities and returns True if success.
       If NewerOnly is True resource will be loaded only if it was changed since last load.
-      If Target is specified loading will be performed directly into Target. }
-    function LoadFromCarrier(NewerOnly: Boolean; const Target: TCELoadTarget = nil): Boolean;
+      If Target is specified loading will be performed directly into Target bypassing Data field. }
+    function LoadExternal(NewerOnly: Boolean; const Target: TCELoadTarget = nil; MetadataOnly: Boolean = False): Boolean;
     // Performs conversion from old format to a new one using data converters facility.
     // Return True if the conversion was successful.
     function Convert(const OldFormat, NewFormat: TCEFormat): Boolean;
@@ -99,7 +96,7 @@ type
 implementation
 
 uses
-  SysUtils, CEResourceCarrier, CEDataConverter;
+  SysUtils, CEDataLoader, CEDataConverter;
 
 { TCEResource }
 
@@ -142,38 +139,53 @@ begin
   //if Assigned(FManager) and (FDataHolder.Data <> OldData) then SendMessage(TDataAdressChangeMsg.Create(OldData, FData, True), nil, [mfCore, mfBroadcast]);
 end;
 
-function TCEResource.LoadFromCarrier(NewerOnly: Boolean; const Target: TCELoadTarget = nil): Boolean;
+function TCEResource.LoadExternal(NewerOnly: Boolean; const Target: TCELoadTarget = nil; MetadataOnly: Boolean = False): Boolean;
 var
-  LCarrier: TCEResourceCarrier;
+  Loader: TCEDataLoader;
+  Decoder: TCEDataDecoder;
   Stream: TCEInputStream;
-  CarrierModified: TDateTime;
+  ResourceModified: TDateTime;
+  Entity: TCEBaseEntity;
 begin
   Result := False;
   if FDataURL = '' then Exit;
-  LCarrier := CEResourceCarrier.GetResourceLoader(GetResourceTypeIDFromUrl(FDataURL));
-  if not Assigned(LCarrier) then
-  begin
-    //Log(ClassName + '.LoadFromCarrier: No appropriate loader found for URL: "' + FDataURL + '"', lkWarning);
-    Exit;
-  end;
-  CarrierModified := GetResourceModificationTime(FDataURL);
-  if NewerOnly and (CarrierModified <= FLastModified) then
+  Loader := CEDataLoader.GetDataLoader(CEIO.GetProtocolFromUrl(FDataURL));
+  if not Assigned(Loader) then
+    raise ECEIOError.CreateFmt('No appropriate loader found for URL %s', [FDataUrl]);
+
+  ResourceModified := Loader.GetResourceModificationTime(FDataURL);
+  if NewerOnly and (ResourceModified <= FLastModified) then
   begin
     //Log(' *** Resource: ' + DateTimeToStr(FLastModified) + ', carrier: ' + DateTimeToStr(CarrierModified), lkDebug);
     Exit;
   end;
-  FLastModified := CarrierModified;
+  FLastModified := ResourceModified;
 
+  Decoder := CEDataDecoder.GetDataDecoder(GetDataTypeIDFromUrl(FDataURL));
+  if not Assigned(Decoder) then
+    raise ECEIOError.CreateFmt('No appropriate decoder found for URL %s', [FDataUrl]);
+
+  Stream := nil;
+  FState := rsLoading;
   try
-    Stream := GetResourceInputStream(FDataURL);
+    Stream := Loader.GetInputStream(FDataURL);
     if not Assigned(Stream) then
-    begin
-      // Log
-    end;
-    Result := LCarrier.Load(Stream, FDataURL, Self);
+      raise ECEIOError.CreateFmt('Can''t obtain data stream by URL: ', [FDataURL]);
+
     //if Result then SendMessage(TResourceModifyMsg.Create(Self), nil, [mfCore]);
+    Entity := Self;
+    if Assigned(Target) then begin
+      Result := Decoder.Decode(Stream, Entity, Target, MetadataOnly);
+      FState := rsTarget
+    end else begin
+      Result := Decoder.Decode(Stream, Entity, FDataHolder.Data);
+      FState := rsMemory;
+    end;
   finally
-    Stream.Free();
+    if Assigned(Stream) then
+      Stream.Free();
+    if FState = rsLoading then
+      FState := rsNotLoaded;
   end;
 end;
 
@@ -183,6 +195,7 @@ var
   Converter: TCEDataConverter;
   Dest: TCEDataPackage;
 begin
+  Result := False;
   Conversion.SrcFormat := OldFormat;
   Conversion.DestFormat := NewFormat;
   Converter := CEDataConverter.GetDataConverter(Conversion);
@@ -195,6 +208,7 @@ begin
   Dest := GetDataPackage(NewFormat, nil, 0);
   if Converter.Convert(GetDataPackage(FFormat, FDataHolder.Data, FDataHolder.Size, Self), Dest) then
   begin
+    Result := True;
   end else begin
     // TODO: log
   end;

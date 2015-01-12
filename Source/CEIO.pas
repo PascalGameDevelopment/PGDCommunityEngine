@@ -33,6 +33,12 @@ interface
 
 uses CEBaseTypes;
 
+const
+  // A substring to separate URL type part in a resource URL
+  CE_URL_TYPE_SEPARATOR = '://';
+  // File protocol
+  PROTOCOL_FILE = 'file';
+
 type
   { @Abstract(Abstract binary stream) }
   TCEStream = class
@@ -128,6 +134,9 @@ type
     constructor Create(ACode: Integer; AMsg: string);
   end;
 
+  // Variables of this type are data type identifiers i.e. bitmap, .obj model, etc
+  TCEDataTypeID = TSignature;
+
   function ReadShortString(InS: TCEInputStream; out Str: ShortString): Boolean;
   function WriteShortString(OutS: TCEOutputStream; const Str: ShortString): Boolean;
   function ReadAnsiString(InS: TCEInputStream; out Str: AnsiString): Boolean;
@@ -137,9 +146,21 @@ type
 
   function GetFileModifiedTime(const FileName: string): TDateTime;
 
+  // Returns protocol part of URL
+  function GetProtocolFromUrl(const URL: string): string;
+  // Returns data type ID based on URL (extension part)
+  function GetDataTypeIDFromUrl(const URL: string): TCEDataTypeID;
+  // Returns path part of URL
+  function GetPathFromURL(const URL: string): string;
+  // Returns modification time of a resource by URL or 0 zero if not found or modification time is unsupported
+  function GetResourceModificationTime(const URL: string): TDateTime;
+  // Returns input stream for a resource specified by URL. Currently only local files supported.
+  function GetResourceInputStream(const URL: string): TCEInputStream;
+
 implementation
 
-uses SysUtils;
+uses
+  SysUtils, CECommon;
 
   function ReadShortString(InS: TCEInputStream; out Str: ShortString): Boolean;
   var l: Byte;
@@ -227,6 +248,67 @@ begin
     {$ENDIF}
   end;
   SysUtils.FindClose(sr);
+end;
+
+function GetDataTypeFromExt(const ext: string): TCEDataTypeID;
+var i: Integer;
+begin
+  Result.Bytes[0] := Ord('.');
+  for i := 1 to High(Result.Bytes) do
+    if i <= Length(ext) then
+      Result.Bytes[i] := Ord(UpperCase(Copy(ext, i, 1))[1])
+    else
+      Result.Bytes[i] := Ord(' ');
+end;
+
+function GetProtocolFromUrl(const URL: string): string;
+var Ind: Integer;
+begin
+  Ind := Pos(CE_URL_TYPE_SEPARATOR, URL);
+  if Ind >= STRING_INDEX_BASE then
+    Result := Copy(URL, STRING_INDEX_BASE, Ind)
+  else
+    Result := '';
+end;
+
+function GetDataTypeIDFromUrl(const URL: string): TCEDataTypeID;
+begin
+  Result := GetDataTypeFromExt(GetFileExt(URL));
+end;
+
+function GetPathFromURL(const URL: string): string;
+var Ind: Integer;
+begin
+  Ind := Pos(CE_URL_TYPE_SEPARATOR, URL);
+  if Ind >= STRING_INDEX_BASE then
+    Result := Copy(URL, Ind + 2, Length(URL))
+  else
+    Result := URL;
+end;
+
+function GetResourceModificationTime(const URL: string): TDateTime;
+var FileName: string;
+begin
+  FileName := GetPathFromURL(URL);
+  if FileExists(FileName) then
+    Result := GetFileModifiedTime(FileName)
+  else
+    Result := 0;
+end;
+
+function GetResourceInputStream(const URL: string): TCEInputStream;
+var Protocol, FileName: string;
+begin
+  Protocol := GetProtocolFromUrl(URL);
+  if (Protocol = '') or (Protocol = PROTOCOL_FILE) then
+  begin
+    FileName := GetPathFromURL(URL);
+    if FileExists(FileName) then
+      Result := TCEFileInputStream.Create(FileName)
+    else
+      Result := nil;
+  end else
+    Raise ECEIOError.CreateFmt('Unknown protocol in URL: %s', [Protocol]);
 end;
 
 { TCEStream }
