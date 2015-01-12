@@ -109,9 +109,9 @@ uses
 type
   _VectorValueType = TCEImageResampler;
   _VectorSearchType = TCEImageResample;
-  {$MESSAGE 'Instantiating TCEImageResamplers interface'}
+  {$MESSAGE 'Instantiating TImageResamplers interface'}
   {$I tpl_coll_vector.inc}
-  TCEImageResamplers = _GenVector;
+  TImageResamplers = _GenVector;
 
   const _VectorOptions = [];
 
@@ -120,11 +120,11 @@ type
   begin
      Result := v.CanResample(Resample);
   end;
-  {$MESSAGE 'Instantiating TCEImageResamplers'}
+  {$MESSAGE 'Instantiating TImageResamplers'}
   {$I tpl_coll_vector.inc}
 
 var
-  LResamplers: TCEImageResamplers;
+  LResamplers: TImageResamplers;
 
 function GetImageResampler(const Resample: TCEImageResample): TCEImageResampler;
 var i: Integer;
@@ -190,5 +190,9 @@ begin
   Result := DoResample(Resample, SrcData, DestData);
 end;
 
+initialization
+  LResamplers := TImageResamplers.Create();
+finalization
+  LResamplers.Free();
 end.
 

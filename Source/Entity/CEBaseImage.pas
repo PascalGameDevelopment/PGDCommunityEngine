@@ -10,7 +10,7 @@
   either express or implied.  See the license for the specific language governing
   rights and limitations under the license.
 
-  The Original Code is CEImageResource.pas
+  The Original Code is CEBaseImage.pas
 
   The Initial Developer of the Original Code is documented in the accompanying
   help file PGDCE.chm.  Portions created by these individuals are Copyright (C)
@@ -41,16 +41,15 @@ const
 type
   // Known pixel formats for image data, textures and render targets (to be extended)
   TCEPixelFormat = (pfUndefined = 0,
-                    pfR8G8B8  = 1,  pfA8R8G8B8 = 2,  pfX8R8G8B8 = 3,
-                    pfR5G6B5  = 4,  pfX1R5G5B5 = 5,  pfA1R5G5B5 = 6,  pfA4R4G4B4 = 7,
+                    pfR8G8B8  = 1,  pfA8R8G8B8 = 2,
+                    pfR5G6B5  = 4,  pfR5G5B5   = 5,  pfA1R5G5B5 = 6,  pfA4R4G4B4 = 7,
                     pfA8      = 8,  pfA8P8     = 9,  pfP8       = 10, pfL8       = 11,
                     pfA8L8    = 12, pfA4L4     = 13,
                     pfB8G8R8  = 14, pfR8G8B8A8 = 15, pfA1B5G5R5 = 16,
-                    pfD32     = 20, pfD15S1    = 21, pfD24S8    = 22, pfD16      = 23, pfD24X8     = 24,
+                    pfD16     = 20, pfD24      = 21, pfD32      = 22,  pfD15S1   = 23, pfD24S8 = 24,
                     pfATIDF16 = 40, pfATIDF24  = 41,
                     pfDXT1    = 50, pfDXT3     = 51, pfDXT5     = 52
                     );
-
 
   // Image mip level record. Width, Height - level dimensions, Size - size of level data in bytes, Offset - offset of level data on bytes from top level data
   TImageLevel = record
@@ -85,9 +84,9 @@ function GetBitsPerPixel(PixelFormat: TCEPixelFormat): Integer;
 begin
   Result := 0;
   case PixelFormat of
-    pfA8R8G8B8, pfX8R8G8B8, pfD32, pfD24S8, pfD24X8, pfR8G8B8A8: Result := 32;
+    pfA8R8G8B8, pfD32, pfD24S8, pfD24, pfR8G8B8A8: Result := 32;
     pfR8G8B8, pfB8G8R8, pfATIDF24: Result := 24;
-    pfR5G6B5, pfX1R5G5B5, pfA1R5G5B5, pfA4R4G4B4, pfA8P8, pfA8L8,
+    pfR5G6B5, pfR5G5B5, pfA1R5G5B5, pfA4R4G4B4, pfA8P8, pfA8L8,
     pfD15S1, pfD16, pfA1B5G5R5, pfATIDF16: Result := 16;
     pfA8, pfP8, pfL8, pfA4L4: Result := 8;
     pfDXT1: Result := 4;
