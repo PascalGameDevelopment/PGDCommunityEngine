@@ -34,12 +34,12 @@ uses
   CEBaseApplication,
   
   Gl,
-	Glx,
-	Glext,
-	X,
-	XLib,
-	XUtil,
-	XF86VMode;
+  Glx,
+  Glext,
+  X,
+  XLib,
+  XUtil,
+  XF86VMode;
 
 type
   TCEX11WindowContainer = Record //Contains most of the X11 specific stuff
@@ -91,31 +91,31 @@ end;
 
 procedure TCELinuxApplication.GenerateAttributes_SingleBufferMode();
 begin
-	GLAttributesList[0] := Glx_RGBA;
-	GLAttributesList[1] := Glx_Red_Size;
-	GLAttributesList[2] := 4;
-	GLAttributesList[3] := Glx_Green_Size;
-	GLAttributesList[4] := 4;
-	GLAttributesList[5] := Glx_Blue_Size;
-	GLAttributesList[6] := 4;
-	GLAttributesList[7] := Glx_Depth_Size;
-	GLAttributesList[8] := 16;
-	GLAttributesList[9] := None;
+  GLAttributesList[0] := Glx_RGBA;
+  GLAttributesList[1] := Glx_Red_Size;
+  GLAttributesList[2] := 4;
+  GLAttributesList[3] := Glx_Green_Size;
+  GLAttributesList[4] := 4;
+  GLAttributesList[5] := Glx_Blue_Size;
+  GLAttributesList[6] := 4;
+  GLAttributesList[7] := Glx_Depth_Size;
+  GLAttributesList[8] := 16;
+  GLAttributesList[9] := None;
 end;
 
 procedure TCELinuxApplication.GenerateAttributes_DoubleBufferMode();
 begin
-	GLAttributesList[0] := Glx_RGBA;
-	GLAttributesList[1] := Glx_DoubleBuffer;
-	GLAttributesList[2] := Glx_Red_Size;
-	GLAttributesList[3] := 4;
-	GLAttributesList[4] := Glx_Green_Size;
-	GLAttributesList[5] := 4;
-	GLAttributesList[6] := Glx_Blue_Size;
-	GLAttributesList[7] := 4;
-	GLAttributesList[8] := Glx_Depth_Size;
-	GLAttributesList[9] := 16;
-	GLAttributesList[10] := None;
+  GLAttributesList[0] := Glx_RGBA;
+  GLAttributesList[1] := Glx_DoubleBuffer;
+  GLAttributesList[2] := Glx_Red_Size;
+  GLAttributesList[3] := 4;
+  GLAttributesList[4] := Glx_Green_Size;
+  GLAttributesList[5] := 4;
+  GLAttributesList[6] := Glx_Blue_Size;
+  GLAttributesList[7] := 4;
+  GLAttributesList[8] := Glx_Depth_Size;
+  GLAttributesList[9] := 16;
+  GLAttributesList[10] := None;
 end;
 
 procedure TCELinuxApplication.InitializeOpenGL();
@@ -159,80 +159,79 @@ var
   c: Int64;
 	
 begin
-	BestVideoMode := 0;
-	
-	Window.X11Display := XOpenDisplay('');
-	Window.X11ScreenID := DefaultScreen(Window.X11Display);
-	XF86VidModeQueryVersion(Window.X11Display, @Version_VMMaj, @Version_VMMin);
-	XF86VidModeGetAllModeLines(Window.X11Display, Window.X11ScreenID, @VideoModeNumber, @ModeList);
-	
-	GLWindow.VideoModes := ModeList^[0];
-	Window.VideoModes := ModeList^[0];
-	
-	if OverrideXF86ModeSelection = False then
-		begin
-			c := 0;
-			repeat
-				if (ModeList[c]^.hDisplay = Width) and (ModeList[c]^.vDisplay = Height) then
-          BestVideoMode := c;
-          BestVideoMode := c;
-				c += 1;
-				until c >= VideoModeNumber;
-		end
-	else	
-		BestVideoMode := 0;
-	
-	GenerateAttributes_DoubleBufferMode();
-	VisualInfo := GlxChooseVisual(Window.X11Display, Window.X11ScreenID, AttributesList);
-	if VisualInfo = Nil then
-		begin
-			//This means there is no double buffering available...
-			//So try again for single buffered mode...
-			GenerateAttributes_SingleBufferMode();
-			VisualInfo := GlxChooseVisual(Window.X11Display, Window.X11ScreenID, AttributesList);
-			Window.DoubleBuffered := False;
-		end
-	else
-		Window.DoubleBuffered := True;
-	
-	//GlxQueryVersion(Window.X11Display, @Version_GlxMaj, @Version_GlxMin); //This screws up for no reason...
-	
-	Window.GLXContext := GlxCreateContext(Window.X11Display, VisualInfo, Nil, True);
-	ColourMap := XCreateColorMap(Window.X11Display, RootWindow(Window.X11Display, VisualInfo^.Screen), VisualInfo^.Visual, AllocNone);
-	Window.X11WindowAttributes.ColorMap := ColourMap;
-	Window.X11WindowAttributes.Border_Pixel := 0;
-	
-	if Mode_FullScreen = True then
-		begin
-			Window.FullScreen := True;
-			
-			XF86VidModeSwitchToMode(Window.X11Display, Window.X11ScreenID, ModeList[BestVideoMode]);
-			XF86VidModeSetViewPort(Window.X11Display, Window.X11ScreenID, 0, 0);
-			
-			DisplayWidth := ModeList[BestVideoMode]^.hDisplay;
-			DisplayHeight := ModeList[BestVideoMode]^.vDisplay;
-			
-			XFree(ModeList);
-			
-			Window.X11WindowAttributes.Override_Redirect := 1; //Assuming 1 = true
+  BestVideoMode := 0;
+  
+  Window.X11Display := XOpenDisplay('');
+  Window.X11ScreenID := DefaultScreen(Window.X11Display);
+  XF86VidModeQueryVersion(Window.X11Display, @Version_VMMaj, @Version_VMMin);
+  XF86VidModeGetAllModeLines(Window.X11Display, Window.X11ScreenID, @VideoModeNumber, @ModeList);
+  
+  GLWindow.VideoModes := ModeList^[0];
+  Window.VideoModes := ModeList^[0];
+  
+  if OverrideXF86ModeSelection = False then
+    begin
+      c := 0;
+      repeat
+	if (ModeList[c]^.hDisplay = Width) and (ModeList[c]^.vDisplay = Height) then
+	  BestVideoMode := c;
+	c += 1;
+	until c >= VideoModeNumber;
+    end
+  else	
+    BestVideoMode := 0;
+  
+  GenerateAttributes_DoubleBufferMode();
+  VisualInfo := GlxChooseVisual(Window.X11Display, Window.X11ScreenID, AttributesList);
+  if VisualInfo = Nil then
+    begin
+      //This means there is no double buffering available...
+      //So try again for single buffered mode...
+      GenerateAttributes_SingleBufferMode();
+      VisualInfo := GlxChooseVisual(Window.X11Display, Window.X11ScreenID, AttributesList);
+      Window.DoubleBuffered := False;
+    end
+  else
+    Window.DoubleBuffered := True;
+  
+  //GlxQueryVersion(Window.X11Display, @Version_GlxMaj, @Version_GlxMin); //This screws up for no reason...
+  
+  Window.GLXContext := GlxCreateContext(Window.X11Display, VisualInfo, Nil, True);
+  ColourMap := XCreateColorMap(Window.X11Display, RootWindow(Window.X11Display, VisualInfo^.Screen), VisualInfo^.Visual, AllocNone);
+  Window.X11WindowAttributes.ColorMap := ColourMap;
+  Window.X11WindowAttributes.Border_Pixel := 0;
+  
+  if Mode_FullScreen = True then
+    begin
+      Window.FullScreen := True;
+      
+      XF86VidModeSwitchToMode(Window.X11Display, Window.X11ScreenID, ModeList[BestVideoMode]);
+      XF86VidModeSetViewPort(Window.X11Display, Window.X11ScreenID, 0, 0);
+      
+      DisplayWidth := ModeList[BestVideoMode]^.hDisplay;
+      DisplayHeight := ModeList[BestVideoMode]^.vDisplay;
+      
+      XFree(ModeList);
+      
+      Window.X11WindowAttributes.Override_Redirect := 1; //Assuming 1 = true
       //Note: we could have customizeable masks for input... Though these have most bases covered.
-			Window.X11WindowAttributes.Event_Mask := ExposureMask Or KeyPressMask Or KeyReleaseMask or PointerMotionMask Or ButtonPressMask Or ButtonReleaseMask or StructureNotifyMask or ButtonMotionMask;
-			Window.X11Window := XCreateWindow(Window.X11Display, RootWindow(Window.X11Display, VisualInfo^.Screen), 0, 0, DisplayWidth, DisplayHeight, 0, VisualInfo^.Depth, InputOutput, VisualInfo^.Visual, CWBorderPixel Or CWColorMap Or CWEventMask Or CWOverrideRedirect, @Window.X11WindowAttributes);
-			XWarpPointer(Window.X11Display, None, Window.X11Window, 0, 0, 0, 0, 0, 0);
-			XGrabKeyboard(Window.X11Display, Window.X11Window, True, GrabModeASync, GrabModeASync, CurrentTime);
-		end
-	else
-		begin
-			Window.X11WindowAttributes.Event_Mask := ExposureMask Or KeyPressMask Or KeyReleaseMask or PointerMotionMask Or ButtonPressMask Or ButtonReleaseMask or StructureNotifyMask or ButtonMotionMask;
-			Window.X11Window := XCreateWindow(Window.X11Display, RootWindow(Window.X11Display, VisualInfo^.Screen), 0, 0, Width, Height, 0, VisualInfo^.Depth, InputOutput, VisualInfo^.Visual, CWBorderPixel Or CWColorMap Or CWEventMask Or CWOverrideRedirect, @Window.X11WindowAttributes);
-			
-			Atom_WmDelete := XInternAtom(Window.X11Display, 'WM_DELETE_WINDOW', True);
-			XSetWMProtocols(Window.X11Display, Window.X11Window, @Atom_WmDelete, 1);
-			XSetStandardProperties(Window.X11Display, Window.X11Window, PChar(Name), PChar(Name), None, Nil, 0, Nil);
-			XMapRaised(Window.X11Display, Window.X11Window);
-		end;
-	
-	glxMakeCurrent(Window.X11Display, Window.X11Window, Window.GlXContext);
+      Window.X11WindowAttributes.Event_Mask := ExposureMask Or KeyPressMask Or KeyReleaseMask or PointerMotionMask Or ButtonPressMask Or ButtonReleaseMask or StructureNotifyMask or ButtonMotionMask;
+      Window.X11Window := XCreateWindow(Window.X11Display, RootWindow(Window.X11Display, VisualInfo^.Screen), 0, 0, DisplayWidth, DisplayHeight, 0, VisualInfo^.Depth, InputOutput, VisualInfo^.Visual, CWBorderPixel Or CWColorMap Or CWEventMask Or CWOverrideRedirect, @Window.X11WindowAttributes);
+      XWarpPointer(Window.X11Display, None, Window.X11Window, 0, 0, 0, 0, 0, 0);
+      XGrabKeyboard(Window.X11Display, Window.X11Window, True, GrabModeASync, GrabModeASync, CurrentTime);
+    end
+  else
+    begin
+      Window.X11WindowAttributes.Event_Mask := ExposureMask Or KeyPressMask Or KeyReleaseMask or PointerMotionMask Or ButtonPressMask Or ButtonReleaseMask or StructureNotifyMask or ButtonMotionMask;
+      Window.X11Window := XCreateWindow(Window.X11Display, RootWindow(Window.X11Display, VisualInfo^.Screen), 0, 0, Width, Height, 0, VisualInfo^.Depth, InputOutput, VisualInfo^.Visual, CWBorderPixel Or CWColorMap Or CWEventMask Or CWOverrideRedirect, @Window.X11WindowAttributes);
+      
+      Atom_WmDelete := XInternAtom(Window.X11Display, 'WM_DELETE_WINDOW', True);
+      XSetWMProtocols(Window.X11Display, Window.X11Window, @Atom_WmDelete, 1);
+      XSetStandardProperties(Window.X11Display, Window.X11Window, PChar(Name), PChar(Name), None, Nil, 0, Nil);
+      XMapRaised(Window.X11Display, Window.X11Window);
+    end;
+  
+  glxMakeCurrent(Window.X11Display, Window.X11Window, Window.GlXContext);
 end;
 
 procedure TCELinuxApplication.DoCreateWindow();
@@ -244,90 +243,90 @@ begin
   *     crashing the application. Any further info on this would be appreciated, for the time being it is turned off fo reliability.
   }
   OverrideXF86ModeSelection := True;
-	
-	InitializeWindow();
-	InitializeOpenGL();
+  	
+  InitializeWindow();
+  InitializeOpenGL();
 end;
 
 
 procedure TCELinuxApplication.GetEvents_Core();
 begin
-	if XPending(Window.X11Display) <= 0 then
-		Exit;
-	XNextEvent(Window.X11Display, @Xev);
-	if Xev._Type = Expose then
-		begin
-			XGetWindowAttributes(Window.X11Display, Window.X11Window, @Window.X11WindowCurrentAttributes);
-			
-			if (Window.X11WindowCurrentAttributes.Width <> Width) or (Window.X11WindowCurrentAttributes.Height <> Height) then //Check for a resize
-				begin
-					Width := Window.X11WindowCurrentAttributes.Width;
-					Height := Window.X11WindowCurrentAttributes.Height;
-					
-					glXMakeCurrent(Window.X11Display, Window.X11Window, Window.GLXContext);
-					
-					glViewport(0, 0, Width, Height);
-					glOrtho(0, Width, Height, 0, -16, 16);
-			
-					ClearCanvas();
-				end
-			else
-				begin
-					//Focus given to window
-				end;
-			
-		end;
-	if Xev._Type = ConfigureNotify then
-		begin
-			Xce := Xev.XConfigure;
-		end;
-	if Xev._Type = KeyPress then
-		begin
-			glXMakeCurrent(Window.X11Display, Window.X11Window, Window.GLXContext);
-			
+  if XPending(Window.X11Display) <= 0 then
+    Exit;
+  XNextEvent(Window.X11Display, @Xev);
+  if Xev._Type = Expose then
+    begin
+      XGetWindowAttributes(Window.X11Display, Window.X11Window, @Window.X11WindowCurrentAttributes);
+      
+      if (Window.X11WindowCurrentAttributes.Width <> Width) or (Window.X11WindowCurrentAttributes.Height <> Height) then //Check for a resize
+	begin
+	  Width := Window.X11WindowCurrentAttributes.Width;
+	  Height := Window.X11WindowCurrentAttributes.Height;
+	  
+	  glXMakeCurrent(Window.X11Display, Window.X11Window, Window.GLXContext);
+	  
+	  glViewport(0, 0, Width, Height);
+	  glOrtho(0, Width, Height, 0, -16, 16);
+
+	  ClearCanvas();
+	end
+      else
+	begin
+	  //Focus given to window
+	end;
+      
+    end;
+  if Xev._Type = ConfigureNotify then
+    begin
+      Xce := Xev.XConfigure;
+    end;
+  if Xev._Type = KeyPress then
+    begin
+      glXMakeCurrent(Window.X11Display, Window.X11Window, Window.GLXContext);
+		      
       { This needs to be plugged into the event system...
-			//Lets convert the X key code to a similar convention use by KeyPressed() in crt unit
-			LastKeyID := XLookupKeysym(@Xev.xkey, 0);
-			if LastKeyID > 65280 then
-				LastKeyID := LastKeyID - 65280;
-			if (LastKeyID <= 255) and (LastKeyID >= 0) then //we care about these keys more than the rest
-				KeyDown[PrometheusEventData.LastKeyID] := True; //Set the status of the key pressed as down
-      }
-		end;
-	if Xev._Type = KeyRelease then
-		begin
-			glXMakeCurrent(Window.X11Display, Window.X11Window, Window.GLXContext);
-			
-      { This needs to be plugged into the event system...
-			//Lets convert the X key code to a similar convention use by KeyPressed() in crt unit
-			LastKeyID := XLookupKeysym(@Xev.xkey, 0);
-			if LastKeyID > 65280 then
-				LastKeyID := LastKeyID - 65280;
-			if (LastKeyID <= 255) and (LastKeyID >= 0) then //we care about these keys more than the rest
-				KeyDown[PrometheusEventData.LastKeyID] := False; //Set the status of the key pressed as down
-      }
-		end;
-	if Xev._Type = MotionNotify then //Mouse motion
-		begin
-			//EventData.MouseX := trunc(Xev.XMotion.X);
-			//EventData.MouseY := trunc(Xev.XMotion.Y);
-		end;
-	if Xev._Type = ButtonPress then
-		begin
-      { This needs to be implemented with the event system...
-			case Xev.XButton.Button of
-        1: MouseButton_LeftDown;
-        2: MouseButton_MiddleDown;
-        3: MouseButton_RightDown;
+      //Lets convert the X key code to a similar convention use by KeyPressed() in crt unit
+      LastKeyID := XLookupKeysym(@Xev.xkey, 0);
+      if LastKeyID > 65280 then
+	      LastKeyID := LastKeyID - 65280;
+      if (LastKeyID <= 255) and (LastKeyID >= 0) then //we care about these keys more than the rest
+	      KeyDown[PrometheusEventData.LastKeyID] := True; //Set the status of the key pressed as down
       }
     end;
-	if Xev._Type = ButtonRelease then
-		begin
+  if Xev._Type = KeyRelease then
+    begin
+      glXMakeCurrent(Window.X11Display, Window.X11Window, Window.GLXContext);
+		      
+      { This needs to be plugged into the event system...
+      //Lets convert the X key code to a similar convention use by KeyPressed() in crt unit
+      LastKeyID := XLookupKeysym(@Xev.xkey, 0);
+      if LastKeyID > 65280 then
+	      LastKeyID := LastKeyID - 65280;
+      if (LastKeyID <= 255) and (LastKeyID >= 0) then //we care about these keys more than the rest
+	      KeyDown[PrometheusEventData.LastKeyID] := False; //Set the status of the key pressed as down
+      }
+    end;
+  if Xev._Type = MotionNotify then //Mouse motion
+    begin
+      //EventData.MouseX := trunc(Xev.XMotion.X);
+      //EventData.MouseY := trunc(Xev.XMotion.Y);
+    end;
+  if Xev._Type = ButtonPress then
+    begin
       { This needs to be implemented with the event system...
 			case Xev.XButton.Button of
-        1: MouseButton_LeftUp;
-        2: MouseButton_MiddleUp;
-        3: MouseButton_RightUp;
+	1: MouseButton_LeftDown;
+	2: MouseButton_MiddleDown;
+	3: MouseButton_RightDown;
+      }
+    end;
+  if Xev._Type = ButtonRelease then
+    begin
+      { This needs to be implemented with the event system...
+			case Xev.XButton.Button of	
+	1: MouseButton_LeftUp;
+	2: MouseButton_MiddleUp;
+	3: MouseButton_RightUp;
       }
     end;
 end;
@@ -335,20 +334,20 @@ end;
 procedure TCEWindowsApplication.Process();
 begin
   if XPending(Window.X11Display) > 0 then
-		begin
-			if FastEventBufferMode = True then //Work around the insane amount of events X sends for moving the mouse (virtually every pixel)
-				begin
-					repeat
-						GetEvents_Core();
-						until XPending(Window.X11Display) <= 0;
-				end
-			else
-				GetEvents_Core();
-		end
-	else
-		begin
-			//No events, things are idle
-		end;
+    begin
+      if FastEventBufferMode = True then //Work around the insane amount of events X sends for moving the mouse (virtually every pixel)
+	begin
+	  repeat
+	      GetEvents_Core();
+	      until XPending(Window.X11Display) <= 0;
+	end
+      else
+	GetEvents_Core();
+    end
+  else
+    begin
+      //No events, things are idle
+    end;
 end;
 
 end.
