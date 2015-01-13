@@ -91,6 +91,7 @@ type
     0: (Bytes: array[0..3] of Byte;);
     1: (DWord: Longword;);
   end;
+  TShortString4 = string[4];
 
   // Rectangle data. Last pixel convention: not include.
   TRect = packed record
@@ -142,6 +143,8 @@ type
   function IntToStr(v: Int64): string;
   // Returns ResTrue if cond and ResFalse otherwise
   function IFF(Cond: Boolean; const ResTrue, ResFalse: string): string; overload; {$I inline.inc}
+  // Returns TSignature structure by 4 characters
+  function GetSignature(Sign: TShortString4): TSignature;
   // Fills the specified rectangle record and returns it in Result
   procedure Rect(ALeft, ATop, ARight, ABottom: Integer; out Result: TRect); {$I inline.inc}
   // Returns the specified by its bounds rectangle record
@@ -205,6 +208,14 @@ end;
 function IFF(Cond: Boolean; const ResTrue, ResFalse: string): string; overload; {$I inline.inc}
 begin
   if Cond then Result := ResTrue else Result := ResFalse;
+end;
+
+function GetSignature(Sign: TShortString4): TSignature;
+begin
+  Result.Bytes[0] := Ord(Sign[1]);
+  Result.Bytes[1] := Ord(Sign[2]);
+  Result.Bytes[2] := Ord(Sign[3]);
+  Result.Bytes[3] := Ord(Sign[4]);
 end;
 
 procedure Rect(ALeft, ATop, ARight, ABottom: Integer; out Result: TRect);

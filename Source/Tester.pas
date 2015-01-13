@@ -44,6 +44,12 @@
     RunTests();
 
   Which returns True if all test passed.
+
+  To check a condition within a test the following construction is recommended:
+
+    Assert(_Check(Assumption), 'Assumption is false!');
+
+  This call will raise TTestFailException if the assumption is false and provide line number information.
 *)
 {$Include PGDCE.inc}
 unit Tester;

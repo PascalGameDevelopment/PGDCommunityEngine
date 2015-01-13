@@ -187,9 +187,15 @@ begin
   Result := DoDecode(Stream, Entity, Target, MetadataOnly);
 end;
 
+function FreeCallback(const e: TCEDataDecoder; Data: Pointer): Boolean;
+begin
+  if Assigned(e) then e.Free();
+end;
+
 initialization
   LDataDecoders := TDataDecoders.Create();
 finalization
+  LDataDecoders.ForEach(FreeCallback, nil);
   LDataDecoders.Free();
 end.
 

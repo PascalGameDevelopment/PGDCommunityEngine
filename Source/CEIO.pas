@@ -266,7 +266,7 @@ var Ind: Integer;
 begin
   Ind := Pos(CE_URL_TYPE_SEPARATOR, URL);
   if Ind >= STRING_INDEX_BASE then
-    Result := Copy(URL, STRING_INDEX_BASE, Ind)
+    Result := Copy(URL, STRING_INDEX_BASE, Ind-1)
   else
     Result := '';
 end;

@@ -48,6 +48,9 @@ Usage:
   // Vector for each delegate
   _VectorDelegate = function(const e: _VectorValueType; Data: Pointer): Boolean of object;
   {$I _Dg.inc} = _VectorDelegate;
+  // Vector for each delegate
+  _VectorCallback = function(const e: _VectorValueType; Data: Pointer): Boolean;
+  {$I _Cb.inc} = _VectorCallback;
   _IGenVector = interface
     {$IFDEF TPL_HINTS}{$MESSAGE 'Instantiating _IGenVector interface for a template vector type'}{$ENDIF}
     {$I tpl_coll_list.inc}
@@ -86,7 +89,9 @@ Usage:
     // Returns True if the collection contains the specified element
     function Contains(const e: _VectorValueType): Boolean;
     // Calls the delegate for each element in the collection
-    procedure ForEach(Delegate: _VectorDelegate; Data: Pointer);
+    procedure ForEach(Delegate: _VectorDelegate; Data: Pointer); overload;
+    // Calls the delegate for each element in the collection
+    procedure ForEach(Callback: _VectorCallback; Data: Pointer); overload;
     {$IF Declared(_VectorSearchType)}
     // Searches for element which satisfies the condition _VectorFound(element, Pattern) and returns its index or -1 if no such element.
     function Find(const Pattern: _VectorSearchType): __CollectionIndexType;
@@ -221,6 +226,12 @@ Usage:
   var i: Integer;
   begin
     for i := 0 to FCount-1 do Delegate(FValues[i], Data);
+  end;
+
+  procedure _GenVector.ForEach(Callback: _VectorCallback; Data: Pointer);
+  var i: Integer;
+  begin
+    for i := 0 to FCount-1 do Callback(FValues[i], Data);
   end;
 
   {$IF Declared(_VectorSearchType)}

@@ -173,18 +173,16 @@ begin
     Result := 0;
 end;
 
-procedure FreeContainedObjects(Container: TDataLoaders);
-var i: Integer;
+function FreeCallback(const e: TCEDataLoader; Data: Pointer): Boolean;
 begin
-  for i := 0 to Container.Count-1 do
-    Container[i].Free();
+  if Assigned(e) then e.Free();
 end;
 
 initialization
   LDataLoaders := TDataLoaders.Create();
   RegisterDataLoader(TCELocalFileLoader.Create());
 finalization
-  FreeContainedObjects(LDataLoaders);
+  LDataLoaders.ForEach(FreeCallback, nil);
   LDataLoaders.Free();
 end.
 

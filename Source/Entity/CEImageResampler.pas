@@ -190,9 +190,15 @@ begin
   Result := DoResample(Resample, SrcData, DestData);
 end;
 
+function FreeCallback(const e: TCEImageResampler; Data: Pointer): Boolean;
+begin
+  if Assigned(e) then e.Free();
+end;
+
 initialization
   LResamplers := TImageResamplers.Create();
 finalization
+  LResamplers.ForEach(FreeCallback, nil);
   LResamplers.Free();
 end.
 

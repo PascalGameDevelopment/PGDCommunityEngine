@@ -1,0 +1,5 @@
+# PGD Community Engine - Ignored filetypes for tests
+
+# IDE files
+*.dproj
+*.dproj.*

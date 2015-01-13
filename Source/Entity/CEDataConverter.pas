@@ -158,9 +158,15 @@ begin
   Result := DoConvert(Source, Destination);
 end;
 
+function FreeCallback(const e: TCEDataConverter; Data: Pointer): Boolean;
+begin
+  if Assigned(e) then e.Free();
+end;
+
 initialization
   LConverters := TDataConverters.Create();
 finalization
+  LConverters.ForEach(FreeCallback, nil);
   LConverters.Free();
 end.
 
