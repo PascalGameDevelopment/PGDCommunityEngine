@@ -32,6 +32,7 @@ interface
 
 uses
   CEBaseApplication,
+  CEMessage,
   
   Gl,
   Glx,
@@ -69,6 +70,7 @@ type
     procedure GenerateAttributes_DoubleBufferMode();
     procedure InitializeOpenGL();
     procedure InitializeWindow();
+    function GetEvents_Core(): TCEMessage;
   protected
     {Protected declarations}
     
@@ -249,38 +251,38 @@ begin
 end;
 
 
-procedure TCELinuxApplication.GetEvents_Core();
+function TCELinuxApplication.GetEvents_Core(): TCEMessage;
 begin
   if XPending(Window.X11Display) <= 0 then
     Exit;
   XNextEvent(Window.X11Display, @Xev);
-  if Xev._Type = Expose then
-    begin
-      XGetWindowAttributes(Window.X11Display, Window.X11Window, @Window.X11WindowCurrentAttributes);
-      
-      if (Window.X11WindowCurrentAttributes.Width <> Width) or (Window.X11WindowCurrentAttributes.Height <> Height) then //Check for a resize
-	begin
-	  Width := Window.X11WindowCurrentAttributes.Width;
-	  Height := Window.X11WindowCurrentAttributes.Height;
-	  
-	  glXMakeCurrent(Window.X11Display, Window.X11Window, Window.GLXContext);
-	  
-	  glViewport(0, 0, Width, Height);
-	  glOrtho(0, Width, Height, 0, -16, 16);
-
-	  ClearCanvas();
-	end
-      else
-	begin
-	  //Focus given to window
-	end;
-      
-    end;
-  if Xev._Type = ConfigureNotify then
+  case Xev._Type of
+    Expose:
+      begin
+	XGetWindowAttributes(Window.X11Display, Window.X11Window, @Window.X11WindowCurrentAttributes);
+	
+	if (Window.X11WindowCurrentAttributes.Width <> Width) or (Window.X11WindowCurrentAttributes.Height <> Height) then //Check for a resize
+	  begin
+	    Width := Window.X11WindowCurrentAttributes.Width;
+	    Height := Window.X11WindowCurrentAttributes.Height;
+	    
+	    glXMakeCurrent(Window.X11Display, Window.X11Window, Window.GLXContext);
+	    
+	    glViewport(0, 0, Width, Height);
+	    glOrtho(0, Width, Height, 0, -16, 16);
+	    
+	    GetEvents_Core := TWindowResizeMsg.Create(Width, Height);
+	    
+	    //ClearCanvas(); //X11 can corrupt the current frame
+	  end
+	else
+	  GetEvents_Core := TAppActivateMsg.Create();
+      end;
+  ConfigureNotify:
     begin
       Xce := Xev.XConfigure;
     end;
-  if Xev._Type = KeyPress then
+  KeyPress:
     begin
       glXMakeCurrent(Window.X11Display, Window.X11Window, Window.GLXContext);
 		      
@@ -292,8 +294,9 @@ begin
       if (LastKeyID <= 255) and (LastKeyID >= 0) then //we care about these keys more than the rest
 	      KeyDown[PrometheusEventData.LastKeyID] := True; //Set the status of the key pressed as down
       }
+//TODO GetEvents_Core := TKeyboardMsg.Create(baDown, wParam, (lParam shr 16) and $FF); //TKeyboardMsg not found in CEMessage
     end;
-  if Xev._Type = KeyRelease then
+  KeyRelease:
     begin
       glXMakeCurrent(Window.X11Display, Window.X11Window, Window.GLXContext);
 		      
@@ -305,29 +308,27 @@ begin
       if (LastKeyID <= 255) and (LastKeyID >= 0) then //we care about these keys more than the rest
 	      KeyDown[PrometheusEventData.LastKeyID] := False; //Set the status of the key pressed as down
       }
+//TODO GetEvents_Core := TKeyboardMsg.Create(baUp, wParam, (lParam shr 16) and $FF);
     end;
-  if Xev._Type = MotionNotify then //Mouse motion
+  MotionNotify: //Mouse motion
     begin
-      //EventData.MouseX := trunc(Xev.XMotion.X);
-      //EventData.MouseY := trunc(Xev.XMotion.Y);
+      GetEvents_Core := TMouseMoveMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y));
     end;
-  if Xev._Type = ButtonPress then
+  ButtonPress:
     begin
-      { This needs to be implemented with the event system...
-			case Xev.XButton.Button of
-	1: MouseButton_LeftDown;
-	2: MouseButton_MiddleDown;
-	3: MouseButton_RightDown;
-      }
+	case Xev.XButton.Button of
+	  1: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), baDown, mbLeft);
+	  2: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), baDown, mbMiddle);
+	  3: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), baDown, mbRight);
+	end;
     end;
-  if Xev._Type = ButtonRelease then
+  ButtonRelease:
     begin
-      { This needs to be implemented with the event system...
-			case Xev.XButton.Button of	
-	1: MouseButton_LeftUp;
-	2: MouseButton_MiddleUp;
-	3: MouseButton_RightUp;
-      }
+      case Xev.XButton.Button of
+	  1: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), baUp, mbLeft);
+	  2: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), baUp, mbMiddle);
+	  3: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), baUp, mbRight);
+	end;
     end;
 end;
 
