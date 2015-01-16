@@ -33,7 +33,7 @@ unit CEBaseApplication;
 interface
 
 uses
-  CEProperty, CEMessage;
+  CEBaseTypes, CEProperty, CEMessage;
 
 const
   // Window handle config parameter name
