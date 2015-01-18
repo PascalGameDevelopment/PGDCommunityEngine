@@ -63,6 +63,7 @@ type
   TCEBaseEntityManager = class
   private
     FEntityClasses: array of CCEEntity;
+    EnitiesUpdateInProcess: Boolean;
   public
     // Registers an entity class. Only entities of registered classes can be saved/loaded or be linked to via an object link property.
     procedure RegisterEntityClass(NewClass: CCEEntity);
@@ -106,13 +107,27 @@ type
   end;
 
   { @Abstract(Base entity class)
-    Responsible for hierarchy and serialization
+    TCEBaseEntity is a central class in PGDCE. Many objects in the engine are entities and therefore descendants from this class:
+    Visible objects, textures, materials, sounds, cameras and other objects.
+    Entities are organized in a hierarchy through Childs and Parent properties.
+
+    Each entity has a set of properties which can be retrieved using GetProperties() method.
+    The set of properties is fully describes an antity and used for serialization/deserialization of an entity.
+    Default implementation of GetProperties includes all published properties of a class.
+
+    Each entity has name property. It's important property as an entity can be referenced by its full name within hierarchy.
+    Such references used in so called entity link properties which allows entities to link each other.
+
+    Entities are thread safe and can be accessed from multiple threads.
+    In PGDCE classes thread safety is achieved by deferred write approach:
+    Setting a property doesn't change its value immediately but at some point within current tick with proper synchronization.
     }
   TCEBaseEntity = class(TCEAbstractEntity)
   private
+    FPropertiesInSync: Boolean;
     // These private members most likely will be moved to separate record
     FEntityLinkMap: TStringEntityNameMap;
-    FName: TCEEntityName;
+    FName, _FName: TCEEntityName;
     FParent: TCEBaseEntity;
     FChilds: TCEEntityList;
     FManager: TCEEntityManager;
@@ -123,6 +138,13 @@ type
     // Destroys all published binary data properties
     procedure CleanupBinaryData;
   protected
+    // Returns True if property writes should be deferred
+    function UseDeferredWrites(): Boolean;
+    // Should be called each time when a deferred property modification requested
+    procedure InvalidateProperties();
+    { Synchronizes read and write versions of properties.
+      This method is called when modification of internal state of the entity is thread safe. }
+    procedure FlushChanges(); virtual;
   public
     class function GetClass: CCEEntity;
     // Creates an empty property collection
@@ -197,7 +219,11 @@ end;
 
 procedure TCEBaseEntity.SetName(const Value: TCEEntityName);
 begin
-  FName := Value;
+  if UseDeferredWrites then begin
+    _FName := Value;
+    InvalidateProperties();
+  end else
+    FName := Value;
 end;
 
 function TCEBaseEntity.ResolveObjectLink(const PropertyName: string): TCEBaseEntity;
@@ -249,6 +275,22 @@ begin
   end;
 end;
 
+function TCEBaseEntity.UseDeferredWrites: Boolean;
+begin
+  Result := Assigned(FManager) and FManager.EnitiesUpdateInProcess;
+end;
+
+procedure TCEBaseEntity.InvalidateProperties;
+begin
+  FPropertiesInSync := False;
+end;
+
+procedure TCEBaseEntity.FlushChanges;
+begin
+  FName := _Fname;
+  FPropertiesInSync := True;
+end;
+
 procedure TCEBaseEntity.DestroyChilds;
 var i: Integer;
 begin
@@ -267,6 +309,7 @@ end;
 
 constructor TCEBaseEntity.Create;
 begin
+  FPropertiesInSync := True;
 end;
 
 destructor TCEBaseEntity.Destroy;
