@@ -147,9 +147,9 @@ type
     procedure FlushChanges(); virtual;
   public
     class function GetClass: CCEEntity;
-    // Creates an empty property collection
+    // Should be called by descendants
     constructor Create(); overload;
-    // Destroys the property collection
+    // Should be called by descendants
     destructor Destroy; override;
     { Copies all properties from ASource to the item.
       Descendants should override this method in order to handle specific fields if any. }

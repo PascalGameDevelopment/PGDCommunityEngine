@@ -57,14 +57,15 @@ type
   // Base resource class for all resources: images, texts, shaders, sounds etc
   TCEResource = class(TCEBaseEntity)
   private
-    FState: TCEResourceState;
-    FFormat: TCEFormat;
-    FDataHolder: TPointerData;
-    FDataURL: string;
+    FState, _FState: TCEResourceState;
+    FFormat, _FFormat: TCEFormat;
+    FDataHolder, _FDataHolder: TPointerData;
+    FDataURL, _FDataURL: string;
     FLastModified: TDateTime;
     function GetData: Pointer;
     procedure SetDataHolder(const Value: TPointerData);
   protected
+    //procedure FlushChanges(); override;
     { Returns resource size in bytes when it is stored.
      For some types (e.g. image with generated mip maps) stored size can be less than regular size. }
     function GetStoredDataSize: Integer; virtual;
@@ -73,6 +74,7 @@ type
     // Sets already allocated and probably ready to use data
     procedure SetAllocated(ASize: Integer; AData: Pointer);
   public
+    constructor Create();
     { Attempts to load resource data specified by DataURL using data loader and data decoder facilities and returns True if success.
       If NewerOnly is True resource will be loaded only if it was changed since last load.
       If Target is specified loading will be performed directly into Target bypassing Data field. }
@@ -93,10 +95,18 @@ type
     property DataURL: string read FDataURL write FDataURL;
   end;
 
+  // For internal use
+  procedure _SetResourceFormat(Resource: TCEResource; Format: TCEFormat);
+
 implementation
 
 uses
   SysUtils, CEDataLoader, CEDataConverter;
+
+procedure _SetResourceFormat(Resource: TCEResource; Format: TCEFormat);
+begin
+  Resource.FFormat := Format;
+end;
 
 { TCEResource }
 
@@ -139,8 +149,14 @@ begin
   //if Assigned(FManager) and (FDataHolder.Data <> OldData) then SendMessage(TDataAdressChangeMsg.Create(OldData, FData, True), nil, [mfCore, mfBroadcast]);
 end;
 
+constructor TCEResource.Create;
+begin
+  inherited;
+  SetDataHolder(TPointerData.Create());
+end;
+
 function TCEResource.LoadExternal(NewerOnly: Boolean; const Target: TCELoadTarget = nil; MetadataOnly: Boolean = False): Boolean;
-var
+var
   Loader: TCEDataLoader;
   Decoder: TCEDataDecoder;
   Stream: TCEInputStream;
@@ -195,7 +211,10 @@ var
   Converter: TCEDataConverter;
   Dest: TCEDataPackage;
 begin
+  Result := True;
+  if OldFormat = NewFormat then Exit;
   Result := False;
+
   Conversion.SrcFormat := OldFormat;
   Conversion.DestFormat := NewFormat;
   Converter := CEDataConverter.GetDataConverter(Conversion);

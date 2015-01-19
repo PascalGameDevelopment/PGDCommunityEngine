@@ -32,7 +32,8 @@ unit CEImageResource;
 interface
 
 uses
-  CEBaseTypes, CEEntity, CEResource, CEBaseImage;
+  CEBaseTypes, CEEntity, CEResource, CEBaseImage,
+  CEDataDecoder, CEIO;
 
 type
   // Resource class for image data
@@ -60,6 +61,8 @@ type
     // Returns information about specified mip level
     function GetLevelInfo(Index: Integer): PImageLevel;
   public
+    constructor Create();
+    destructor Destroy(); override;
     // Creates an empty image with the specified dimensions
     procedure CreateEmpty(AWidth, AHeight: Integer);
     // Sets width and height of the image. Data should be initialized. deprecated: @Link(MinFilter)/@Link(MagFilter) will be used to resize.
@@ -79,6 +82,14 @@ type
     property ActualLevels: Integer read GetActualLevels;
     // Mip levels information
     property LevelInfo[Index: Integer]: PImageLevel read GetLevelInfo;
+  end;
+
+  TCEDataDecoderBmp = class(TCEDataDecoder)
+  protected
+    function DoDecode(Stream: TCEInputStream; var Entity: TCEBaseEntity;
+                      const Target: TCELoadTarget = nil; MetadataOnly: Boolean = False): Boolean; override;
+    // Should fill LoadingTypes
+    procedure Init; override;
   end;
 
 implementation
@@ -152,6 +163,18 @@ end;
 function TCEImageResource.GetLevelInfo(Index: Integer): PImageLevel;
 begin
   Result := FLevels^[Index];
+end;
+
+constructor TCEImageResource.Create;
+begin
+  inherited;
+  GetMem(FLevels, SizeOf(TImageLevels));
+end;
+
+destructor TCEImageResource.Destroy;
+begin
+  FreeMem(FLevels, SizeOf(TImageLevels));
+  inherited;
 end;
 
 procedure TCEImageResource.CreateEmpty(AWidth, AHeight: Integer);
@@ -277,4 +300,160 @@ begin
 //  SendMessage(TResourceModifyMsg.Create(Self), Self, [mfCore, mfRecipient]);
 end;
 
+type
+  // .bmp file information header data structure
+  TBitmapInfoHeader = packed record
+    biSize: Cardinal;
+    biWidth, biHeight: Longint;
+    biPlanes: Word;
+    biBitCount: Word;
+    biCompression: Cardinal;
+    biSizeImage: Cardinal;
+    biXPelsPerMeter, biYPelsPerMeter: Longint;
+    biClrUsed: Cardinal;
+    biClrImportant: Cardinal;
+  end;
+
+  // .bmp file header data structure
+  TBitmapFileHeader = packed record
+    bfType: Word;
+    bfSize: Cardinal;
+    bfReserved1, bfReserved2: Word;
+    bfOffBits: Cardinal;
+  end;
+
+function LoadBitmapHeader(const Stream: TCEInputStream; out Header: TImageHeader): Boolean;
+var
+  FileHeader: TBITMAPFILEHEADER;
+  InfoHeader: TBITMAPINFOHEADER;
+begin
+  Result := False;
+
+  if not Stream.ReadCheck(FileHeader, SizeOf(FileHeader)) then Exit;
+  if FileHeader.bfType <> Ord('M')*256 + Ord('B') then
+    raise ECEIOError.Create(-1, 'Not a .bmp file');
+  if not Stream.ReadCheck(InfoHeader, SizeOf(InfoHeader)) then Exit;
+
+  Header.Width  := InfoHeader.biWidth;
+  Header.Height := Abs(InfoHeader.biHeight);
+  Header.BitsPerPixel := InfoHeader.biBitCount;
+  Header.LineSize := Header.Width * Header.BitsPerPixel div 8;
+  if InfoHeader.biHeight < 0 then
+    Header.ImageOrigin := ioTopLeft
+  else
+    Header.ImageOrigin := ioBottomLeft;
+
+  if Header.LineSize and 3 <> 0 then
+    Header.LineSize := Header.LineSize + 4 - Header.LineSize and 3;
+  case Header.BitsPerPixel of                                  // ToDo: Test with more .bmp files and fix if necessary
+    15, 16: Header.Format := pfR5G6B5;
+    24:     Header.Format := pfB8G8R8;
+    32:     Header.Format := pfA8R8G8B8;
+  end;
+
+  Header.PaletteSize := InfoHeader.biClrUsed;
+  if (InfoHeader.biBitCount <= 8) and (Header.PaletteSize = 0) then
+    Header.PaletteSize := 256;
+  Getmem(Header.Palette, Header.PaletteSize * SizeOf(TCEColor));
+  if not Stream.ReadCheck(Header.Palette^, Header.PaletteSize * SizeOf(TCEColor)) then
+  begin
+    FreeMem(Header.Palette);
+    Exit;
+  end;
+  Header.ImageSize := InfoHeader.biSizeImage;
+  if Header.ImageSize = 0 then
+    Header.ImageSize := Header.LineSize * Header.Height;
+  Result := True;
+end;
+
+function LoadBitmap(const Stream: TCEInputStream; out Header: TImageHeader): Boolean;
+var
+  i, CurLine, Remainder, RemData: Integer;
+begin
+  Result := False;
+
+  if not LoadBitmapHeader(Stream, Header) then Exit;
+
+  // Convert header from .bmp to usual image
+  Remainder := Header.LineSize - Header.Width * Header.BitsPerPixel div 8;
+  Assert((Remainder >= 0) and (Remainder < 4));
+  Header.LineSize  := Header.Width * Header.BitsPerPixel div 8;
+  Header.ImageSize := Header.LineSize * Header.Height;
+  // Get the actual pixel data
+  GetMem(Header.Data, Header.ImageSize);
+
+  if Header.ImageOrigin = ioTopLeft then CurLine := 0 else CurLine := Header.Height-1;
+
+  for i := 0 to Header.Height-1 do begin
+    if not Stream.ReadCheck(PtrOffs(Header.Data, CurLine*Header.LineSize)^, Header.LineSize) or
+       not Stream.ReadCheck(RemData, Remainder) then begin
+      FreeMem(Header.Data);
+      Exit;
+    end;
+    if Header.ImageOrigin = ioTopLeft then Inc(CurLine) else Dec(CurLine);
+  end;
+  Result := True;
+end;
+
+function InitResource(Image: TCEImageResource; const AURL: string; const Header: TImageHeader): Boolean;
+var
+  OldMipPolicy: TMipPolicy;
+  OldFormat: TCEFormat;
+begin
+  Result := False;
+  Assert(Assigned(Image));
+
+  Image.State := rsInvalid;                            // Not consistent during init
+
+  OldMipPolicy := Image.MipPolicy;
+  Image.FMipPolicy := mpNoMips;                           // Save mip policy
+
+  OldFormat := Image.Format;
+
+  _SetResourceFormat(Image, Ord(Header.Format));
+  Image.FWidth := Header.Width;
+  Image.FHeight := Header.Height;
+  Image.FSuggestedLevels := GetSuggestedMipLevelsInfo(Image.FWidth, Image.FHeight, TCEPixelFormat(Image.Format), Image.FLevels);
+
+  if Assigned(Header.Data) then
+    Image.SetAllocated(Header.ImageSize, Header.Data)
+  else
+    Image.SetAllocated(0, Header.Data);
+
+  Image.State := rsMemory;
+
+  if TCEPixelFormat(OldFormat) <> pfUndefined then
+    Image.Convert(Image.Format, OldFormat);
+  Image.MipPolicy := OldMipPolicy;                        // Restore mip policy
+  Image.DataURL := AURL;
+  Result := True;
+end;
+
+{ TCEDataDecoderBmp }
+
+function TCEDataDecoderBmp.DoDecode(Stream: TCEInputStream; var Entity: TCEBaseEntity; const Target: TCELoadTarget;
+  MetadataOnly: Boolean): Boolean;
+var
+  BMPHeader: TImageHeader;
+begin
+  Result := False;
+  if MetadataOnly then
+  begin
+    if Assigned(Entity) then
+      LoadBitmapHeader(Stream, BMPHeader)
+    else
+      raise ECEInvalidArgument.Create('Entity must be TCEImageResource descendant');
+  end else
+    LoadBitmap(Stream, BMPHeader);
+  Result := InitResource(Entity as TCEImageResource, '', BMPHeader);
+end;
+
+procedure TCEDataDecoderBmp.Init;
+begin
+  SetLength(FLoadingTypes, 1);
+  FLoadingTypes[0] := GetDataTypeFromExt('bmp');
+end;
+
+initialization
+  CEDataDecoder.RegisterDataDecoder(TCEDataDecoderBmp.Create());
 end.

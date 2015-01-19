@@ -51,6 +51,26 @@ type
                     pfDXT1    = 50, pfDXT3     = 51, pfDXT5     = 52
                     );
 
+  // Image palette for paletted graphics file formats
+  TPalette = array[0..255] of TCEColor;
+  PPalette = ^TPalette;
+  // Image origin
+  TImageOrigin = (// Top-down image and its origin is the upper-left corner.
+                  ioTopLeft,
+                  // Bottom-up image and its origin is the lower-left corner
+                  ioBottomLeft);
+  // Image parameters data structure
+  TImageHeader = record
+    Format: TCEPixelFormat;
+    LineSize: Integer;
+    Width, Height: Integer;
+    BitsPerPixel, ImageSize: Integer;
+    ImageOrigin: TImageOrigin;
+    PaletteSize: Cardinal;
+    Palette: PPalette;
+    Data: Pointer;
+  end;
+
   // Image mip level record. Width, Height - level dimensions, Size - size of level data in bytes, Offset - offset of level data on bytes from top level data
   TImageLevel = record
     Width, Height: Integer;

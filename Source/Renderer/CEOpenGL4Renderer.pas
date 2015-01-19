@@ -63,6 +63,9 @@ type
 
 implementation
 
+uses
+  CECommon, CEVectors;
+
 { TCEOpenGL4Renderer }
 
 procedure TCEOpenGL4Renderer.DoInit;
@@ -170,20 +173,27 @@ begin
   if not Active then Exit;
   ts := CEMesh.GetVB(Mesh);
 
-  if ts^.BufferIndex = -1 then begin  // Create buffer
+  {if ts^.BufferIndex = -1 then begin  // Create buffer
     glGenBuffers(1, @VBO);
     ts^.BufferIndex := VBO;
     ts^.Status := tsMaxSizeChanged;   // Not tesselated yet as vertex buffer is just created
   end;
 
-  glBindBuffer(GL_ARRAY_BUFFER, ts^.BufferIndex);
+  glBindBuffer(GL_ARRAY_BUFFER, ts^.BufferIndex);}
   if ts^.Status <> tsTesselated then begin
     Mesh.FillVertexBuffer(VertexData);
-    glBufferData(GL_ARRAY_BUFFER, Mesh.VerticesCount * 3*SizeOf(TGLFloat), VertexData, GL_STATIC_DRAW);
+    //glBufferData(GL_ARRAY_BUFFER, Mesh.VerticesCount * Mesh.VertexSize, VertexData, GL_STATIC_DRAW);
   end;
 
-  glVertexAttribPointer(0, Mesh.VerticesCount, GL_FLOAT, False, 0, nil);
-  glEnableVertexAttribArray(0);
+  {glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, False, Mesh.VertexSize, nil);
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(1, 2, GL_FLOAT, False, Mesh.VertexSize, pointer(3));}
+
+  glEnableClientState(GL_VERTEX_ARRAY);
+  glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+  glTexCoordPointer(2, GL_FLOAT, Mesh.VertexSize,  ptroffs(VertexData, SizeOf(TCEVector3f)));
+  glVertexPointer(3, GL_FLOAT, Mesh.VertexSize, VertexData);
   glDrawArrays(GL_TRIANGLES, 0, Mesh.VerticesCount);
 end;
 

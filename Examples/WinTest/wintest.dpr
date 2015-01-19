@@ -34,7 +34,7 @@ uses
   SysUtils, dglOpenGL, Windows,
   CEWindowsApplication, CEBaseRenderer, CEOpenGL4Renderer, CEBaseInput, CEOSMessageInput,
   CEMesh, CECommon,
-  CEBaseTypes, CEMessage, CEInputMessage, CEVectors;
+  CEBaseTypes, CEMessage, CEInputMessage, CEVectors, CEImageResource;
 
 type
   // Example mesh class
@@ -53,18 +53,49 @@ begin
   VertexBuffer.Status := tsChanged; // Invalidate buffer
 end;
 
+type
+  TVert = packed record
+    vec: TCEVector3f;
+    u, v: Single;
+  end;
+  TVertArray = array[0..$FFFF] of TVert;
+
 procedure TCERotatingTriangleMesh.FillVertexBuffer(Dest: Pointer);
 var
   a: Single;
-  v: ^TCEVector3fArray;
+  v: ^TVertArray;
 begin
   inherited;
   a := Angle * pi/180;
   v := Dest;
-  Vec3f(cos(a), -sin(a), 0, v^[0]);
-  Vec3f(cos(a+2*pi/3), -sin(a+2*pi/3), 0, v^[1]);
-  Vec3f(cos(a+4*pi/3), -sin(a+4*pi/3), 0, v^[2]);
+  Vec3f(cos(a), -sin(a), 0, v^[0].vec);
+  v^[0].u := 0; v^[0].v := 0;
+  Vec3f(cos(a+2*pi/3), -sin(a+2*pi/3), 0, v^[1].vec);
+  v^[1].u := 1; v^[1].v := 0;
+  Vec3f(cos(a+4*pi/3), -sin(a+4*pi/3), 0, v^[2].vec);
+  v^[2].u := 0.5; v^[2].v := 0.5;
   FVerticesCount := 3;
+  FVertexSize := SizeOf(TVert);
+end;
+
+var
+  TexID: glUint;
+
+procedure InitTexture(Image: TCEImageResource);
+begin
+  glGenTextures(1, @TexID);
+  glBindTexture(GL_TEXTURE_2D, TexID);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, Image.ActualLevels);
+  glTexImage2D(GL_TEXTURE_2D, 0, 3, Image.Width, Image.Height, 0, GL_BGR, GL_UNSIGNED_BYTE, Image.Data);
+  glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
+
+  glActiveTexture(GL_TEXTURE0);
+  glEnable(GL_TEXTURE_2D);
+  glBindTexture(GL_TEXTURE_2D, TexID);
 end;
 
 var
@@ -72,6 +103,7 @@ var
   Renderer: TCEOpenGL4Renderer;
   Input: TCEOSMessageInput;
   Mesh: TCERotatingTriangleMesh;
+  Image: TCEImageResource;
   speed: Single;
 begin
   {$IF Declared(ReportMemoryLeaksOnShutdown)}
@@ -81,6 +113,11 @@ begin
   Renderer := TCEOpenGL4Renderer.Create(App);
   Input := TCEOSMessageInput.Create();
   Mesh := TCERotatingTriangleMesh.Create();
+  Image := TCEImageResource.Create();
+  Image.DataURL := ExtractFilePath(ParamStr(0)) + '../Examples/WinTest/test1.bmp';
+  Image.LoadExternal(False);
+
+  InitTexture(Image);
 
   App.MessageHandler := Input.HandleMessage;
 
@@ -94,6 +131,7 @@ begin
 
     App.Process();
     Mesh.Angle := Mesh.Angle + speed;
+
     Renderer.RenderMesh(Mesh);
 
     Renderer.NextFrame();
@@ -105,6 +143,7 @@ begin
     if Input.Pressed[vkALT] and Input.Pressed[vkX] then App.Terminated := True;
   end;
 
+  Image.Free();
   Mesh.Free();
   Input.Free();
   Renderer.Free();

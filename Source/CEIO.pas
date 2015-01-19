@@ -146,6 +146,8 @@ type
 
   function GetFileModifiedTime(const FileName: string): TDateTime;
 
+  // Returns data type ID based on file extension
+  function GetDataTypeFromExt(const ext: string): TCEDataTypeID;
   // Returns protocol part of URL
   function GetProtocolFromUrl(const URL: string): string;
   // Returns data type ID based on URL (extension part)
