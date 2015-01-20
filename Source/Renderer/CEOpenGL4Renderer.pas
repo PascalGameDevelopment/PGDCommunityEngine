@@ -32,7 +32,7 @@ unit CEOpenGL4Renderer;
 interface
 
 uses
-  CEBaseTypes, CEBaseRenderer, CEBaseApplication, CEMesh,
+  CEBaseTypes, CEBaseRenderer, CEBaseApplication, CEMesh, CEMaterial,
   dglOpenGL
   {$IFDEF WINDOWS}
   , Windows
@@ -56,6 +56,7 @@ type
     procedure DoFinalizeGAPI(); override;
     procedure DoFinalizeGAPIWin();
   public
+    procedure ApplyRenderPass(Pass: TCERenderPass); override;
     procedure RenderMesh(Mesh: TCEMesh); override;
     procedure Clear(Flags: TCEClearFlags; Color: TCEColor; Z: Single; Stencil: Cardinal); override;
     procedure NextFrame(); override;
@@ -64,7 +65,7 @@ type
 implementation
 
 uses
-  CECommon, CEVectors;
+  CECommon, CEVectors, CEImageResource;
 
 { TCEOpenGL4Renderer }
 
@@ -164,6 +165,31 @@ begin
   glClearStencil(Stencil);
 
   glClear(GL_COLOR_BUFFER_BIT * Ord(cfColor in Flags) or GL_DEPTH_BUFFER_BIT * Ord(cfDepth in Flags) or GL_STENCIL_BITS * Ord(cfStencil in Flags));
+end;
+
+function InitTexture(Image: TCEImageResource): glUint;
+begin
+  glGenTextures(1, @Result);
+  glBindTexture(GL_TEXTURE_2D, Result);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, Image.ActualLevels);
+  glTexImage2D(GL_TEXTURE_2D, 0, 3, Image.Width, Image.Height, 0, GL_BGR, GL_UNSIGNED_BYTE, Image.Data);
+end;
+
+procedure TCEOpenGL4Renderer.ApplyRenderPass(Pass: TCERenderPass);
+var TexId: Integer;
+begin
+  TexId := CEMaterial._GetTextureId(Pass, 0);
+  if TexId = -1 then
+  begin
+    TexId := InitTexture(Pass.Texture0);
+    CEMaterial._SetTextureId(Pass, 0, TexId);
+  end;
+  glBindTexture(GL_TEXTURE_2D, TexId);
+  glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glActiveTexture(GL_TEXTURE0);
+  glEnable(GL_TEXTURE_2D);
 end;
 
 procedure TCEOpenGL4Renderer.RenderMesh(Mesh: TCEMesh);

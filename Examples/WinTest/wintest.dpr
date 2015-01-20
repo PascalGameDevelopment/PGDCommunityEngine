@@ -31,10 +31,10 @@ program wintest;
 {$APPTYPE CONSOLE}
 
 uses
-  SysUtils, dglOpenGL, Windows,
+  SysUtils, Windows, dglOpenGL,
   CEWindowsApplication, CEBaseRenderer, CEOpenGL4Renderer, CEBaseInput, CEOSMessageInput,
   CEMesh, CECommon,
-  CEBaseTypes, CEMessage, CEInputMessage, CEVectors, CEImageResource;
+  CEBaseTypes, CEMessage, CEInputMessage, CEVectors, CEImageResource, CEMaterial;
 
 type
   // Example mesh class
@@ -79,31 +79,12 @@ begin
 end;
 
 var
-  TexID: glUint;
-
-procedure InitTexture(Image: TCEImageResource);
-begin
-  glGenTextures(1, @TexID);
-  glBindTexture(GL_TEXTURE_2D, TexID);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, Image.ActualLevels);
-  glTexImage2D(GL_TEXTURE_2D, 0, 3, Image.Width, Image.Height, 0, GL_BGR, GL_UNSIGNED_BYTE, Image.Data);
-  glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
-
-  glActiveTexture(GL_TEXTURE0);
-  glEnable(GL_TEXTURE_2D);
-  glBindTexture(GL_TEXTURE_2D, TexID);
-end;
-
-var
   App: TCEWindowsApplication;
   Renderer: TCEOpenGL4Renderer;
   Input: TCEOSMessageInput;
   Mesh: TCERotatingTriangleMesh;
   Image: TCEImageResource;
+  Mat: TCERenderPass;
   speed: Single;
 begin
   {$IF Declared(ReportMemoryLeaksOnShutdown)}
@@ -116,8 +97,8 @@ begin
   Image := TCEImageResource.Create();
   Image.DataURL := ExtractFilePath(ParamStr(0)) + '../Examples/WinTest/test1.bmp';
   Image.LoadExternal(False);
-
-  InitTexture(Image);
+  Mat := TCERenderPass.Create();
+  Mat.Texture0 := Image;
 
   App.MessageHandler := Input.HandleMessage;
 
@@ -132,6 +113,7 @@ begin
     App.Process();
     Mesh.Angle := Mesh.Angle + speed;
 
+    Renderer.ApplyRenderPass(Mat);
     Renderer.RenderMesh(Mesh);
 
     Renderer.NextFrame();
@@ -143,6 +125,7 @@ begin
     if Input.Pressed[vkALT] and Input.Pressed[vkX] then App.Terminated := True;
   end;
 
+  Mat.Free();
   Image.Free();
   Mesh.Free();
   Input.Free();

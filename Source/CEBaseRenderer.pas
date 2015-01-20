@@ -33,7 +33,7 @@ unit CEBaseRenderer;
 interface
 
 uses
-  CEBaseTypes, CEBaseApplication, CEMesh;
+  CEBaseTypes, CEBaseApplication, CEMesh, CEMaterial;
 
 type
   // Render target clear flags
@@ -54,6 +54,8 @@ type
   public
     constructor Create(App: TCEBaseApplication);
     destructor Destroy(); override;
+    // Performs render state setup
+    procedure ApplyRenderPass(Pass: TCERenderPass); virtual; abstract;
     // Performs necessary draw calls to render the given geometry
     procedure RenderMesh(Mesh: TCEMesh); virtual; abstract;
     // Clear current render target
