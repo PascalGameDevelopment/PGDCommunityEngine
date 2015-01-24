@@ -243,7 +243,7 @@ begin
   Result := 0;
   if SysUtils.FindFirst(FileName, faDirectory, sr) = 0 then
   begin
-    {$IFDEF DELPHIXE}
+    {$IFDEF HAS_FILE_TIMESTAMP}
       Result := sr.TimeStamp;
     {$ELSE}
       Result := SysUtils.FileDateToDateTime(sr.Time);

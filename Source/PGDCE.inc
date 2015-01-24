@@ -3,11 +3,13 @@
     {$MESSAGE ERROR 'Seems that the include file is used in a program before program header'}
   {$IFEND}
   {$IF CompilerVersion >= 15.0}             // Delphi 7
-    {$Message 'Delphi 7+ detected'}
     {$DEFINE DELPHI}
     {$IF CompilerVersion >= 17.0}           // Delphi 2005
       {$DEFINE HAS_INLINE}
       {$DEFINE HAS_STRICT}
+    {$IFEND}
+    {$IF CompilerVersion >= 22.0}           // Delphi XE
+      {$DEFINE HAS_FILE_TIMESTAMP}
     {$IFEND}
   {$IFEND}
 {$ENDIF}
