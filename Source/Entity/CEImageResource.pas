@@ -354,11 +354,14 @@ begin
   Header.PaletteSize := InfoHeader.biClrUsed;
   if (InfoHeader.biBitCount <= 8) and (Header.PaletteSize = 0) then
     Header.PaletteSize := 256;
-  Getmem(Header.Palette, Header.PaletteSize * SizeOf(TCEColor));
-  if not Stream.ReadCheck(Header.Palette^, Header.PaletteSize * SizeOf(TCEColor)) then
+  if Header.PaletteSize > 0 then
   begin
-    FreeMem(Header.Palette);
-    Exit;
+    Getmem(Header.Palette, Header.PaletteSize * SizeOf(TCEColor));
+    if not Stream.ReadCheck(Header.Palette^, Header.PaletteSize * SizeOf(TCEColor)) then
+    begin
+      FreeMem(Header.Palette);
+      Exit;
+    end;
   end;
   Header.ImageSize := InfoHeader.biSizeImage;
   if Header.ImageSize = 0 then
@@ -446,6 +449,8 @@ begin
   end else
     LoadBitmap(Stream, BMPHeader);
   Result := InitResource(Entity as TCEImageResource, '', BMPHeader);
+  if BMPHeader.PaletteSize <> 0 then
+    FreeMem(BMPHeader.Palette, BMPHeader.PaletteSize);
 end;
 
 procedure TCEDataDecoderBmp.Init;
