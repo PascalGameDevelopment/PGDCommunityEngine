@@ -21,7 +21,7 @@
 {
 @abstract(PGDCE OpenGL Renderer)
 
-Definition for the PGDCE OpenGL 4.x renderer class
+Definition for the PGDCE OpenGL 4.x renderer class. Platform specific.
 
 @author(<INSERT YOUR NAME HERE> (<INSERT YOUR EMAIL ADDRESS OR WEBSITE HERE>))
 }
