@@ -25,15 +25,15 @@ This is test for Windows application starter classes
 
 @author(George Bakhtadze (avagames@gmail.com))
 }
-{$Include PGDCE.inc}
 program wintest;
+{$Include PGDCE.inc}
 
 {$APPTYPE CONSOLE}
 
 uses
-  SysUtils, Windows, dglOpenGL,
-  CEWindowsApplication, CEBaseRenderer, CEOpenGL4Renderer, CEBaseInput, CEOSMessageInput,
-  CEMesh, CECommon,
+  SysUtils, Windows,
+  CEWindowsApplication, CEBaseRenderer, CEOpenGLES2Renderer, CEBaseInput, CEOSMessageInput,
+  CEMesh, CECommon, CEOSUtils,
   CEBaseTypes, CEMessage, CEInputMessage, CEVectors, CEImageResource, CEMaterial;
 
 type
@@ -56,7 +56,7 @@ end;
 type
   TVert = packed record
     vec: TCEVector3f;
-    u, v: Single;
+    //u, v: Single;
   end;
   TVertArray = array[0..$FFFF] of TVert;
 
@@ -68,12 +68,12 @@ begin
   inherited;
   a := Angle * pi/180;
   v := Dest;
-  Vec3f(cos(a), -sin(a), 0, v^[0].vec);
-  v^[0].u := 0; v^[0].v := 0;
-  Vec3f(cos(a+2*pi/3), -sin(a+2*pi/3), 0, v^[1].vec);
-  v^[1].u := 1; v^[1].v := 0;
-  Vec3f(cos(a+4*pi/3), -sin(a+4*pi/3), 0, v^[2].vec);
-  v^[2].u := 0.5; v^[2].v := 0.5;
+  Vec3f(cos(a), sin(a), 0, v^[0].vec);
+  //v^[0].u := 0; v^[0].v := 0;
+  Vec3f(cos(a+2*pi/3), sin(a+2*pi/3), 0, v^[1].vec);
+  //v^[1].u := 1; v^[1].v := 0;
+  Vec3f(cos(a+4*pi/3), sin(a+4*pi/3), 0, v^[2].vec);
+  //v^[2].u := 0.5; v^[2].v := 0.5;
   FVerticesCount := 3;
   FVertexSize := SizeOf(TVert);
 end;
@@ -91,8 +91,8 @@ begin
   ReportMemoryLeaksOnShutdown := True;
   {$IFEND}
   App := TCEWindowsApplication.Create();
-  Renderer := TCEOpenGL4Renderer.Create(App);
   Input := TCEOSMessageInput.Create();
+  Renderer := TCEOpenGL4Renderer.Create(App);
   Mesh := TCERotatingTriangleMesh.Create();
   Image := TCEImageResource.Create();
   Image.DataURL := ExtractFilePath(ParamStr(0)) + '../Examples/WinTest/test1.bmp';
@@ -102,13 +102,10 @@ begin
 
   App.MessageHandler := Input.HandleMessage;
 
-  glLoadIdentity;
-  glTranslatef(0, 0, -3);
-
   speed := 0.1;
 
   while not App.Terminated do begin
-    Renderer.Clear([cfColor, cfDepth], GetColor(0, 0, 0, 0), 1.0, 0);
+    Renderer.Clear([cfColor, cfDepth], GetColor(40, 30, 130, 0), 1.0, 0);
 
     App.Process();
     Mesh.Angle := Mesh.Angle + speed;

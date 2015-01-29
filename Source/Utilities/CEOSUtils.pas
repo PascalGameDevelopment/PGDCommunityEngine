@@ -37,7 +37,7 @@ uses
 {$ENDIF}
 {$IFDEF UNIX}
 uses
-    unix;
+  unix;
 {$ENDIF}
 
 // Obtains mouse cursor position relative to screen and fills X and Y with the position

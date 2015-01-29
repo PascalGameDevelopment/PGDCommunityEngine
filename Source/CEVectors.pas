@@ -53,6 +53,8 @@ type
 
   function Vec3f(x, y, z: Single): TCEVector3f; overload;
   procedure Vec3f(x, y, z: Single; out dest: TCEVector3f); overload;
+  function Vec4f(x, y, z, W: Single): TCEVector4f; overload;
+  procedure Vec4f(x, y, z, W: Single; out dest: TCEVector4f); overload;
 
 implementation
 
@@ -66,6 +68,19 @@ begin
   dest.x := x;
   dest.y := y;
   dest.z := z;
+end;
+
+function Vec4f(x, y, z, W: Single): TCEVector4f; overload;
+begin
+  Vec4f(x, y, z, w, Result);
+end;
+
+procedure Vec4f(x, y, z, W: Single; out dest: TCEVector4f); overload;
+begin
+  dest.x := x;
+  dest.y := y;
+  dest.z := z;
+  dest.w := W;
 end;
 
 end.
