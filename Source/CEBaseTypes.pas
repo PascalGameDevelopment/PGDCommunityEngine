@@ -136,6 +136,8 @@ type
     // Line number in source file
     LineNumber: Integer;
   end;
+  // Stack trace
+  TBaseStackTrace = array of TCodeLocation;
 
   function GetColor(const R, G, B, A: Byte): TCEColor; overload; {$I inline.inc}
   function GetColor(const C: Longword): TCEColor; overload; {$I inline.inc}
