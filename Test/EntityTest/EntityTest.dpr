@@ -25,8 +25,8 @@ This is test for template collections
 
 @author(George Bakhtadze (avagames@gmail.com))
 }
-{$Include PGDCE.inc}
 program EntityTest;
+{$Include PGDCE.inc}
 
 {$APPTYPE CONSOLE}
 

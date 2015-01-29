@@ -26,8 +26,8 @@ This is test console runner for template collections and algorithms
 @author(George Bakhtadze (avagames@gmail.com))
 }
 
-{$Include PGDCE.inc}
 program TemplateTest;
+{$Include PGDCE.inc}
 
 {$APPTYPE CONSOLE}
 
