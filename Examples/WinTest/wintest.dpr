@@ -95,7 +95,7 @@ begin
   Renderer := TCEOpenGL4Renderer.Create(App);
   Mesh := TCERotatingTriangleMesh.Create();
   Image := TCEImageResource.Create();
-  Image.DataURL := ExtractFilePath(ParamStr(0)) + '../Examples/WinTest/test1.bmp';
+  Image.DataURL := GetPathRelativeToFile(ParamStr(0), '../Assets/test1.bmp');
   Image.LoadExternal(False);
   Mat := TCERenderPass.Create();
   Mat.Texture0 := Image;
