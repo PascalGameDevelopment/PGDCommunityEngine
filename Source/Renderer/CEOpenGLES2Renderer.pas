@@ -33,11 +33,15 @@ interface
 
 uses
   CEBaseTypes, CEBaseRenderer, CEBaseApplication, CEMesh, CEMaterial,
-  gles20
-  {$IFDEF WINDOWS}
-  , Windows
+  {$IFDEF MOBILE}
+    gles20,
+  {$ELSE}                                     // Use emulation layer for desktops
+    GLES20Regal,
   {$ENDIF}
-  ;
+  {$IFDEF WINDOWS}
+  Windows,
+  {$ENDIF}
+  CELog;
 
 type
   TCEOpenGL4Renderer = class(TCEBaseRenderer)
@@ -82,7 +86,7 @@ const
                                      'uniform mediump float phase;' +
                                      'uniform sampler2D s_texture0;' +
                                      'void main() {' +
-                                     '  gl_FragColor = texture2D(s_texture0, pos.xy)*sin(((pos.x*pos.x)+(pos.y*pos.y))*40.0+phase);' +
+                                     '  gl_FragColor = texture2D(s_texture0, pos.xy*sin(sqrt((pos.x*pos.x)+(pos.y*pos.y))*32.0+phase));' +
                                      '}';
 
 procedure PrintShaderInfoLog(Shader: TGLUint; ShaderType: string);
@@ -98,7 +102,7 @@ begin
     begin
       getmem(Buffer, len+1);
       glGetShaderInfoLog(Shader, len, nil, Buffer);
-      writeln(ShaderType + ': ' + Buffer + '!!!');
+      CELog.Error(ShaderType + ': ' + Buffer);
       freemem(Buffer);
     end;
   end;
@@ -119,7 +123,14 @@ end;
 { TCEOpenGL4Renderer }
 
 procedure TCEOpenGL4Renderer.DoInit;
+type
+  TLib = PWideChar;
 begin
+  {$IFNDEF MOBILE}
+    {$ifdef windows}
+    LoadGLESv2(TLib(GetPathRelativeToFile(ParamStr(0), '../Library/regal/regal32.dll')));
+    {$endif}
+  {$ENDIF}
 end;
 
 function TCEOpenGL4Renderer.DoInitGAPI(App: TCEBaseApplication): Boolean;
@@ -130,7 +141,7 @@ begin
   {$ELSE}
   raise Exception.Create('Not implemented for this platform yet');
   {$ENDIF}
-  Writeln('Context succesfully created');
+  CELog.Log('Context succesfully created');
 
   // Init GL settings
   glClearColor(0, 0, 0, 0);
@@ -155,14 +166,14 @@ begin
 
   FOGLDC := GetDC(FRenderWindowHandle);
   if (FOGLDC = 0) then begin
-    Writeln(ClassName + '.DoInitGAPI: Unable to get a device context');
+    CELog.Error(ClassName + '.DoInitGAPI: Unable to get a device context');
     Exit;
   end;
 
   FOGLContext := CreateRenderingContext(FOGLDC, [opDoubleBuffered], 24, 16, 0, 0, 0, Dummy);
 
   if FOGLContext = 0 then begin
-    Writeln(ClassName + '.DoInitGAPI: Error creating rendering context');
+    CELog.Error(ClassName + '.DoInitGAPI: Error creating rendering context');
     Exit;
   end;
 
@@ -182,7 +193,7 @@ begin
 
   PhaseLocation:=glGetUniformLocation(ShaderProgram,'phase');
   if PhaseLocation<0 then begin
-    writeln('Error: Cannot get phase shader uniform location');
+    CELog.Error('Error: Cannot get phase shader uniform location');
   end;
 
   Result := True;

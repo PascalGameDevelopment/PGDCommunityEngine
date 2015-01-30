@@ -55,6 +55,9 @@ uses
   // Returns extension part of file name
   function GetFileExt(const FileName: string): string;
 
+  // Converts file path relative to given file path to absolute path
+  function GetPathRelativeToFile(const FileName, RelativeFileName: string): string;
+
 type
   { @Abstract(Pseudo-random numbers generator)
     Generates a sequence of pseudo-random numbers.
@@ -178,6 +181,11 @@ begin
     Result := ''
   else
     Result := Copy(FileName, ind+1, Length(FileName));
+end;
+
+function GetPathRelativeToFile(const FileName, RelativeFileName: string): string;
+begin
+  Result := ExtractFilePath(FileName) + RelativeFileName;
 end;
 
 const
