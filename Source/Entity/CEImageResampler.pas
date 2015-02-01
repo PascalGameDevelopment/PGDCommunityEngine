@@ -193,6 +193,7 @@ end;
 function FreeCallback(const e: TCEImageResampler; Data: Pointer): Boolean;
 begin
   if Assigned(e) then e.Free();
+  Result := True;
 end;
 
 initialization

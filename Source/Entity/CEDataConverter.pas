@@ -161,6 +161,7 @@ end;
 function FreeCallback(const e: TCEDataConverter; Data: Pointer): Boolean;
 begin
   if Assigned(e) then e.Free();
+  Result := True;
 end;
 
 initialization

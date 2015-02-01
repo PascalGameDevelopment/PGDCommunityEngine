@@ -190,6 +190,7 @@ end;
 function FreeCallback(const e: TCEDataDecoder; Data: Pointer): Boolean;
 begin
   if Assigned(e) then e.Free();
+  Result := True;
 end;
 
 initialization

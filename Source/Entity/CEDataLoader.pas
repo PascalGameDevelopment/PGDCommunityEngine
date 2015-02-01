@@ -176,6 +176,7 @@ end;
 function FreeCallback(const e: TCEDataLoader; Data: Pointer): Boolean;
 begin
   if Assigned(e) then e.Free();
+  Result := True;
 end;
 
 initialization
