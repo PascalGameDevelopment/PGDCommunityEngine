@@ -53,4 +53,5 @@
   {$DEFINE CE_DEBUG}
 {$ENDIF}
 
+{$DEFINE FLOAT_IEEE}             // Assume IEEE floating point values representation
 {$DEFINE LOGGING}
