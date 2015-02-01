@@ -49,6 +49,8 @@ uses
 
   // Returns base pointer shifted by offset
   function PtrOffs(Base: Pointer; Offset: Integer): Pointer; {$I inline.inc}
+  // Returns pointer as a number
+  function PtrToInt(P: Pointer): Cardinal; {$I inline.inc}
 
   // Returns positions of ch within the given string starting from Start or -1 if not found
   function CharPos(const ch: AnsiChar; const s: AnsiString; const Start: Integer ): Integer;
@@ -113,6 +115,37 @@ type
     property Managed: IRefcountedContainer read GetContainer;
   end;
 
+  // Back buffer data structure
+  TBackBufferData = packed record
+    OrigData: Pointer;
+    Size: Cardinal;
+    Data: Pointer;
+  end;
+  TBackBufferArray = packed array[0..$FFFFFF] of TBackBufferData;
+
+  { @Abstract(Deferred write helper for user entity classes)
+    May be used to support deferred write of properties in non performace critical classes.
+    Use WriteXXX methods in a property setter to remember a write operation.
+    Use Flush() method to apply remembered write operations.
+    Not thread safe. There is on much sense to make this class thread safe as properties will be written from one thread.
+  }
+  TCEBackBuffer = class
+  private
+    FBuffer: Pointer;
+    {$IFOPT C+}FSize: Integer;{$ENDIF}
+    FData: ^TBackBufferArray;
+    FCount: Integer;
+    function GetIndex(Dest: Pointer; Size: Integer): Integer;
+  public
+    // Initialize internall storage for Count properties with Size total size
+    constructor Create(Count: Integer; Size: Integer);
+    destructor Destroy(); override;
+    // Writes Value into internal storage as a value of a property which is located at Dest and has the specified size
+    procedure WriteProperty(Dest: Pointer; Size: Integer; const Value);
+    // Writes all values from internal storage into properties
+    procedure Flush();
+  end;
+
   // Create an instance of reference counted container
   function CreateRefcountedContainer: IRefcountedContainer;
 
@@ -154,6 +187,11 @@ function PtrOffs(Base: Pointer; Offset: Integer): Pointer; {$I inline.inc}
 begin
   Result := Base;
   Inc(PByte(Result), Offset);
+end;
+
+function PtrToInt(P: Pointer): Cardinal; {$I inline.inc}
+begin
+  Result := Cardinal(P);
 end;
 
 function CharPos(const ch: AnsiChar; const s: AnsiString; const Start: Integer): Integer;
@@ -325,6 +363,65 @@ end;
 function CreateRefcountedContainer: IRefcountedContainer;
 begin
   Result := TRefcountedContainer.Create;
+end;
+
+{ TCEBackBuffer }
+
+function TCEBackBuffer.GetIndex(Dest: Pointer; Size: Integer): Integer;
+begin
+  Result := 0;
+  while Result < FCount do
+  begin
+    if Assigned(FData^[Result].OrigData) then
+    begin
+      if FData^[Result].OrigData = Dest then
+        Exit
+    end else begin
+      if Result > 0 then
+        FData^[Result].Data := PtrOffs(FData^[Result-1].Data, FData^[Result-1].Size);
+      {$IFOPT C+} Assert(PtrToInt(FData^[Result].Data) + Cardinal(Size) <= PtrToInt(FBuffer) + Cardinal(FSize), 'TCEBackBuffer.WriteProperty: Buffer is too small'); {$ENDIF}
+      FData^[Result].OrigData := Dest;
+      FData^[Result].Size := Size;
+      Exit;
+    end;
+    Inc(Result);
+  end;
+  Assert(False, 'TCEBackBuffer.WriteProperty: No backbuffer slots left');
+end;
+
+constructor TCEBackBuffer.Create(Count, Size: Integer);
+begin
+  Assert((Count > 0) and (Size > 0));
+  FCount := Count;
+  GetMem(FBuffer, Size);
+  {$IFOPT C+} FSize := Size; {$ENDIF}
+  GetMem(FData, Count * SizeOf(TBackBufferData));
+  FillChar(FData^, Count * SizeOf(TBackBufferData), 0);
+  FData^[0].Data := FBuffer;
+end;
+
+destructor TCEBackBuffer.Destroy;
+begin
+  FreeMem(FData);
+  FreeMem(FBuffer);
+  inherited;
+end;
+
+procedure TCEBackBuffer.WriteProperty(Dest: Pointer; Size: Integer; const Value);
+var
+  Index: Integer;
+begin
+  Index := GetIndex(Dest, Size);
+  Move(Value, FData^[Index].Data^, Size);
+end;
+
+procedure TCEBackBuffer.Flush;
+var
+  i: Integer;
+begin
+  for i := 0 to FCount-1 do
+    if Assigned(FData^[i].OrigData) then
+      Move(FData^[i].Data^, FData^[i].OrigData^, FData^[i].Size);
 end;
 
 end.

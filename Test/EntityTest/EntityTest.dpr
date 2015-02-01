@@ -108,7 +108,8 @@ type
   published
     procedure TestPropsGetSet();
     procedure TestWriteRead();
-    procedure TestSaveLoad;
+    procedure TestSaveLoad();
+    procedure TestBackBuffer();
   end;
 
 const
@@ -315,6 +316,44 @@ begin
 
     Assert(_Check(Manager2.Find('/Parent/Child') = TLinkingEntity(Manager2.Find('/Parent/Linking')).Linked), 'Link fail');
   end;
+end;
+
+procedure TEntityTest.TestBackBuffer;
+var
+  BB: TCEBackBuffer;
+  i1: Integer;
+  d1: Double;
+  i2: Int64;
+  r1: record
+    f1, f2: Single;
+    i: int64;
+  end;
+begin
+  BB := TCEBackBuffer.Create(4, 4+8+8+SizeOf(r1));
+  i1 := 100;
+  BB.WriteProperty(@i1, SizeOf(i1), i1);
+  d1 := 100.01;
+  BB.WriteProperty(@d1, SizeOf(d1), d1);
+  i2 := 1000;
+  BB.WriteProperty(@i2, SizeOf(i2), i2);
+  r1.f1 := 1.0;
+  r1.f2 := -200.0003;
+  BB.WriteProperty(@r1, SizeOf(r1), r1);
+
+  BB.WriteProperty(@i1, SizeOf(i1), i1);
+  BB.WriteProperty(@d1, SizeOf(d1), d1);
+  i1 := 0;
+  d1 := 0;
+  i2 := 0;
+  r1.f1 := 0;
+  r1.f2 := 0;
+
+  BB.Flush();
+  BB.Free();
+  Assert(_Check(i1 = 100),                Format('BackBuffer: i1: expected 100,    actual: %d', [i1]));
+  Assert(_Check(FloatEquals(d1, 100.01)), Format('BackBuffer: d1: expected 100.01, actual: %g', [d1]));
+  Assert(_Check(i2 = 1000),               Format('BackBuffer: i2: expected 1000,   actual: %d', [i2]));
+  Assert(_Check(FloatEquals(r1.f1, 1.0) and FloatEquals(r1.f2, -200.0003)), Format('BackBuffer: r1: expected (1.0, -200.0003), actual: (%g, %g)', [r1.f1, r1.f2]));
 end;
 
 { TLinkingEntity }
