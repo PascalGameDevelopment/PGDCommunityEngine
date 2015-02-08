@@ -32,13 +32,14 @@ unit CEMaterial;
 interface
 
 uses
-  CEBaseTypes, CEEntity, CEImageResource;
+  CEBaseTypes, CEEntity, CEResource, CEImageResource;
 
 const
   MAX_TEXTURES = 32;
+  // Special value indicating that the ID is not initialized
+  ID_NOT_INITIALIZED = -1;
 
 type
-
   TTextureSetup = record
     // Private to renderer
     TextureId: Integer;
@@ -48,18 +49,27 @@ type
   // Representing render pass setup
   TCERenderPass = class(TCEBaseEntity)
   private
+    // Shader program ID used by a renderer
+    ProgramId: Integer;
     TextureSetups, _TextureSetups: TTextureSetups;
     FTexture0: TCEImageResource;
+    FVertexShader: TCETextResource;
+    FFragmentShader: TCETextResource;
+
     function GetTexture0: TCEImageResource;
     procedure SetTexture0(const Value: TCEImageResource);
   public
   published
     constructor Create();
     property Texture0: TCEImageResource read GetTexture0 write SetTexture0;
+    property VertexShader: TCETextResource read FVertexShader write FVertexShader;
+    property FragmentShader: TCETextResource read FFragmentShader write FFragmentShader;
   end;
 
   function _GetTextureId(Pass: TCERenderPass; Index: Integer): Integer;
   procedure _SetTextureId(Pass: TCERenderPass; Index: Integer; Id: Integer);
+  function _GetProgramId(Pass: TCERenderPass): Integer;
+  procedure _SetProgramId(Pass: TCERenderPass; Id: Integer);
 
 implementation
 
@@ -71,6 +81,16 @@ end;
 procedure _SetTextureId(Pass: TCERenderPass; Index: Integer; Id: Integer);
 begin
   Pass.TextureSetups[Index].TextureId := Id;
+end;
+
+function _GetProgramId(Pass: TCERenderPass): Integer;
+begin
+  Result := Pass.ProgramId;
+end;
+
+procedure _SetProgramId(Pass: TCERenderPass; Id: Integer);
+begin
+  Pass.ProgramId := Id;
 end;
 
 function TCERenderPass.GetTexture0: TCEImageResource;
@@ -88,8 +108,9 @@ end;
 constructor TCERenderPass.Create;
 var i: Integer;
 begin
+  ProgramId := ID_NOT_INITIALIZED;
   for i := 0 to MAX_TEXTURES-1 do
-    TextureSetups[i].TextureId := -1;
+    TextureSetups[i].TextureId := ID_NOT_INITIALIZED;
 end;
 
 end.

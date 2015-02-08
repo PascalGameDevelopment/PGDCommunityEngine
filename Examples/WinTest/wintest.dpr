@@ -33,7 +33,7 @@ program wintest;
 uses
   SysUtils, Windows,
   CEWindowsApplication, CEBaseRenderer, CEOpenGLES2Renderer, CEBaseInput, CEOSMessageInput,
-  CEMesh, CECommon, CEOSUtils,
+  CEMesh, CECommon, CEOSUtils, CEResource,
   CEBaseTypes, CEMessage, CEInputMessage, CEVectors, CEImageResource, CEMaterial;
 
 type
@@ -85,6 +85,7 @@ var
   Mesh: TCERotatingTriangleMesh;
   Image: TCEImageResource;
   Mat: TCERenderPass;
+  Sh: TCETextResource;
   speed: Single;
 begin
   {$IF Declared(ReportMemoryLeaksOnShutdown)}
@@ -94,12 +95,11 @@ begin
   Input := TCEOSMessageInput.Create();
   Renderer := TCEOpenGL4Renderer.Create(App);
   Mesh := TCERotatingTriangleMesh.Create();
-  Image := TCEImageResource.Create();
-  Image.DataURL := GetPathRelativeToFile(ParamStr(0), '../Assets/test1.bmp');
-  Image.LoadExternal(False);
+  Image := TCEImageResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/test1.bmp'));
   Mat := TCERenderPass.Create();
   Mat.Texture0 := Image;
-
+  Mat.VertexShader   := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/vs.glsl'));
+  Mat.FragmentShader := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/fs.glsl'));
   App.MessageHandler := Input.HandleMessage;
 
   speed := 0.1;
@@ -115,13 +115,15 @@ begin
 
     Renderer.NextFrame();
 
-    if Input.Pressed[vkNUMPAD6] or (Input.MouseState.Buttons[mbLeft] = baDown) then speed := speed + 0.1;
-    if Input.Pressed[vkNUMPAD4] or (Input.MouseState.Buttons[mbRight] = baDown) then speed := speed - 0.1;
+    if Input.Pressed[vkNUMPAD6] or (Input.MouseState.Buttons[mbLeft]  = baDown) then speed := speed - 0.1;
+    if Input.Pressed[vkNUMPAD4] or (Input.MouseState.Buttons[mbRight] = baDown) then speed := speed + 0.1;
     speed := Clamps(speed, -10, 10);
 
     if Input.Pressed[vkALT] and Input.Pressed[vkX] then App.Terminated := True;
   end;
 
+  Mat.VertexShader.Free();
+  Mat.FragmentShader.Free();
   Mat.Free();
   Image.Free();
   Mesh.Free();

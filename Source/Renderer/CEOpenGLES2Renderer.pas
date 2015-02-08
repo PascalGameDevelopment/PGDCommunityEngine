@@ -32,7 +32,7 @@ unit CEOpenGLES2Renderer;
 interface
 
 uses
-  CEBaseTypes, CEBaseRenderer, CEBaseApplication, CEMesh, CEMaterial,
+  CEBaseTypes, CEBaseRenderer, CEBaseApplication, CEMesh, CEMaterial, CEOpenGL,
   {$IFDEF MOBILE}
     gles20,
   {$ELSE}                                     // Use emulation layer for desktops
@@ -51,11 +51,13 @@ type
       FOGLDC: HDC;
       FRenderWindowHandle: HWND;
     {$ENDIF}
-    VertexShader, FragmentShader, ShaderProgram: TGLuint;
     PhaseLocation: TGLint;
 
     VertexData: Pointer;
     VBO: GLUInt;
+
+    Shaders: TGLSLShaderList;
+    function InitShader(Pass: TCERenderPass): Integer;
   protected
     procedure DoInit(); override;
     function DoInitGAPI(App: TCEBaseApplication): Boolean; override;
@@ -74,29 +76,16 @@ implementation
 uses
   CECommon, CEVectors, CEImageResource;
 
-const
-  VertexShaderSource: AnsiString = 'attribute vec4 position;' +
-                                   'varying mediump vec2 pos;' +
-                                   'void main() {' +
-                                   '  gl_Position = position;' +
-                                   '  pos = position.xy;' +
-                                   '}';
-
-  FragmentShaderSource: AnsiString = 'varying mediump vec2 pos;' +
-                                     'uniform mediump float phase;' +
-                                     'uniform sampler2D s_texture0;' +
-                                     'void main() {' +
-                                     '  gl_FragColor = texture2D(s_texture0, pos.xy*sin(sqrt((pos.x*pos.x)+(pos.y*pos.y))*32.0+phase));' +
-                                     '}';
-
-procedure PrintShaderInfoLog(Shader: TGLUint; ShaderType: string);
+function PrintShaderInfoLog(Shader: TGLUint; ShaderType: string): Boolean;
 var
   len, Success: TGLint;
   Buffer: pchar;
 begin
+  Result := True;
   glGetShaderiv(Shader, GL_COMPILE_STATUS, @Success);
   if Success <> GL_TRUE then
   begin
+    Result := False;
     glGetShaderiv(Shader, GL_INFO_LOG_LENGTH, @len);
     if len > 0 then
     begin
@@ -108,16 +97,15 @@ begin
   end;
 end;
 
-function CreateShader(ShaderType: TGLenum; Source: PChar): TGLuint;
+function CreateShader(ShaderType: TGLenum; Source: PAnsiChar): TGLuint;
+const
+  Title: array[Boolean] of String = ('Fragment', 'Vertex');
 begin
   Result := glCreateShader(ShaderType);
   glShaderSource(Result, 1, @Source, nil);
   glCompileShader(Result);
-  if ShaderType = GL_VERTEX_SHADER then
-  begin
-    PrintShaderInfoLog(Result, 'Vertex shader');
-  end else
-    PrintShaderInfoLog(Result, 'Fragment shader');
+  if not PrintShaderInfoLog(Result, Title[ShaderType = GL_VERTEX_SHADER] + ' shader') then
+    Result := 0;
 end;
 
 { TCEOpenGL4Renderer }
@@ -136,6 +124,7 @@ end;
 function TCEOpenGL4Renderer.DoInitGAPI(App: TCEBaseApplication): Boolean;
 begin
   Result := False;
+  Shaders := TGLSLShaderList.Create();
   {$IFDEF WINDOWS}
   if not DoInitGAPIWin(App) then Exit;
   {$ELSE}
@@ -179,23 +168,12 @@ begin
 
   ActivateRenderingContext(FOGLDC, FOGLContext);
 
-  ShaderProgram:=glCreateProgram();
+  Result := True;
+end;
 
-  VertexShader:=CreateShader(GL_VERTEX_SHADER,pchar(VertexShaderSource));
-  FragmentShader:=CreateShader(GL_FRAGMENT_SHADER,pchar(FragmentShaderSource));
-
-  glAttachShader(ShaderProgram,VertexShader);
-  glAttachShader(ShaderProgram,FragmentShader);
-
-  glLinkProgram(ShaderProgram);
-
-  glUseProgram(ShaderProgram);
-
-  PhaseLocation:=glGetUniformLocation(ShaderProgram,'phase');
-  if PhaseLocation<0 then begin
-    CELog.Error('Error: Cannot get phase shader uniform location');
-  end;
-
+function FreeCallback(const e: TCEGLSLShader; Data: Pointer): Boolean;
+begin
+  if Assigned(e) then e.Free();
   Result := True;
 end;
 
@@ -208,6 +186,10 @@ begin
   {$ELSE}
   raise Exception.Create('Not implemented for this platform');
   {$ENDIF}
+
+  Shaders.ForEach(FreeCallback, nil);
+  Shaders.Free();
+  Shaders := nil;
 end;
 
 procedure TCEOpenGL4Renderer.DoFinalizeGAPIWin();
@@ -232,28 +214,67 @@ begin
   glClear(GL_COLOR_BUFFER_BIT * Ord(cfColor in Flags) or GL_DEPTH_BUFFER_BIT * Ord(cfDepth in Flags) or GL_STENCIL_BITS * Ord(cfStencil in Flags));
 end;
 
+function TCEOpenGL4Renderer.InitShader(Pass: TCERenderPass): Integer;
+var
+  Sh: TCEGLSLShader;
+begin
+  Sh := TCEGLSLShader.Create();
+  Sh.ShaderProgram  := glCreateProgram();
+  Sh.VertexShader   := CreateShader(GL_VERTEX_SHADER,   PAnsiChar(Pass.VertexShader.Text));
+  Sh.FragmentShader := CreateShader(GL_FRAGMENT_SHADER, PAnsiChar(Pass.FragmentShader.Text));
+  if (sh.VertexShader = 0) or (sh.FragmentShader = 0) then
+  begin
+    Sh.Free();
+    Result := ID_NOT_INITIALIZED;
+    Exit;
+  end;
+  glAttachShader(Sh.ShaderProgram, Sh.VertexShader);
+  glAttachShader(Sh.ShaderProgram, Sh.FragmentShader);
+  glLinkProgram(Sh.ShaderProgram);
+  Shaders.Add(Sh);
+  Result := Shaders.Count-1;
+end;
+
 function InitTexture(Image: TCEImageResource): glUint;
 begin
   glGenTextures(1, @Result);
   glBindTexture(GL_TEXTURE_2D, Result);
 //  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, Image.ActualLevels);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexImage2D(GL_TEXTURE_2D, 0, 3, Image.Width, Image.Height, 0, GL_RGB, GL_UNSIGNED_BYTE, Image.Data);
 end;
 
 procedure TCEOpenGL4Renderer.ApplyRenderPass(Pass: TCERenderPass);
-var TexId: Integer;
+var
+  TexId, PrId: Integer;
+  Sh: TCEGLSLShader;
 begin
+  PrId := CEMaterial._GetProgramId(Pass);
+  if PrId = ID_NOT_INITIALIZED then
+  begin
+    PrId := InitShader(Pass);
+    CEMaterial._SetProgramId(Pass, PrId);
+  end;
+  if PrId >= 0 then
+  begin
+    Sh := Shaders.Get(PrId);
+    glUseProgram(Sh.ShaderProgram);
+    PhaseLocation := glGetUniformLocation(Sh.ShaderProgram, 'phase');
+    if PhaseLocation < 0 then begin
+      CELog.Error('Error: Cannot get phase shader uniform location');
+    end;
+    glUniform1i(glGetUniformLocation(Sh.ShaderProgram, 's_texture0'), 0);
+  end;
+
   TexId := CEMaterial._GetTextureId(Pass, 0);
-  if TexId = -1 then
+  if TexId = ID_NOT_INITIALIZED then
   begin
     TexId := InitTexture(Pass.Texture0);
     CEMaterial._SetTextureId(Pass, 0, TexId);
   end;
   glBindTexture(GL_TEXTURE_2D, TexId);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glActiveTexture(GL_TEXTURE0);
-  glUniform1i(glGetUniformLocation(ShaderProgram, 's_texture0'), 0);
   glEnable(GL_TEXTURE_2D);
 end;
 
