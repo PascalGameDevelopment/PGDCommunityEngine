@@ -25,13 +25,16 @@ This is a test suite for resource entities and mechanisms
 
 @author(George Bakhtadze (avagames@gmail.com))
 }
-{$Include PGDCE.inc}
 program ResourceTest;
+{$Include PGDCE.inc}
 
 {$APPTYPE CONSOLE}
 
 uses
-  SysUtils, Tester, CEBaseTypes, CEEntity, CECommon, CEProperty, CEIO, CEResource, CEImageResource, CEDataLoader, CEDataDecoder;
+  SysUtils, Tester,
+  CEBaseTypes, CEEntity, CECommon, CEProperty, CEIO, CEStrUtils,
+  CEResource, CEImageResource, CEDataLoader, CEDataDecoder,
+  CEBaseRenderer, CEOpenGL;
 
 type
   TBaseLoader = class(TCEDataLoader)
@@ -63,6 +66,7 @@ type
   published
     procedure TestLoaders();
     procedure TestDecoders();
+    procedure TestGLSLParse();
   end;
 
 const
@@ -132,6 +136,29 @@ begin
     Assert(_Check(GetClass(Dcd) = DECODER_CLASS[i]), 'Wrong decoder class for URL: ' + TEST_URL[i] +
         '. Expected: ' + DECODER_CLASS[i].ClassName + ', actual: ' + GetClassName(Dcd));
   end;
+end;
+
+function CheckIdent(Ident: TCEShaderIdent; const name: string; kind: TCEShaderIdentKind; const typeName: string): Boolean;
+begin
+  Result := (kind = Ident.Kind) and (name = Ident.Name) and (typeName = Ident.TypeStr);
+end;
+
+procedure TTest.TestGLSLParse;
+var
+  Sh: TCEGLSLShader;
+begin
+  Sh := TCEGLSLShader.Create();
+  Sh.SetFragmentShader(0, 'attribute lowp vec4 aVertColor;'#13#10 +
+                          'attribute float a;'#10 +
+                          'uniform vec3 EyePos;;'#13#10 +
+                          'uniform sampler2D t_texture1;' +
+                          'uniform sampler2D t_texture2;' +
+                          'uniform sampler2D t_mix1;' +
+                          'lowp varying vec4 vColor;');
+  Assert(_Check(CheckIdent(Sh.Idents[gliAttribute]^[0], 'aVertColor', ikATTRIBUTE, 'vec4')), 'Ident not match');
+  Assert(_Check(CheckIdent(Sh.Idents[gliUniform]^[0],   'EyePos',     ikUNIFORM,   'vec3')), 'Ident not match');
+  Assert(_Check(CheckIdent(Sh.Idents[gliVarying]^[0],   'vColor',     ikVARYING,   'vec4')), 'Ident not match');
+  Sh.Free();
 end;
 
 { TDecoder1 }

@@ -41,6 +41,20 @@ type
   // Render target clear flag set
   TCEClearFlags = set of TCEClearFlag;
 
+  TCEShaderSource = string;
+
+  // Types of identifiers used in a shader
+  TCEShaderIdentKind = (ikINVALID, ikATTRIBUTE, ikVARYING, ikUNIFORM);
+
+  // Identifier used in shader
+  TCEShaderIdent = record
+    Kind: TCEShaderIdentKind;
+    Name, TypeStr: TCEShaderSource;
+    Location: Integer;
+  end;
+  TCEShaderIdentList = array[0..$FFFF] of TCEShaderIdent;
+  PCEShaderIdentList = ^TCEShaderIdentList;
+
   TCEBaseRenderer = class
   private
   protected
