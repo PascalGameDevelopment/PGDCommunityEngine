@@ -117,6 +117,18 @@ type
     procedure Allocate(ASize: Integer);
   end;
 
+  // Text based binary data implementation
+  TTextData = class(TCEBinaryData)
+  public
+    Data: AnsiString;
+    destructor Destroy(); override;
+    procedure Assign(AData: TCEBinaryData); override;
+    function Read(IStream: TCEInputStream): Boolean; override;
+    function Write(OStream: TCEOutputStream): Boolean; override;
+    function GetData(): Pointer; override;
+    function GetText(): AnsiString;
+  end;
+
   PCEPropertyValue = ^TCEPropertyValue;
   // Data structure representing a property value
   TCEPropertyValue = packed record
@@ -281,6 +293,44 @@ begin
     Result := @Data[0]
   else
     Result := nil;
+end;
+
+{ TTextData }
+
+destructor TTextData.Destroy;
+begin
+  SetLength(Data, 0);
+  inherited;
+end;
+
+procedure TTextData.Assign(AData: TCEBinaryData);
+begin
+  if not (AData is TTextData) then
+    raise ECEInvalidArgument.Create('TTextData.Assign: Invalid type');
+  Data := Copy(TTextData(AData).GetText(), STRING_INDEX_BASE, Length(TTextData(AData).GetText()));
+end;
+
+function TTextData.Read(IStream: TCEInputStream): Boolean;
+begin
+  Result := CEIO.ReadAnsiString(IStream, Data);
+end;
+
+function TTextData.Write(OStream: TCEOutputStream): Boolean;
+begin
+  Result := CEIO.WriteAnsiString(OStream, Data);
+end;
+
+function TTextData.GetData: Pointer;
+begin
+  if Data <> '' then
+    Result := @Data[STRING_INDEX_BASE]
+  else
+    Result := nil;
+end;
+
+function TTextData.GetText: AnsiString;
+begin
+ Result := Data;
 end;
 
 { TPointerData }

@@ -54,7 +54,8 @@ type
     rsFull
   );
 
-  // Base resource class for all resources: images, texts, shaders, sounds etc
+  { Base resource class for all resources: images, texts, shaders, sounds etc
+    Data changes are not thread safe and should be synchronized. }
   TCEResource = class(TCEBaseEntity)
   private
     FState, _FState: TCEResourceState;
@@ -65,6 +66,8 @@ type
     function GetData: Pointer;
     procedure SetDataHolder(const Value: TPointerData);
   protected
+    // Called from constructor
+    procedure Init(); virtual;
     //procedure FlushChanges(); override;
     { Returns resource size in bytes when it is stored.
      For some types (e.g. image with generated mip maps) stored size can be less than regular size. }
@@ -75,6 +78,9 @@ type
     procedure SetAllocated(ASize: Integer; AData: Pointer);
   public
     constructor Create();
+    // Create and loads the resource from the specified URL
+    constructor CreateFromUrl(const Url: string);
+    destructor Destroy(); override;
     { Attempts to load resource data specified by DataURL using data loader and data decoder facilities and returns True if success.
       If NewerOnly is True resource will be loaded only if it was changed since last load.
       If Target is specified loading will be performed directly into Target bypassing Data field. }
@@ -88,11 +94,27 @@ type
     // Resource state
     property State: TCEResourceState read FState write FState;
     // Resource data format
-    property Format: TCEFormat read FFormat;
+    property Format: TCEFormat read FFormat write FFormat;
     // Binary data holder instance which stores data in memory
     property DataHolder: TPointerData read FDataHolder write SetDataHolder;
     // External data URL
     property DataURL: string read FDataURL write FDataURL;
+  end;
+
+  TCETextResource = class(TCEResource)
+  private
+    FTextData: TTextData;
+    procedure SetDataHolder(const Value: TTextData);
+    function GetText: AnsiString;
+    procedure SetText(const Value: AnsiString);
+  protected
+    procedure Init(); override;
+  public
+    destructor Destroy(); override;
+    procedure SetBuffer(Buf: PAnsiChar; Len: Integer);
+    property Text: AnsiString read GetText write SetText;
+  published
+    property DataHolder: TTextData read FTextData write SetDataHolder;
   end;
 
   // For internal use
@@ -118,6 +140,11 @@ end;
 procedure TCEResource.SetDataHolder(const Value: TPointerData);
 begin
   FDataHolder := Value;
+end;
+
+procedure TCEResource.Init;
+begin
+  SetDataHolder(TPointerData.Create());
 end;
 
 function TCEResource.GetStoredDataSize: Integer;
@@ -152,7 +179,21 @@ end;
 constructor TCEResource.Create;
 begin
   inherited;
-  SetDataHolder(TPointerData.Create());
+  Init();
+end;
+
+constructor TCEResource.CreateFromUrl(const Url: string);
+begin
+  Create();
+  DataURL := Url;
+  LoadExternal(False);
+end;
+
+destructor TCEResource.Destroy;
+begin
+  if Assigned(FDataHolder) then
+    FreeAndNil(FDataHolder);
+  inherited;
 end;
 
 function TCEResource.LoadExternal(NewerOnly: Boolean; const Target: TCELoadTarget = nil; MetadataOnly: Boolean = False): Boolean;
@@ -231,6 +272,45 @@ begin
   end else begin
     // TODO: log
   end;
+end;
+
+{ TCETextResource }
+
+procedure TCETextResource.SetDataHolder(const Value: TTextData);
+begin
+  FTextData := Value;
+end;
+
+function TCETextResource.GetText: AnsiString;
+begin
+  if Assigned(FTextData) then
+    Result := FTextData.Data
+  else
+    Result := '';
+end;
+
+procedure TCETextResource.SetText(const Value: AnsiString);
+begin
+  FTextData.Data := Value;
+end;
+
+procedure TCETextResource.Init;
+begin
+  inherited;
+  SetDataHolder(TTextData.Create());
+end;
+
+destructor TCETextResource.Destroy;
+begin
+  if Assigned(FTextData) then
+    FreeAndNil(FTextData);
+  inherited;
+end;
+
+procedure TCETextResource.SetBuffer(Buf: PAnsiChar; Len: Integer);
+begin
+  FTextData.Data := '';
+  SetString(FTextData.Data, Buf, Len);
 end;
 
 end.

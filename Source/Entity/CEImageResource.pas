@@ -60,8 +60,9 @@ type
     function GetStoredDataSize: Integer; override;
     // Returns information about specified mip level
     function GetLevelInfo(Index: Integer): PImageLevel;
+  protected
+    procedure Init(); override;
   public
-    constructor Create();
     destructor Destroy(); override;
     // Creates an empty image with the specified dimensions
     procedure CreateEmpty(AWidth, AHeight: Integer);
@@ -165,7 +166,7 @@ begin
   Result := FLevels^[Index];
 end;
 
-constructor TCEImageResource.Create;
+procedure TCEImageResource.Init;
 begin
   inherited;
   GetMem(FLevels, SizeOf(TImageLevels));

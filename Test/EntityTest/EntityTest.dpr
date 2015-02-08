@@ -259,6 +259,8 @@ var
   outs: TCEFileOutputStream;
   ins: TCEFileInputStream;
   Loaded: TCEBaseEntity;
+  TextRes: TCETextResource;
+  Entity: TCEBaseEntity;
 begin
   with CreateRefcountedContainer() do
   begin
@@ -278,9 +280,14 @@ begin
     Linking.Linked := Child;
     Parent.AddChild(Linking);
 
+    TextRes := TCETextResource.Create();
+    TextRes.Name := 'Text resource';
+    TextRes.Text := 'Text resource data';
+    Parent.AddChild(TextRes);
+
     Manager := TCEEntityManager.Create();
     Managed.AddObject(Manager);
-    Manager.RegisterEntityClasses([TEntity1, TEntity2, TLinkingEntity]);
+    Manager.RegisterEntityClasses([TEntity1, TEntity2, TLinkingEntity, TCETextResource]);
 
     Manager.Root := Parent;
     Assert(_Check(Manager.Find('/Parent/Child') = Child), 'Find fail');
@@ -295,7 +302,7 @@ begin
 
     Manager2 := TCEEntityManager.Create();
     Managed.AddObject(Manager2);
-    Manager2.RegisterEntityClasses([TEntity1, TEntity2, TLinkingEntity]);
+    Manager2.RegisterEntityClasses([TEntity1, TEntity2, TLinkingEntity, TCETextResource]);
     Filer2 := TCESimpleEntityFiler.Create(Manager2);
     Managed.AddObject(Filer2);
 
@@ -309,12 +316,16 @@ begin
     Writeln('Full name: ' + Loaded.Childs[0].GetFullName());
 
     Assert(_Check(Loaded is TEntity1), 'Load fail');
-    Assert(_Check(Loaded.Childs.Count = 2), 'Childs fail');
+    Assert(_Check(Loaded.Childs.Count = 3), 'Childs fail');
     Assert(_Check(Loaded.Childs[0].Parent = Loaded), 'Parent fail');
     Assert(_Check(((Loaded as TEntity1).Int = Parent.Int) and ((Loaded as TEntity1).Str = Parent.Str)), 'Props1 fail');
     Assert(_Check(((Loaded.Childs[0] as TEntity2).Dbl = Child.Dbl) and ((Loaded.Childs[0] as TEntity2).fBigInt = Child.BigInt)), 'Props2 fail');
 
     Assert(_Check(Manager2.Find('/Parent/Child') = TLinkingEntity(Manager2.Find('/Parent/Linking')).Linked), 'Link fail');
+
+    Entity := Manager2.Find('/Parent/Text resource');
+    Assert(_Check(Entity is TCETextResource), 'Type check fail');
+    Assert(_Check(TCETextResource(Entity).Text = 'Text resource data'), 'Text resource fail');
   end;
 end;
 

@@ -114,6 +114,7 @@ type
     Each entity has a set of properties which can be retrieved using GetProperties() method.
     The set of properties is fully describes an antity and used for serialization/deserialization of an entity.
     Default implementation of GetProperties includes all published properties of a class.
+    Note that the properties should have read/write access to avoid weird AVs in Delphi.
 
     Each entity has name property. It's important property as an entity can be referenced by its full name within hierarchy.
     Such references used in so called entity link properties which allows entities to link each other.
@@ -200,7 +201,8 @@ type
 
 implementation
 
-uses CECommon, CERttiUtil, TypInfo, SysUtils;
+uses
+  CELog, CECommon, CERttiUtil, TypInfo, SysUtils;
 
 {$MESSAGE 'Instantiating TEntityList'}
 {$I tpl_coll_vector.inc}
@@ -414,7 +416,7 @@ begin
   EntityClass := FManager.GetEntityClass(s);
   if EntityClass = nil then
   begin
-// TODO:   Log(ClassName + '.LoadItem: Unknown item class "' + s + '". Substitued by TItem', lkError);
+    CELog.Error(ClassName + '.LoadItem: Unknown item class "' + s + '". Substitued by TItem');
     EntityClass := TCEBaseEntity;  // TPropertyEntity;
   end;
 
@@ -476,7 +478,7 @@ procedure TCEBaseEntityManager.RegisterEntityClass(NewClass: CCEEntity);
 begin
   if GetEntityClass(TCEEntityClassName(NewClass.ClassName)) <> nil then
   begin
-    //Log(ClassName + '.RegisterEntityClass: Class "' + NewClass.ClassName + '" already registered', lkWarning);
+    CELog.Warning(ClassName + '.RegisterEntityClass: Class "' + NewClass.ClassName + '" already registered');
     Exit;
   end;
   SetLength(FEntityClasses, Length(FEntityClasses) + 1);
