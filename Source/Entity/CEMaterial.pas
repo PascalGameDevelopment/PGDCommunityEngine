@@ -58,9 +58,9 @@ type
 
     function GetTexture0: TCEImageResource;
     procedure SetTexture0(const Value: TCEImageResource);
-  public
+  protected
+    procedure DoInit(); override;
   published
-    constructor Create();
     property Texture0: TCEImageResource read GetTexture0 write SetTexture0;
     property VertexShader: TCETextResource read FVertexShader write FVertexShader;
     property FragmentShader: TCETextResource read FFragmentShader write FFragmentShader;
@@ -78,7 +78,7 @@ type
   public
     LOD: Single;
     property TotalPasses: Integer read FTotalPasses write SetTotalPasses;
-    property Passes[Index: Integer]: TCERenderPass read GetPass write SetPass; default;
+    property Pass[Index: Integer]: TCERenderPass read GetPass write SetPass; default;
     property Valid: Boolean read FValid write FValid;
   end;
 
@@ -134,7 +134,7 @@ begin
   FTexture0 := Value;
 end;
 
-constructor TCERenderPass.Create;
+procedure TCERenderPass.DoInit();
 var i: Integer;
 begin
   ProgramId := ID_NOT_INITIALIZED;
@@ -159,7 +159,7 @@ function TCERenderTechnique.GetPass(Index: Integer): TCERenderPass;
 begin
   Assert(Index < TotalPasses);
   Assert(Length(PassesCache) = TotalPasses, ClassName() + '("' + GetFullName() + '")');
-  if not Assigned(PassesCache[Index]) then
+  if Assigned(PassesCache[Index]) then
     Result := PassesCache[Index]
   else begin
     PassesCache[Index] := ResolveObjectLink(PassPropertyName(Index)) as TCERenderPass;
@@ -186,7 +186,7 @@ end;
 
 function TCEMaterial.GetTechnique(Index: Integer): TCERenderTechnique;
 begin
-  Result := ResolveObjectLink(PassPropertyName(Index)) as TCERenderTechnique;
+  Result := ResolveObjectLink(TechPropertyName(Index)) as TCERenderTechnique;
 end;
 
 procedure TCEMaterial.SetTechnique(Index: Integer; const Value: TCERenderTechnique);

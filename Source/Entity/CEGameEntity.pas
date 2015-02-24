@@ -66,16 +66,16 @@ implementation
 uses
   CELog, CECommon, sysutils;
 
-
 { TCEGameEntity }
 
 procedure TCEGameEntity.SetLocation(const Value: TCELocation);
 begin
+  FLocation := Value;
 end;
 
 procedure TCEGameEntity.SetMesh(const Value: TCEMesh);
 begin
-
+  FMesh := Value;
 end;
 
 procedure TCEGameEntity.SetMaterial(const Value: TCEMaterial);

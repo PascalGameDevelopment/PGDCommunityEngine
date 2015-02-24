@@ -134,11 +134,15 @@ type
     FManager: TCEEntityManager;
     procedure SetName(const Value: TCEEntityName);
     procedure SetParent(const Value: TCEBaseEntity);
+    procedure SetManager(const Value: TCEEntityManager);
     // Destroys all childs recursively
     procedure DestroyChilds;
     // Destroys all published binary data properties
     procedure CleanupBinaryData;
+    procedure InternalInit();
   protected
+    // Called from a constructor
+    procedure DoInit(); virtual;
     // Returns True if property writes should be deferred
     function UseDeferredWrites(): Boolean;
     // Should be called each time when a deferred property modification requested
@@ -148,8 +152,13 @@ type
     procedure FlushChanges(); virtual;
   public
     class function GetClass: CCEEntity;
-    // Should be called by descendants
+    // One of the constructors should be called in constructor of a descendant class
     constructor Create(); overload;
+    { Constructs an instance with the specified manager. If the manager doesn't have a root item this item will become root item.
+      Otherwise this item will become a child of root item. }
+    constructor Create(AManager: TCEEntityManager); overload;
+    // Constructs an instance with the specified parent. Also inits FManager field as AParent.Manager.
+    constructor Create(AParent: TCEBaseEntity); overload;
     // Should be called by descendants
     destructor Destroy; override;
     { Copies all properties from ASource to the item.
@@ -221,6 +230,7 @@ end;
 
 procedure TCEBaseEntity.SetName(const Value: TCEEntityName);
 begin
+  Assert(Value <> '', 'Name can''be empty');
   if UseDeferredWrites then begin
     _FName := Value;
     InvalidateProperties();
@@ -233,8 +243,8 @@ begin
   Result := nil;
   if not Assigned(FManager) then Exit;
   Result := FManager.Find(FEntityLinkMap[PropertyName]);
-  if Assigned(Result) then
-    FEntityLinkMap[PropertyName] := '';                 // Link was resolved so no need to store full name
+//  if Assigned(Result) then
+//    FEntityLinkMap[PropertyName] := '';                 // TODO: Link was resolved so no need to store full name
 end;
 
 procedure TCEBaseEntity.SetObjectLink(const PropertyName: string; const FullName: TCEEntityName);
@@ -247,7 +257,25 @@ end;
 
 procedure TCEBaseEntity.SetParent(const Value: TCEBaseEntity);
 begin
+  Assert(Value <> Self, 'Can''t attach an item to itself');
+  if FParent = Value then Exit;
+  if Assigned(FParent) then FParent.FChilds.Remove(Self);
+  if Assigned(Value) then Value.AddChild(Self);
   FParent := Value;
+  if Assigned(FParent) then
+    FManager := FParent.FManager;
+end;
+
+procedure TCEBaseEntity.SetManager(const Value: TCEEntityManager);
+begin
+  FManager := Value;
+  if Assigned(FManager) then
+  begin
+    if Assigned(FManager.Root) then
+      Parent := FManager.Root
+    else
+      FManager.Root := Self;
+  end;
 end;
 
 procedure TCEBaseEntity.CleanupBinaryData();
@@ -275,6 +303,17 @@ begin
   finally
     FreeMem(PropInfos);
   end;
+end;
+
+procedure TCEBaseEntity.InternalInit;
+begin
+  FName := Copy(ClassName, STRING_INDEX_BASE+1, Length(ClassName)-1);
+  FPropertiesInSync := True;
+  DoInit();
+end;
+
+procedure TCEBaseEntity.DoInit();
+begin
 end;
 
 function TCEBaseEntity.UseDeferredWrites: Boolean;
@@ -309,9 +348,21 @@ begin
   Result := Self;
 end;
 
-constructor TCEBaseEntity.Create;
+constructor TCEBaseEntity.Create();
 begin
-  FPropertiesInSync := True;
+  InternalInit();
+end;
+
+constructor TCEBaseEntity.Create(AManager: TCEEntityManager);
+begin
+  SetManager(AManager);
+  InternalInit();
+end;
+
+constructor TCEBaseEntity.Create(AParent: TCEBaseEntity);
+begin
+  SetParent(AParent);
+  InternalInit();
 end;
 
 destructor TCEBaseEntity.Destroy;
@@ -361,8 +412,7 @@ begin
   Assert(not Assigned(AEntity.Parent), 'TCEBaseEntity.AddChild: entity "' + AEntity.GetFullName + '" already has a parent');
   if not Assigned(FChilds) then FChilds := TCEEntityList.Create();
 
-  AEntity.Parent := Self;
-  AEntity.FManager := FManager;
+  AEntity.FParent := Self;
   FChilds.Add(AEntity);
 end;
 
@@ -370,6 +420,7 @@ function TCEBaseEntity.FindChild(const Name: TCEEntityName): TCEBaseEntity;
 var i: Integer;
 begin
   Result := nil;
+  if not Assigned(FChilds) then Exit;  
   i := FChilds.Count-1;
   while (i >= 0) and (FChilds[i].Name <> Name) do Dec(i);
   if i >= 0 then Result := FChilds[i];

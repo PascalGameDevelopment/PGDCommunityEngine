@@ -76,7 +76,7 @@ type
     FPrimitiveType: TPrimitiveType;
     FPrimitiveCount: Integer;
   public
-    constructor Create();
+    procedure DoInit(); override;
     // Fill vertex buffer
     procedure FillVertexBuffer(Dest: Pointer); virtual;
     // Fill index buffer
@@ -119,7 +119,7 @@ end;
 
 { TCEMesh }
 
-constructor TCEMesh.Create;
+procedure TCEMesh.DoInit();
 begin
   FVerticesCount := 1;
   FVertexSize := SizeOf(TCEVector3f);
