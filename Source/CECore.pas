@@ -38,33 +38,31 @@ uses
   CEBasePhysics,
   CEBaseNetwork,
 
-  CEEntityManager;
+  CEEntity,
+
+  CEOSUtils;
 
 type
-
-  { TCECore }
-
   TCECore = class
   private
-    {Private declarations}
+    procedure DoUpdate();
+    procedure DoRender();
   protected
-    {Protected declarations}
-    fApplication: TCEBaseApplication;
+    FApplication: TCEBaseApplication;
     fRenderer: TCEBaseRenderer;
     fAudio: TCEBaseAudio;
     fInput: TCEBaseInput;
     fPhysics: TCEBasePhysics;
     fNetwork: TCEBaseNetwork;
     fEntityManager: TCEEntityManager;
+    procedure Update(DeltaTime: Single); virtual;
   public
-    {Public declarations}
     constructor Create;
     destructor Destroy; override;
-
+    // Launch the engine's main cycle
+    procedure Run();
     property EntityManager: TCEEntityManager read fEntityManager;
-  published
-    {Published declarations}
-    property Application: TCEBaseApplication read fApplication write fApplication;
+    property Application: TCEBaseApplication read FApplication write FApplication;
     property Renderer: TCEBaseRenderer read fRenderer write fRenderer;
     property Audio: TCEBaseAudio read fAudio write fAudio;
     property Input: TCEBaseInput read fInput write fInput;
@@ -74,11 +72,25 @@ type
 
 implementation
 
+{ TCECore }
+
+procedure TCECore.DoUpdate();
+begin
+end;
+
+procedure TCECore.DoRender();
+begin
+end;
+
+procedure TCECore.Update(DeltaTime: Single);
+begin
+end;
+
 constructor TCECore.Create;
 begin
   inherited;
 
-  fEntityManager := TCEEntityManager.Create;
+  fEntityManager := TCEEntityManager.Create();
 end;
 
 destructor TCECore.Destroy;
@@ -114,11 +126,21 @@ begin
   end;
 
   try
-    fApplication.Free;
+    FApplication.Free;
   except
   end;
 
   inherited;
+end;
+
+procedure TCECore.Run();
+begin
+  while not FApplication.Terminated do
+  begin
+    FApplication.Process();
+    DoUpdate();
+    DoRender();
+  end;
 end;
 
 end.

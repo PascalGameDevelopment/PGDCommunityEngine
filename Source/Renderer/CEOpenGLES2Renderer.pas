@@ -61,9 +61,11 @@ type
   protected
     procedure DoInit(); override;
     function DoInitGAPI(App: TCEBaseApplication): Boolean; override;
-    function DoInitGAPIWin(App: TCEBaseApplication): Boolean;
     procedure DoFinalizeGAPI(); override;
+    {$IFDEF WINDOWS}
+    function DoInitGAPIWin(App: TCEBaseApplication): Boolean;
     procedure DoFinalizeGAPIWin();
+    {$ENDIF}
   public
     procedure ApplyRenderPass(Pass: TCERenderPass); override;
     procedure RenderMesh(Mesh: TCEMesh); override;
@@ -144,6 +146,28 @@ begin
   Result := True;
 end;
 
+function FreeCallback(const e: TCEGLSLShader; Data: Pointer): Boolean;
+begin
+  if Assigned(e) then e.Free();
+  Result := True;
+end;
+
+procedure TCEOpenGL4Renderer.DoFinalizeGAPI();
+begin
+  if Assigned(VertexData) then
+    FreeMem(VertexData);
+  {$IFDEF WINDOWS}
+  DoFinalizeGAPIWin();
+  {$ELSE}
+  raise Exception.Create('Not implemented for this platform');
+  {$ENDIF}
+
+  Shaders.ForEach(FreeCallback, nil);
+  Shaders.Free();
+  Shaders := nil;
+end;
+
+{$IFDEF WINDOWS}
 function TCEOpenGL4Renderer.DoInitGAPIWin(App: TCEBaseApplication): Boolean;
 var
   Dummy: LongWord;
@@ -171,27 +195,6 @@ begin
   Result := True;
 end;
 
-function FreeCallback(const e: TCEGLSLShader; Data: Pointer): Boolean;
-begin
-  if Assigned(e) then e.Free();
-  Result := True;
-end;
-
-procedure TCEOpenGL4Renderer.DoFinalizeGAPI();
-begin
-  if Assigned(VertexData) then
-    FreeMem(VertexData);
-  {$IFDEF WINDOWS}
-  DoFinalizeGAPIWin();
-  {$ELSE}
-  raise Exception.Create('Not implemented for this platform');
-  {$ENDIF}
-
-  Shaders.ForEach(FreeCallback, nil);
-  Shaders.Free();
-  Shaders := nil;
-end;
-
 procedure TCEOpenGL4Renderer.DoFinalizeGAPIWin();
 begin
   DeactivateRenderingContext();
@@ -201,6 +204,7 @@ begin
   ReleaseDC(FRenderWindowHandle, FOGLDC);
   FOGLDC := 0;
 end;
+{$ENDIF}
 
 procedure TCEOpenGL4Renderer.Clear(Flags: TCEClearFlags; Color: TCEColor; Z: Single; Stencil: Cardinal);
 begin
@@ -221,7 +225,8 @@ begin
   Sh := TCEGLSLShader.Create();
   Sh.ShaderProgram  := glCreateProgram();
   Sh.VertexShader   := CreateShader(GL_VERTEX_SHADER,   PAnsiChar(Pass.VertexShader.Text));
-  Sh.FragmentShader := CreateShader(GL_FRAGMENT_SHADER, PAnsiChar(Pass.FragmentShader.Text));
+
+  Sh.FragmentShader := CreateShader(GL_FRAGMENT_SHADER, PAnsiChar(Pass.FragmentShader.Text));
   if (sh.VertexShader = 0) or (sh.FragmentShader = 0) then
   begin
     Sh.Free();
@@ -265,7 +270,8 @@ begin
       CELog.Error('Error: Cannot get phase shader uniform location');
     end;
     glUniform1i(glGetUniformLocation(Sh.ShaderProgram, 's_texture0'), 0);
-  end;
+
+  end;
 
   TexId := CEMaterial._GetTextureId(Pass, 0);
   if TexId = ID_NOT_INITIALIZED then
@@ -282,6 +288,7 @@ procedure TCEOpenGL4Renderer.RenderMesh(Mesh: TCEMesh);
 var
   ts: PTesselationStatus;
 begin
+  Assert(Assigned(Mesh));
   if not Active then Exit;
   ts := CEMesh.GetVB(Mesh);
 
@@ -320,7 +327,8 @@ begin
   {$IFDEF WINDOWS}
 
     glUniform1f(PhaseLocation,(gettickcount() mod 2000)*0.001*pi);
-
+
+
     SwapBuffers(FOGLDC);                  // Display the scene
   {$ENDIF}
 end;
