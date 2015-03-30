@@ -26,6 +26,7 @@ PGDCE Core engine class
 @author(<INSERT YOUR NAME HERE> (<INSERT YOUR EMAIL ADDRESS OR WEBSITE HERE>))
 }
 
+{$I PGDCE.inc}
 unit CECore;
 
 interface
@@ -43,8 +44,12 @@ uses
   CEOSUtils;
 
 type
+  TUpdateDelegate = procedure(const DeltaTime: Single) of object;
+
   TCECore = class
   private
+    LastTime: Int64;
+    FOnUpdateDelegate: TUpdateDelegate;
     procedure DoUpdate();
     procedure DoRender();
   protected
@@ -55,10 +60,14 @@ type
     fPhysics: TCEBasePhysics;
     fNetwork: TCEBaseNetwork;
     fEntityManager: TCEEntityManager;
-    procedure Update(DeltaTime: Single); virtual;
+
+    procedure Update(const DeltaTime: Single); virtual;
   public
     constructor Create;
     destructor Destroy; override;
+    { Performs one step of main cycle. This method is called from TCECore.Run() and may be
+      used instead when main program cycle can't be delegated to the engine. }
+    procedure Process();
     // Launch the engine's main cycle
     procedure Run();
     property EntityManager: TCEEntityManager read fEntityManager;
@@ -68,6 +77,7 @@ type
     property Input: TCEBaseInput read fInput write fInput;
     property Physics: TCEBasePhysics read fPhysics write fPhysics;
     property Network: TCEBaseNetwork read fNetwork write fNetwork;
+    property OnUpdateDelegate: TUpdateDelegate read FOnUpdateDelegate write FOnUpdateDelegate;
   end;
 
 implementation
@@ -75,14 +85,24 @@ implementation
 { TCECore }
 
 procedure TCECore.DoUpdate();
+var
+  LTime: Int64;
 begin
+  LTime := CEOSUtils.GetCurrentMs();
+  if Assigned(OnUpdateDelegate) then
+    OnUpdateDelegate((LTime - LastTime) * 0.001)
+  else
+    Update((LTime - LastTime) * 0.001);
+
+  LastTime := LTime;
 end;
 
 procedure TCECore.DoRender();
 begin
+  FRenderer.NextFrame();
 end;
 
-procedure TCECore.Update(DeltaTime: Single);
+procedure TCECore.Update(const DeltaTime: Single);
 begin
 end;
 
@@ -133,14 +153,17 @@ begin
   inherited;
 end;
 
+procedure TCECore.Process;
+begin
+  FApplication.Process();
+  DoUpdate();
+  DoRender();
+end;
+
 procedure TCECore.Run();
 begin
   while not FApplication.Terminated do
-  begin
-    FApplication.Process();
-    DoUpdate();
-    DoRender();
-  end;
+    Process();
 end;
 
 end.

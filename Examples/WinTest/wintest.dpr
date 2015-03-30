@@ -45,12 +45,21 @@ type
   public
     property Angle: Single read FAngle write SetAngle;
     procedure FillVertexBuffer(Dest: Pointer); override;
+    procedure Update(const DeltaTime: Single);
   end;
+
+var
+  speed: Single;
 
 procedure TCERotatingTriangleMesh.SetAngle(const Value: Single);
 begin
   FAngle := Value;
   VertexBuffer.Status := tsChanged; // Invalidate buffer
+end;
+
+procedure TCERotatingTriangleMesh.Update(const DeltaTime: Single);
+begin
+  Angle := Angle + speed * DeltaTime;
 end;
 
 type
@@ -88,7 +97,6 @@ var
   Mat: TCEMaterial;
   Pass: TCERenderPass;
   Sh: TCETextResource;
-  speed: Single;
 begin
   {$IF Declared(ReportMemoryLeaksOnShutdown)}
   ReportMemoryLeaksOnShutdown := True;
@@ -116,21 +124,20 @@ begin
   Entity.Material := Mat;
 
   App.MessageHandler := Core.Input.HandleMessage;
+  Core.OnUpdateDelegate := Mesh.Update;
 
-  speed := 0.1;
+  speed := 4;
 
   while not App.Terminated do
   begin
     Renderer.Clear([cfColor, cfDepth], GetColor(40, 30, 130, 0), 1.0, 0);
 
-    Mesh.Angle := Mesh.Angle + speed;
-
     Renderer.ApplyRenderPass(Entity.Material.Technique[0].Pass[0]);
     Renderer.RenderMesh(Entity.Mesh);
 
-    if Core.Input.Pressed[vkNUMPAD6] or (Core.Input.MouseState.Buttons[mbLeft]  = baDown) then speed := speed - 0.1;
-    if Core.Input.Pressed[vkNUMPAD4] or (Core.Input.MouseState.Buttons[mbRight] = baDown) then speed := speed + 0.1;
-    speed := Clamps(speed, -10, 10);
+    if Core.Input.Pressed[vkNUMPAD6] or (Core.Input.MouseState.Buttons[mbLeft]  = baDown) then speed := speed + 4;
+    if Core.Input.Pressed[vkNUMPAD4] or (Core.Input.MouseState.Buttons[mbRight] = baDown) then speed := speed - 4;
+    speed := Clamps(speed, -360, 360);
 
     if Core.Input.Pressed[vkALT] and Core.Input.Pressed[vkX] then App.Terminated := True;
     Core.Process();
