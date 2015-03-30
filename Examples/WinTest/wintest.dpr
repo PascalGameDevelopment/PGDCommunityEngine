@@ -33,8 +33,8 @@ program wintest;
 uses
   SysUtils, Windows,
   CEWindowsApplication, CEBaseRenderer, CEOpenGLES2Renderer, CEBaseInput, CEOSMessageInput,
-  CEMesh, CECommon, CEOSUtils, CEResource,
-  CEBaseTypes, CEMessage, CEInputMessage, CEVectors, CEImageResource, CEMaterial;
+  CEMesh, CECommon, CEOSUtils, CEResource, CEGameEntity,
+  CEBaseTypes, CEMessage, CEInputMessage, CEVectors, CEImageResource, CEMaterial, CECore;
 
 type
   // Example mesh class
@@ -80,11 +80,13 @@ end;
 
 var
   App: TCEWindowsApplication;
-  Renderer: TCEOpenGL4Renderer;
-  Input: TCEOSMessageInput;
+  Renderer: TCEBaseRenderer;
+  Core: TCECore;
+  Entity: TCEGameEntity;
   Mesh: TCERotatingTriangleMesh;
   Image: TCEImageResource;
-  Mat: TCERenderPass;
+  Mat: TCEMaterial;
+  Pass: TCERenderPass;
   Sh: TCETextResource;
   speed: Single;
 begin
@@ -92,43 +94,53 @@ begin
   ReportMemoryLeaksOnShutdown := True;
   {$IFEND}
   App := TCEWindowsApplication.Create();
-  Input := TCEOSMessageInput.Create();
   Renderer := TCEOpenGL4Renderer.Create(App);
-  Mesh := TCERotatingTriangleMesh.Create();
+  Core := TCECore.Create();
+  Core.Application := App;
+  Core.Renderer := Renderer;
+  Core.Input := TCEOSMessageInput.Create();
+
+  Mesh := TCERotatingTriangleMesh.Create(Core.EntityManager);
   Image := TCEImageResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/test1.bmp'));
-  Mat := TCERenderPass.Create();
-  Mat.Texture0 := Image;
-  Mat.VertexShader   := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/vs.glsl'));
-  Mat.FragmentShader := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/fs.glsl'));
-  App.MessageHandler := Input.HandleMessage;
+  Pass := TCERenderPass.Create(Core.EntityManager);
+  Pass.Texture0 := Image;
+  Pass.VertexShader := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/vs.glsl'));
+  Pass.FragmentShader := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/fs.glsl'));
+  Mat := TCEMaterial.Create(Core.EntityManager);
+  Mat.TotalTechniques := 1;
+  Mat.Technique[0] := TCERenderTechnique.Create(Core.EntityManager);
+  Mat.Technique[0].TotalPasses := 1;
+  Mat.Technique[0].Pass[0] := Pass;
+  Entity := TCEGameEntity.Create(Core.EntityManager);
+  Entity.Mesh := Mesh;
+  Entity.Material := Mat;
+
+  App.MessageHandler := Core.Input.HandleMessage;
 
   speed := 0.1;
 
-  while not App.Terminated do begin
+  while not App.Terminated do
+  begin
     Renderer.Clear([cfColor, cfDepth], GetColor(40, 30, 130, 0), 1.0, 0);
 
-    App.Process();
     Mesh.Angle := Mesh.Angle + speed;
 
-    Renderer.ApplyRenderPass(Mat);
-    Renderer.RenderMesh(Mesh);
+    Renderer.ApplyRenderPass(Entity.Material.Technique[0].Pass[0]);
+    Renderer.RenderMesh(Entity.Mesh);
 
-    Renderer.NextFrame();
-
-    if Input.Pressed[vkNUMPAD6] or (Input.MouseState.Buttons[mbLeft]  = baDown) then speed := speed - 0.1;
-    if Input.Pressed[vkNUMPAD4] or (Input.MouseState.Buttons[mbRight] = baDown) then speed := speed + 0.1;
+    if Core.Input.Pressed[vkNUMPAD6] or (Core.Input.MouseState.Buttons[mbLeft]  = baDown) then speed := speed - 0.1;
+    if Core.Input.Pressed[vkNUMPAD4] or (Core.Input.MouseState.Buttons[mbRight] = baDown) then speed := speed + 0.1;
     speed := Clamps(speed, -10, 10);
 
-    if Input.Pressed[vkALT] and Input.Pressed[vkX] then App.Terminated := True;
+    if Core.Input.Pressed[vkALT] and Core.Input.Pressed[vkX] then App.Terminated := True;
+    Core.Process();
   end;
 
-  Mat.VertexShader.Free();
-  Mat.FragmentShader.Free();
-  Mat.Free();
+  Pass.VertexShader.Free();
+  Pass.FragmentShader.Free();
+  Pass.Free();
   Image.Free();
   Mesh.Free();
-  Input.Free();
-  Renderer.Free();
-  App.Free();
+  Core.Free();
   Readln;
 end.
