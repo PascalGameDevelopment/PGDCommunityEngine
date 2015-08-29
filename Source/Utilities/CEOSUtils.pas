@@ -41,11 +41,11 @@ uses
 {$ENDIF}
 
 // Obtains mouse cursor position relative to screen and fills X and Y with the position
-procedure GetMouseCursorPos(out X, Y: Integer);
+  procedure GetMouseCursorPos(out X, Y: Integer);
 // Sets mouse cursor position relative to screen
-procedure SetMouseCursorPos(X, Y: Integer);
+  procedure SetMouseCursorPos(X, Y: Integer);
 // Adjust mouse cursor visibility counter. The cursor will be visible if the counter >= 0. Initial value of the counter is zero.
-function AdjustMouseCursorVisibility(Show: Boolean): Integer;
+  function AdjustMouseCursorVisibility(Show: Boolean): Integer;
 // Returns current time in milliseconds (precision is up to 1/20 of second)
 function GetCurrentMs(): Int64;
 // Returns value of high-frequency counter
@@ -64,6 +64,22 @@ begin
 end;
 
 {$IFDEF UNIX}
+
+procedure GetMouseCursorPos(out X, Y: Integer);
+begin
+
+end;
+
+procedure SetMouseCursorPos(X, Y: Integer);
+begin
+
+end;
+
+function AdjustMouseCursorVisibility(Show: Boolean): Integer;
+begin
+
+end;
+
 function GetCurrentMs(): Int64;
 var
   tm: TimeVal;
@@ -71,6 +87,17 @@ begin
   fpGetTimeOfDay(@tm, nil);
   Result := tm.tv_sec * Int64(1000) + tm.tv_usec div 1000;
 end;
+
+function GetPerformanceCounter: Int64;
+begin
+  Result := GetCurrentMs();
+end;
+
+procedure ObtainPerformanceFrequency;
+begin
+  PerformanceFrequency := 1000;
+end;
+
 {$ENDIF}
 
 {$IFDEF WINDOWS}
