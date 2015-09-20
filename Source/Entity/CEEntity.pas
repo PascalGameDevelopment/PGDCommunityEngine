@@ -134,13 +134,14 @@ type
     FManager: TCEEntityManager;
     procedure SetName(const Value: TCEEntityName);
     procedure SetParent(const Value: TCEBaseEntity);
-    procedure SetManager(const Value: TCEEntityManager);
     // Destroys all childs recursively
     procedure DestroyChilds;
     // Destroys all published binary data properties
     procedure CleanupBinaryData;
     procedure InternalInit();
   protected
+    // Sets entity manager for this entity and its childs recursively.
+    procedure SetManager(const Value: TCEEntityManager); virtual;
     // Called from a constructor
     procedure DoInit(); virtual;
     // Returns True if property writes should be deferred
@@ -206,6 +207,7 @@ type
   published
     // Name used for references to the entity
     property Name: TCEEntityName read FName write SetName;
+    property Manager: TCEEntityManager read FManager;
   end;
 
 implementation
@@ -230,7 +232,7 @@ end;
 
 procedure TCEBaseEntity.SetName(const Value: TCEEntityName);
 begin
-  Assert(Value <> '', 'Name can''be empty');
+  Assert(Value <> '', 'Name can''t be empty');
   if UseDeferredWrites then begin
     _FName := Value;
     InvalidateProperties();
@@ -262,20 +264,8 @@ begin
   if Assigned(FParent) then FParent.FChilds.Remove(Self);
   if Assigned(Value) then Value.AddChild(Self);
   FParent := Value;
-  if Assigned(FParent) then
-    FManager := FParent.FManager;
-end;
-
-procedure TCEBaseEntity.SetManager(const Value: TCEEntityManager);
-begin
-  FManager := Value;
-  if Assigned(FManager) then
-  begin
-    if Assigned(FManager.Root) then
-      Parent := FManager.Root
-    else
-      FManager.Root := Self;
-  end;
+  if Assigned(FParent) and (FManager <> FParent.FManager) then
+    SetManager(FParent.FManager);
 end;
 
 procedure TCEBaseEntity.CleanupBinaryData();
@@ -307,9 +297,22 @@ end;
 
 procedure TCEBaseEntity.InternalInit;
 begin
+  Assert((not Assigned(FParent)) or (FParent.FManager = FManager), 'Entity manager should be same as parent''s');
   FName := Copy(ClassName, STRING_INDEX_BASE+1, Length(ClassName)-1);
   FPropertiesInSync := True;
   DoInit();
+end;
+
+procedure TCEBaseEntity.SetManager(const Value: TCEEntityManager);
+var
+  i: Integer;
+begin
+  if FManager = Value then Exit;
+  FManager := Value;
+  //set for childs recursively
+  if Assigned(FChilds) then
+    for i := 0 to FChilds.Count-1 do
+      if Assigned(FChilds[i]) then FChilds[i].SetManager(Value);
 end;
 
 procedure TCEBaseEntity.DoInit();
@@ -356,6 +359,14 @@ end;
 constructor TCEBaseEntity.Create(AManager: TCEEntityManager);
 begin
   SetManager(AManager);
+  if Assigned(AManager) then
+  begin
+    if Assigned(AManager.Root) then
+      SetParent(AManager.Root)
+    else
+      AManager.Root := Self;
+  end;
+
   InternalInit();
 end;
 
@@ -414,6 +425,7 @@ begin
 
   AEntity.FParent := Self;
   FChilds.Add(AEntity);
+  AEntity.SetManager(FManager);
 end;
 
 function TCEBaseEntity.FindChild(const Name: TCEEntityName): TCEBaseEntity;
@@ -560,7 +572,7 @@ procedure TCEEntityManager.SetRoot(ARoot: TCEBaseEntity);
 begin
   FRoot := ARoot;
   if Assigned(FRoot) then
-    FRoot.FManager := Self;
+    FRoot.SetManager(Self);
 end;
 
 function GetNextIndex(const s: TCEEntityName; PrevI, len: Integer): Integer; {$I inline.inc}
