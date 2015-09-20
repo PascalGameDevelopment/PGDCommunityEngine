@@ -49,6 +49,7 @@ type
     procedure SetMesh(const Value: TCEMesh);
     procedure SetMaterial(const Value: TCEMaterial);
   protected
+    procedure SetManager(const Value: TCEEntityManager); override;
   public
     // Called each frame
     procedure Update(const DeltaT: Single); virtual; abstract;
@@ -61,10 +62,19 @@ type
     property Material: TCEMaterial read FMaterial write SetMaterial;
   end;
 
-implementation
+  TCEGameEntityManager = class(TCEEntityManager)
+  private
+    FUpdateList: TCEEntityList;
+    procedure MapRenderable(const OldMaterial, NewMaterial: TCEMaterial; Mesh: TCEMesh);
+    procedure RegisterGameEntity(const Entity: TCEGameEntity);
+  public
+    constructor Create();
+    destructor Destroy(); override;
+    // Returns list of entities which should be updated
+    function GetUpdateList(): TCEEntityList;
+  end;
 
-uses
-  CELog, CECommon, sysutils;
+implementation
 
 { TCEGameEntity }
 
@@ -76,11 +86,46 @@ end;
 procedure TCEGameEntity.SetMesh(const Value: TCEMesh);
 begin
   FMesh := Value;
+  if Assigned(Manager) then TCEGameEntityManager(Manager).MapRenderable(nil, FMaterial, FMesh);
 end;
 
 procedure TCEGameEntity.SetMaterial(const Value: TCEMaterial);
 begin
+  if Assigned(Manager) then TCEGameEntityManager(Manager).MapRenderable(FMaterial, Value, FMesh);
   FMaterial := Value;
+end;
+
+procedure TCEGameEntity.SetManager(const Value: TCEEntityManager);
+begin
+  if Manager = Value then Exit;
+  inherited;
+  TCEGameEntityManager(Manager).RegisterGameEntity(Self);
+end;
+
+procedure TCEGameEntityManager.MapRenderable(const OldMaterial, NewMaterial: TCEMaterial; Mesh: TCEMesh);
+begin
+
+end;
+
+procedure TCEGameEntityManager.RegisterGameEntity(const Entity: TCEGameEntity);
+begin
+  FUpdateList.Add(Entity);
+end;
+
+constructor TCEGameEntityManager.Create();
+begin
+  FUpdateList := TCEEntityList.Create();
+end;
+
+destructor TCEGameEntityManager.Destroy();
+begin
+  FUpdateList.Free();
+  inherited Destroy();
+end;
+
+function TCEGameEntityManager.GetUpdateList(): TCEEntityList;
+begin
+  Result := FUpdateList;
 end;
 
 end.

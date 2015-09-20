@@ -39,7 +39,7 @@ uses
   CEBasePhysics,
   CEBaseNetwork,
 
-  CEEntity,
+  CEEntity, CEGameEntity,
 
   CEOSUtils;
 
@@ -59,7 +59,7 @@ type
     fInput: TCEBaseInput;
     fPhysics: TCEBasePhysics;
     fNetwork: TCEBaseNetwork;
-    fEntityManager: TCEEntityManager;
+    FEntityManager: TCEGameEntityManager;
 
     procedure Update(const DeltaTime: Single); virtual;
   public
@@ -70,7 +70,7 @@ type
     procedure Process();
     // Launch the engine's main cycle
     procedure Run();
-    property EntityManager: TCEEntityManager read fEntityManager;
+    property EntityManager: TCEGameEntityManager read FEntityManager;
     property Application: TCEBaseApplication read FApplication write FApplication;
     property Renderer: TCEBaseRenderer read fRenderer write fRenderer;
     property Audio: TCEBaseAudio read fAudio write fAudio;
@@ -103,14 +103,21 @@ begin
 end;
 
 procedure TCECore.Update(const DeltaTime: Single);
+var
+  Items: TCEEntityList;
+var
+  i: Integer;
 begin
+  Items := FEntityManager.GetUpdateList();
+  for i := 0 to Items.Count-1 do
+    TCEGameEntity(Items[i]).Update(DeltaTime);
 end;
 
 constructor TCECore.Create;
 begin
   inherited;
 
-  fEntityManager := TCEEntityManager.Create();
+  FEntityManager := TCEGameEntityManager.Create();
 end;
 
 destructor TCECore.Destroy;
@@ -121,7 +128,7 @@ begin
   end;
 
   try
-    fEntityManager.Free;
+    FEntityManager.Free;
   except
   end;
 
