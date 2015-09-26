@@ -31,9 +31,8 @@ program wintest;
 {$APPTYPE CONSOLE}
 
 uses
-  SysUtils, Windows,
   CEWindowsApplication, CEBaseRenderer, CEOpenGLES2Renderer, CEBaseInput, CEOSMessageInput,
-  CEMesh, CECommon, CEOSUtils, CEResource, CEGameEntity,
+  CEMesh, CECommon, CEOSUtils, CEResource, CEGameEntity, CE2DMesh,
   CEBaseTypes, CEMessage, CEInputMessage, CEVectors, CEImageResource, CEMaterial, CECore;
 
 type
@@ -45,7 +44,11 @@ type
   public
     property Angle: Single read FAngle write SetAngle;
     procedure FillVertexBuffer(Dest: Pointer); override;
-    procedure Update(const DeltaTime: Single);
+  end;
+
+  TRotatingTriangle = class(TCEGameEntity)
+  public
+    procedure Update(const DeltaTime: Single); override;
   end;
 
 var
@@ -57,46 +60,39 @@ begin
   VertexBuffer.Status := tsChanged; // Invalidate buffer
 end;
 
-procedure TCERotatingTriangleMesh.Update(const DeltaTime: Single);
-begin
-  Angle := Angle + speed * DeltaTime;
-end;
-
-type
-  TVert = packed record
-    vec: TCEVector3f;
-    //u, v: Single;
-  end;
-  TVertArray = array[0..$FFFF] of TVert;
-
 procedure TCERotatingTriangleMesh.FillVertexBuffer(Dest: Pointer);
 var
   a: Single;
-  v: ^TVertArray;
+  v: ^TVert3Array;
 begin
   inherited;
-  a := Angle * pi/180;
+  a := Angle * pi / 180;
   v := Dest;
   Vec3f(cos(a), sin(a), 0, v^[0].vec);
   //v^[0].u := 0; v^[0].v := 0;
-  Vec3f(cos(a+2*pi/3), sin(a+2*pi/3), 0, v^[1].vec);
+  Vec3f(cos(a + 2 * pi / 3), sin(a + 2 * pi / 3), 0, v^[1].vec);
   //v^[1].u := 1; v^[1].v := 0;
-  Vec3f(cos(a+4*pi/3), sin(a+4*pi/3), 0, v^[2].vec);
+  Vec3f(cos(a + 4 * pi / 3), sin(a + 4 * pi / 3), 0, v^[2].vec);
   //v^[2].u := 0.5; v^[2].v := 0.5;
   FVerticesCount := 3;
-  FVertexSize := SizeOf(TVert);
+  FVertexSize := SizeOf(TVert3);
+end;
+
+procedure TRotatingTriangle.Update(const DeltaTime: Single);
+begin
+  //TCERotatingTriangleMesh(Mesh).Angle := TCERotatingTriangleMesh(Mesh).Angle + speed * DeltaTime;
 end;
 
 var
   App: TCEWindowsApplication;
   Renderer: TCEBaseRenderer;
   Core: TCECore;
-  Entity: TCEGameEntity;
-  Mesh: TCERotatingTriangleMesh;
+  Mesh: TCELineMesh;
   Image: TCEImageResource;
   Mat: TCEMaterial;
   Pass: TCERenderPass;
   Sh: TCETextResource;
+  Triangle: TRotatingTriangle;
 begin
   {$IF Declared(ReportMemoryLeaksOnShutdown)}
   ReportMemoryLeaksOnShutdown := True;
@@ -108,23 +104,23 @@ begin
   Core.Renderer := Renderer;
   Core.Input := TCEOSMessageInput.Create();
 
-  Mesh := TCERotatingTriangleMesh.Create(Core.EntityManager);
+  Triangle := TRotatingTriangle.Create(Core.EntityManager);
+  Mesh := TCELineMesh.Create(Core.EntityManager);
   Image := TCEImageResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/test1.bmp'));
   Pass := TCERenderPass.Create(Core.EntityManager);
   Pass.Texture0 := Image;
-  Pass.VertexShader := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/vs.glsl'));
-  Pass.FragmentShader := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/fs.glsl'));
+  Pass.VertexShader := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/vs_line.glsl'));
+  Pass.FragmentShader := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/fs_line.glsl'));
   Mat := TCEMaterial.Create(Core.EntityManager);
   Mat.TotalTechniques := 1;
   Mat.Technique[0] := TCERenderTechnique.Create(Core.EntityManager);
   Mat.Technique[0].TotalPasses := 1;
   Mat.Technique[0].Pass[0] := Pass;
-  Entity := TCEGameEntity.Create(Core.EntityManager);
-  Entity.Mesh := Mesh;
-  Entity.Material := Mat;
+  Triangle.Mesh := Mesh;
+  //Triangle.Material := Mat;
 
   App.MessageHandler := Core.Input.HandleMessage;
-  Core.OnUpdateDelegate := Mesh.Update;
+  //Core.OnUpdateDelegate := Mesh.Update;
 
   speed := 4;
 
@@ -132,10 +128,10 @@ begin
   begin
     Renderer.Clear([cfColor, cfDepth], GetColor(40, 30, 130, 0), 1.0, 0);
 
-    Renderer.ApplyRenderPass(Entity.Material.Technique[0].Pass[0]);
-    Renderer.RenderMesh(Entity.Mesh);
+    Renderer.ApplyRenderPass(Mat.Technique[0].Pass[0]);
+    Renderer.RenderMesh(Mesh);
 
-    if Core.Input.Pressed[vkNUMPAD6] or (Core.Input.MouseState.Buttons[mbLeft]  = baDown) then speed := speed + 4;
+    if Core.Input.Pressed[vkNUMPAD6] or (Core.Input.MouseState.Buttons[mbLeft] = baDown) then speed := speed + 4;
     if Core.Input.Pressed[vkNUMPAD4] or (Core.Input.MouseState.Buttons[mbRight] = baDown) then speed := speed - 4;
     speed := Clamps(speed, -360, 360);
 
@@ -147,7 +143,7 @@ begin
   Pass.FragmentShader.Free();
   Pass.Free();
   Image.Free();
-  Mesh.Free();
+  Triangle.Free();
   Core.Free();
   Readln;
 end.

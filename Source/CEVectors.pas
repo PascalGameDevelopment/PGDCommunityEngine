@@ -51,12 +51,25 @@ type
   TCEMatrix4 = array[0..3, 0..3] of single;
   TCEMatrix = TCEMatrix4;
 
+  function Vec2f(x, y: Single): TCEVector2f; overload;
+  procedure Vec2f(x, y: Single; out dest: TCEVector2f); overload;
   function Vec3f(x, y, z: Single): TCEVector3f; overload;
   procedure Vec3f(x, y, z: Single; out dest: TCEVector3f); overload;
   function Vec4f(x, y, z, W: Single): TCEVector4f; overload;
   procedure Vec4f(x, y, z, W: Single; out dest: TCEVector4f); overload;
 
 implementation
+
+function Vec2f(x, y: Single): TCEVector2f;
+begin
+  Vec2f(x, y, Result);
+end;
+
+procedure Vec2f(x, y: Single; out dest: TCEVector2f);
+begin
+  dest.x := x;
+  dest.y := y;
+end;
 
 function Vec3f(x, y, z: Single): TCEVector3f;
 begin
