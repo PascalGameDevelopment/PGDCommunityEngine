@@ -65,7 +65,7 @@ type
   end;
 
   // Vertex attribute data types
-  TVertexAttribDataType = (AT_SHORTINT, AT_BYTE, AT_SMALLINT, AT_WORD, AT_SINGLE);
+  TVertexAttribDataType = (atShortint, atByte, atSmallint, atWord, atSingle);
   // Vertex attribute information
   TVertexAttrib = record
     DataType: TVertexAttribDataType;
@@ -90,6 +90,7 @@ type
     FVertexAttribs: PVertexAttribs;
     procedure SetVertexAttribsCount(Count: Integer);
   public
+    destructor Destroy; override;
     procedure DoInit(); override;
     // Fill vertex buffer
     procedure FillVertexBuffer(Dest: Pointer); virtual;
@@ -141,6 +142,12 @@ procedure TCEMesh.SetVertexAttribsCount(Count: Integer);
 begin
   FVertexAttribsCount := Count;
   ReallocMem(FVertexAttribs, FVertexAttribsCount * SizeOf(TVertexAttrib));
+end;
+
+destructor TCEMesh.Destroy;
+begin
+  FreeMem(FVertexAttribs, FVertexAttribsCount * SizeOf(TVertexAttrib));
+  inherited;
 end;
 
 procedure TCEMesh.DoInit();

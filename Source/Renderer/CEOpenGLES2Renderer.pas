@@ -288,11 +288,11 @@ end;
 function GetGLType(Value: TVertexAttribDataType): GLenum;
 begin
   case Value of
-    AT_SHORTINT: Result := GL_BYTE;
-    AT_BYTE: Result := GL_UNSIGNED_BYTE;
-    AT_SMALLINT: Result := GL_SHORT;
-    AT_WORD: Result := GL_UNSIGNED_SHORT;
-    AT_SINGLE: Result := GL_FLOAT;
+    atShortint: Result := GL_BYTE;
+    atByte: Result := GL_UNSIGNED_BYTE;
+    atSmallint: Result := GL_SHORT;
+    atWord: Result := GL_UNSIGNED_SHORT;
+    atSingle: Result := GL_FLOAT;
   end;
 end;
 

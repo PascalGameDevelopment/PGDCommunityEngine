@@ -91,15 +91,16 @@ procedure TCELineMesh.DoInit();
 begin
   inherited;
   SetVertexAttribsCount(3);
-  VertexAttribs^[0].DataType := AT_SINGLE;
+  VertexAttribs^[0].DataType := atSingle;
   VertexAttribs^[0].Size := 4;
   VertexAttribs^[0].Name := 'position';
-  VertexAttribs^[1].DataType := AT_SINGLE;
+  VertexAttribs^[1].DataType := atSingle;
   VertexAttribs^[1].Size := 4;
   VertexAttribs^[1].Name := 'data';
-  VertexAttribs^[2].DataType := AT_SINGLE;
+  VertexAttribs^[2].DataType := atSingle;
   VertexAttribs^[2].Size := 2;
   VertexAttribs^[2].Name := 'width';
+  FPrimitiveType := ptTriangleStrip;
 end;
 
 procedure TCELineMesh.FillVertexBuffer(Dest: Pointer);
