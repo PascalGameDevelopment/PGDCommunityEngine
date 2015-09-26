@@ -57,6 +57,7 @@ type
     VBO: GLUInt;
 
     Shaders: TGLSLShaderList;
+    CurShader: TCEGLSLShader;
     function InitShader(Pass: TCERenderPass): Integer;
   protected
     procedure DoInit(); override;
@@ -265,12 +266,12 @@ begin
   begin
     Sh := Shaders.Get(PrId);
     glUseProgram(Sh.ShaderProgram);
-    PhaseLocation := glGetUniformLocation(Sh.ShaderProgram, 'phase');
+    {PhaseLocation := glGetUniformLocation(Sh.ShaderProgram, 'phase');
     if PhaseLocation < 0 then begin
       CELog.Error('Error: Cannot get phase shader uniform location');
-    end;
+    end;}
     glUniform1i(glGetUniformLocation(Sh.ShaderProgram, 's_texture0'), 0);
-
+    CurShader := Sh;
   end;
 
   TexId := CEMaterial._GetTextureId(Pass, 0);
@@ -284,41 +285,55 @@ begin
   glEnable(GL_TEXTURE_2D);
 end;
 
+function GetGLType(Value: TVertexAttribDataType): GLenum;
+begin
+  case Value of
+    AT_SHORTINT: Result := GL_BYTE;
+    AT_BYTE: Result := GL_UNSIGNED_BYTE;
+    AT_SMALLINT: Result := GL_SHORT;
+    AT_WORD: Result := GL_UNSIGNED_SHORT;
+    AT_SINGLE: Result := GL_FLOAT;
+  end;
+end;
+
 procedure TCEOpenGL4Renderer.RenderMesh(Mesh: TCEMesh);
 var
+  i: Integer;
   ts: PTesselationStatus;
 begin
   Assert(Assigned(Mesh));
   if not Active then Exit;
   ts := CEMesh.GetVB(Mesh);
 
-  {if ts^.BufferIndex = -1 then begin  // Create buffer
+  if ts^.BufferIndex = -1 then begin
+    // Create buffer
     glGenBuffers(1, @VBO);
     ts^.BufferIndex := VBO;
     ts^.Status := tsMaxSizeChanged;   // Not tesselated yet as vertex buffer is just created
   end;
 
-  glBindBuffer(GL_ARRAY_BUFFER, ts^.BufferIndex);}
+  glBindBuffer(GL_ARRAY_BUFFER, ts^.BufferIndex);
   if ts^.Status <> tsTesselated then begin
     Mesh.FillVertexBuffer(VertexData);
-    //glBufferData(GL_ARRAY_BUFFER, Mesh.VerticesCount * Mesh.VertexSize, VertexData, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, Mesh.VerticesCount * Mesh.VertexSize, VertexData, GL_STATIC_DRAW);
   end;
 
-{  glVertexAttribPointer(0,4,GL_FLOAT,0,0,@VertexArray);
-  glEnableVertexAttribArray(0);
-  glDrawArrays(GL_TRIANGLE_STRIP,0,3);}
+  for i := 0 to Mesh.VertexAttribCount - 1 do
+  begin
+    glBindAttribLocation(CurShader.ShaderProgram, i, Mesh.VertexAttribs^[i].Name);
+    glEnableVertexAttribArray(i);
+    glVertexAttribPointer(i, Mesh.VertexAttribs^[i].Size, GetGLType(Mesh.VertexAttribs^[i].DataType), GL_FALSE, Mesh.VertexSize, PtrOffs(nil, i*SizeOf(TCEVector4f)));
+  end;
 
-
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, Mesh.VertexSize, VertexData);
-//  glEnableVertexAttribArray(1);
-//  glVertexAttribPointer(1, 2, GL_FLOAT, False, Mesh.VertexSize, pointer(3));
-
-  {glEnableClientState(GL_VERTEX_ARRAY);
-  glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-  glTexCoordPointer(2, GL_FLOAT, Mesh.VertexSize,  ptroffs(VertexData, SizeOf(TCEVector3f)));
-  glVertexPointer(3, GL_FLOAT, Mesh.VertexSize, VertexData);}
-  glDrawArrays(GL_TRIANGLES, 0, Mesh.VerticesCount);
+  case Mesh.PrimitiveType of
+    ptPointList: glDrawArrays(GL_POINTS, 0, Mesh.VerticesCount);
+    ptLineList: glDrawArrays(GL_LINES, 0, Mesh.VerticesCount);
+    ptLineStrip: glDrawArrays(GL_LINE_STRIP, 0, Mesh.VerticesCount);
+    ptTriangleList: glDrawArrays(GL_TRIANGLES, 0, Mesh.VerticesCount);
+    ptTriangleStrip: glDrawArrays(GL_TRIANGLE_STRIP, 0, Mesh.VerticesCount);
+    ptTriangleFan: glDrawArrays(GL_TRIANGLE_FAN, 0, Mesh.VerticesCount);
+    ptQuads:;
+  end;
 end;
 
 procedure TCEOpenGL4Renderer.NextFrame;

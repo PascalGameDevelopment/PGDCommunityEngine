@@ -64,6 +64,17 @@ type
     Status: TTesselationState;
   end;
 
+  // Vertex attribute data types
+  TVertexAttribDataType = (AT_SHORTINT, AT_BYTE, AT_SMALLINT, AT_WORD, AT_SINGLE);
+  // Vertex attribute information
+  TVertexAttrib = record
+    DataType: TVertexAttribDataType;
+    Size: Integer;
+    Name: PAnsiChar;
+  end;
+  TVertexAttribs = array[0..15] of TVertexAttrib;
+  PVertexAttribs = ^TVertexAttribs;
+
   {
   Encapsulates vertex data needed to render a visible entity
   }
@@ -75,6 +86,9 @@ type
     FVertexSize: Integer;
     FPrimitiveType: TPrimitiveType;
     FPrimitiveCount: Integer;
+    FVertexAttribsCount: Integer;
+    FVertexAttribs: PVertexAttribs;
+    procedure SetVertexAttribsCount(Count: Integer);
   public
     procedure DoInit(); override;
     // Fill vertex buffer
@@ -89,6 +103,10 @@ type
     property PrimitiveType: TPrimitiveType read FPrimitiveType;
     // Number of primitives (points, lines, triangles etc depending on PrimitiveType) in mesh
     property PrimitiveCount: Integer read FPrimitiveCount;
+    // Number of vertex attributes
+    property VertexAttribCount: Integer read FVertexAttribsCount;
+    // Vertex attributes info
+    property VertexAttribs: PVertexAttribs read FVertexAttribs;
   end;
 
   // Used by renderer
@@ -118,6 +136,12 @@ begin
 end;
 
 { TCEMesh }
+
+procedure TCEMesh.SetVertexAttribsCount(Count: Integer);
+begin
+  FVertexAttribsCount := Count;
+  ReallocMem(FVertexAttribs, FVertexAttribsCount * SizeOf(TVertexAttrib));
+end;
 
 procedure TCEMesh.DoInit();
 begin

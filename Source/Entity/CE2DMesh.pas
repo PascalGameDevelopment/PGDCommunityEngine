@@ -58,8 +58,8 @@ type
 
   // Line mesh class
   TCELineMesh = class(TCEMesh)
-  private
   public
+    procedure DoInit(); override;
     procedure FillVertexBuffer(Dest: Pointer); override;
   end;
 
@@ -87,59 +87,74 @@ begin
   FVertexSize := SizeOf(TVert3);
 end;
 
+procedure TCELineMesh.DoInit();
+begin
+  inherited;
+  SetVertexAttribsCount(3);
+  VertexAttribs^[0].DataType := AT_SINGLE;
+  VertexAttribs^[0].Size := 4;
+  VertexAttribs^[0].Name := 'position';
+  VertexAttribs^[1].DataType := AT_SINGLE;
+  VertexAttribs^[1].Size := 4;
+  VertexAttribs^[1].Name := 'data';
+  VertexAttribs^[2].DataType := AT_SINGLE;
+  VertexAttribs^[2].Size := 2;
+  VertexAttribs^[2].Name := 'width';
+end;
+
 procedure TCELineMesh.FillVertexBuffer(Dest: Pointer);
 const
   th1 = 0.004; th2 = 0.004;
 
-procedure fillVB(x1, y1, x2, y2, w1, w2: Single; v: PVert4Array);
-var
-  dirx, diry, len: Single;
-begin
-  dirx := x2 - x1;
-  diry := y2 - y1;
-  len := dirx * dirx + diry * diry;
-  len := sqrt(len);
-  dirx := dirx / len;
-  diry := diry / len;
+  procedure fillVB(x1, y1, x2, y2, w1, w2: Single; v: PVert4Array);
+  var
+    dirx, diry, len: Single;
+  begin
+    dirx := x2 - x1;
+    diry := y2 - y1;
+    len := dirx * dirx + diry * diry;
+    len := sqrt(len);
+    dirx := dirx / len;
+    diry := diry / len;
 
-  // (x, y, w, len) th (midX, midY, endX, endY)
-  //Vec4f(x1 - (dirx - diry) * (w1+th1), y1 - (diry + dirx) * (w1+th1), w1, len, v^[0].vec);
-  //Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), th1, v^[0].vec2);
-  Vec4f(x1 - (dirx - diry) * (w1+th1), y1 - (diry + dirx) * (w1+th1), x2, y2, v^[0].vec);
-  Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), x1, y1, v^[0].vec2);
-  Vec2f(w1, th1, v^[0].width);
+    // (x, y, w, len) th (midX, midY, endX, endY)
+    //Vec4f(x1 - (dirx - diry) * (w1+th1), y1 - (diry + dirx) * (w1+th1), w1, len, v^[0].vec);
+    //Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), th1, v^[0].vec2);
+    Vec4f(x1 - (dirx - diry) * (w1+th1), y1 - (diry + dirx) * (w1+th1), x2, y2, v^[0].vec);
+    Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), x1, y1, v^[0].vec2);
+    Vec2f(w1, th1, v^[0].width);
 
-  //Vec4f(x1 - (dirx + diry) * (w1+th1), y1 - (diry - dirx) * (w1+th1), w1, len, v^[1].vec);
-  //Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), th1, v^[1].vec2);
-  Vec4f(x1 - (dirx + diry) * (w1+th1), y1 - (diry - dirx) * (w1+th1), x2, y2, v^[1].vec);
-  Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), x1, y1, v^[1].vec2);
-  Vec2f(w1, th1, v^[1].width);
+    //Vec4f(x1 - (dirx + diry) * (w1+th1), y1 - (diry - dirx) * (w1+th1), w1, len, v^[1].vec);
+    //Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), th1, v^[1].vec2);
+    Vec4f(x1 - (dirx + diry) * (w1+th1), y1 - (diry - dirx) * (w1+th1), x2, y2, v^[1].vec);
+    Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), x1, y1, v^[1].vec2);
+    Vec2f(w1, th1, v^[1].width);
 
-  //Vec4f(x2 + (dirx - diry) * (w2+th2), y2 + (diry + dirx) * (w2+th2), w2, len, v^[2].vec);
-  //Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), th2, v^[2].vec2);
-  Vec4f(x2 + (dirx - diry) * (w2+th2), y2 + (diry + dirx) * (w2+th2), x2, y2, v^[2].vec);
-  Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), x1, y1, v^[2].vec2);
-  Vec2f(w2, th2, v^[2].width);
+    //Vec4f(x2 + (dirx - diry) * (w2+th2), y2 + (diry + dirx) * (w2+th2), w2, len, v^[2].vec);
+    //Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), th2, v^[2].vec2);
+    Vec4f(x2 + (dirx - diry) * (w2+th2), y2 + (diry + dirx) * (w2+th2), x2, y2, v^[2].vec);
+    Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), x1, y1, v^[2].vec2);
+    Vec2f(w2, th2, v^[2].width);
 
 
-  //Vec4f(x1 - (dirx - diry) * (w1+th1), y1 - (diry + dirx) * (w1+th1), w1, len, v^[3].vec);
-//  Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), th1, v^[3].vec2);
-  Vec4f(x1 - (dirx - diry) * (w1+th1), y1 - (diry + dirx) * (w1+th1), x2, y2, v^[3].vec);
-  Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), x1, y1, v^[3].vec2);
-  Vec2f(w1, th1, v^[3].width);
+    //Vec4f(x1 - (dirx - diry) * (w1+th1), y1 - (diry + dirx) * (w1+th1), w1, len, v^[3].vec);
+  //  Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), th1, v^[3].vec2);
+    Vec4f(x1 - (dirx - diry) * (w1+th1), y1 - (diry + dirx) * (w1+th1), x2, y2, v^[3].vec);
+    Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), x1, y1, v^[3].vec2);
+    Vec2f(w1, th1, v^[3].width);
 
-  //Vec4f(x2 + (dirx - diry) * (w2+th2), y2 + (diry + dirx) * (w2+th2), w2, len, v^[4].vec);
-//  Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), th2, v^[4].vec2);
-  Vec4f(x2 + (dirx - diry) * (w2+th2), y2 + (diry + dirx) * (w2+th2), x2, y2, v^[4].vec);
-  Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), x1, y1, v^[4].vec2);
-  Vec2f(w2, th2, v^[4].width);
+    //Vec4f(x2 + (dirx - diry) * (w2+th2), y2 + (diry + dirx) * (w2+th2), w2, len, v^[4].vec);
+  //  Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), th2, v^[4].vec2);
+    Vec4f(x2 + (dirx - diry) * (w2+th2), y2 + (diry + dirx) * (w2+th2), x2, y2, v^[4].vec);
+    Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), x1, y1, v^[4].vec2);
+    Vec2f(w2, th2, v^[4].width);
 
-  //Vec4f(x2 + (dirx + diry) * (w2+th2), y2 + (diry - dirx) * (w2+th2), w2, len, v^[5].vec);
-//  Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), th2, v^[5].vec2);
-  Vec4f(x2 + (dirx + diry) * (w2+th2), y2 + (diry - dirx) * (w2+th2), x2, y2, v^[5].vec);
-  Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), x1, y1, v^[5].vec2);
-  Vec2f(w2, th2, v^[5].width);
-end;
+    //Vec4f(x2 + (dirx + diry) * (w2+th2), y2 + (diry - dirx) * (w2+th2), w2, len, v^[5].vec);
+  //  Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), th2, v^[5].vec2);
+    Vec4f(x2 + (dirx + diry) * (w2+th2), y2 + (diry - dirx) * (w2+th2), x2, y2, v^[5].vec);
+    Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), x1, y1, v^[5].vec2);
+    Vec2f(w2, th2, v^[5].width);
+  end;
 
 var
   v: PVert4Array;
