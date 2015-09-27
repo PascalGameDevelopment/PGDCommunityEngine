@@ -103,74 +103,100 @@ begin
   FPrimitiveType := ptTriangleStrip;
 end;
 
+const
+  Points: array[0..3] of TCEVector2f = ((x: -0.5; y: 0.3), (x: 0.3; y: 0.3), (x: +0.6; y: -0.3), (x: 0.7; y: -0.3));
+
 procedure TCELineMesh.FillVertexBuffer(Dest: Pointer);
 const
-  th1 = 0.004; th2 = 0.004;
-
-  procedure fillVB(x1, y1, x2, y2, w1, w2: Single; v: PVert4Array);
-  var
-    dirx, diry, len: Single;
-  begin
-    dirx := x2 - x1;
-    diry := y2 - y1;
-    len := dirx * dirx + diry * diry;
-    len := sqrt(len);
-    dirx := dirx / len;
-    diry := diry / len;
-
-    // (x, y, w, len) th (midX, midY, endX, endY)
-    //Vec4f(x1 - (dirx - diry) * (w1+th1), y1 - (diry + dirx) * (w1+th1), w1, len, v^[0].vec);
-    //Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), th1, v^[0].vec2);
-    Vec4f(x1 - (dirx - diry) * (w1+th1), y1 - (diry + dirx) * (w1+th1), x2, y2, v^[0].vec);
-    Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), x1, y1, v^[0].vec2);
-    Vec2f(w1, th1, v^[0].width);
-
-    //Vec4f(x1 - (dirx + diry) * (w1+th1), y1 - (diry - dirx) * (w1+th1), w1, len, v^[1].vec);
-    //Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), th1, v^[1].vec2);
-    Vec4f(x1 - (dirx + diry) * (w1+th1), y1 - (diry - dirx) * (w1+th1), x2, y2, v^[1].vec);
-    Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), x1, y1, v^[1].vec2);
-    Vec2f(w1, th1, v^[1].width);
-
-    //Vec4f(x2 + (dirx - diry) * (w2+th2), y2 + (diry + dirx) * (w2+th2), w2, len, v^[2].vec);
-    //Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), th2, v^[2].vec2);
-    Vec4f(x2 + (dirx - diry) * (w2+th2), y2 + (diry + dirx) * (w2+th2), x2, y2, v^[2].vec);
-    Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), x1, y1, v^[2].vec2);
-    Vec2f(w2, th2, v^[2].width);
-
-
-    //Vec4f(x1 - (dirx - diry) * (w1+th1), y1 - (diry + dirx) * (w1+th1), w1, len, v^[3].vec);
-  //  Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), th1, v^[3].vec2);
-    Vec4f(x1 - (dirx - diry) * (w1+th1), y1 - (diry + dirx) * (w1+th1), x2, y2, v^[3].vec);
-    Vec4f(x1 - dirx * (w1+th1), y1 - diry * (w1+th1), x1, y1, v^[3].vec2);
-    Vec2f(w1, th1, v^[3].width);
-
-    //Vec4f(x2 + (dirx - diry) * (w2+th2), y2 + (diry + dirx) * (w2+th2), w2, len, v^[4].vec);
-  //  Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), th2, v^[4].vec2);
-    Vec4f(x2 + (dirx - diry) * (w2+th2), y2 + (diry + dirx) * (w2+th2), x2, y2, v^[4].vec);
-    Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), x1, y1, v^[4].vec2);
-    Vec2f(w2, th2, v^[4].width);
-
-    //Vec4f(x2 + (dirx + diry) * (w2+th2), y2 + (diry - dirx) * (w2+th2), w2, len, v^[5].vec);
-  //  Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), th2, v^[5].vec2);
-    Vec4f(x2 + (dirx + diry) * (w2+th2), y2 + (diry - dirx) * (w2+th2), x2, y2, v^[5].vec);
-    Vec4f(x2 + dirx * (w2+th2), y2 + diry * (w2+th2), x1, y1, v^[5].vec2);
-    Vec2f(w2, th2, v^[5].width);
-  end;
+  th1 = 0.003; th2 = 0.004;
 
 var
   v: PVert4Array;
-  x1, y1, x2, y2, w1, w2: Single;
+  Width, w: Single;
+  Dir1, Dir2, Norm1, Norm2: TCEVector2f;
+  P1, P2, P31, P32, P41, P42, P3, P4, P5, P6, AD, BD: TCEVector2f;
+  i, Count: Integer;
 begin
-  x1 := -0.5; y1 := -0.1;
-  x2 := +0.5; y2 := +0.1;
-  w1 := 0.05; w2 := 0.02;
+  FVerticesCount := 0;
+  FPrimitiveCount := 0;
+  Count := Length(Points);
+  if Count < 2 then Exit;
 
   v := Dest;
-  fillVB(-0.5, -0.1, 0.5, 0.1, 0.02, 0.07, v);
-  fillVB(0.5, 0.1, 0.3, 0.5, 0.07, 0.01, PtrOffs(v, 6*SizeOf(v^[0])));
+  Width := 0.05;
+  w := Width + th1 + 0.03;
 
-  FVerticesCount := 12;
-  FPrimitiveCount := 4;
+  // First two points
+  Dir1 := VectorNormalize(VectorSub(points[0+1], points[0]));
+  Norm1 := Vec2f(-Dir1.y, Dir1.x);
+  P1 := Vec2f(points[0].x - (Dir1.x + Norm1.x) * w, points[0].y - (Dir1.y + Norm1.y) * w);
+  P2 := Vec2f(points[0].x - (Dir1.x - Norm1.x) * w, points[0].y - (Dir1.y - Norm1.y) * w);
+  Vec4f(P1.x, P1.y, points[0+1].x, points[0+1].y, v^[0].vec);
+  Vec4f(points[0].x - Dir1.x * w, points[0].y - Dir1.y * w, points[0].x, points[0].y, v^[0].vec2);
+  Vec2f(Width, th1, v^[0].width);
+  Vec4f(P2.x, P2.y, points[0+1].x, points[0+1].y, v^[1].vec);
+  Vec4f(points[0].x - Dir1.x * w, points[0].y - Dir1.y * w, points[0].x, points[0].y, v^[1].vec2);
+  Vec2f(Width, th1, v^[1].width);
+  FVerticesCount := 2;
+
+  i := 0;
+  while i < Count-2 do
+  begin
+
+    Dir2 := VectorNormalize(VectorSub(Points[i+2], Points[i+1]));
+    Norm2 := Vec2f(-Dir2.y, Dir2.x);
+    P31 := Vec2f(Points[i+1].x + (Dir1.x - Norm1.x) * w, Points[i+1].y + (Dir1.y - Norm1.y) * w);
+    P41 := Vec2f(Points[i+1].x + (Dir1.x + Norm1.x) * w, Points[i+1].y + (Dir1.y + Norm1.y) * w);
+    P32 := Vec2f(Points[i+1].x - (Dir2.x + Norm2.x) * w, Points[i+1].y - (Dir2.y + Norm2.y) * w);
+    P42 := Vec2f(Points[i+1].x - (Dir2.x - Norm2.x) * w, Points[i+1].y - (Dir2.y - Norm2.y) * w);
+    P5  := Vec2f(Points[i+2].x + (Dir2.x - Norm2.x) * w, Points[i+2].y + (Dir2.y - Norm2.y) * w);
+    P6  := Vec2f(Points[i+2].x + (Dir2.x + Norm2.x) * w, Points[i+2].y + (Dir2.y + Norm2.y) * w);
+    LineIntersect(P1, P31, P32, P5, P3);
+    LineIntersect(P2, P41, P42, P6, P4);
+
+    Vec4f(P3.x, P3.y, Points[i+1].x, Points[i+1].y, v^[FVerticesCount].vec);
+    AD := VectorSub(P3, Vec2f(Points[i].x - Dir1.x * w, Points[i].y - Dir1.y * w));
+    Vec4f(Points[i].x - Dir1.x * w + Dir1.x * VectorMagnitude(AD), Points[i].y - Dir1.y * w + Dir1.y * VectorMagnitude(AD), Points[i].x, Points[i].y, v^[FVerticesCount].vec2);
+    Vec2f(Width, th1, v^[FVerticesCount].width);
+
+    Vec4f(P4.x, P4.y, Points[i+1].x, Points[i+1].y, v^[FVerticesCount+1].vec);
+    BD := VectorSub(P4, Vec2f(Points[i].x - Dir1.x * w, Points[i].y - Dir1.y * w));
+    Vec4f(Points[i].x - Dir1.x * w + Dir1.x * VectorMagnitude(BD), Points[i].y - Dir1.y * w + Dir1.y * VectorMagnitude(BD), Points[i].x, Points[i].y, v^[FVerticesCount+1].vec2);
+    Vec2f(Width, th1, v^[FVerticesCount+1].width);
+
+    Inc(FVerticesCount, 2);
+    Inc(FPrimitiveCount, 2);
+
+    Vec4f(P3.x, P3.y, Points[i+2].x, Points[i+2].y, v^[FVerticesCount].vec);                 // Two degenerated triangles
+    AD := VectorSub(P3, Vec2f(Points[i+2].x + Dir2.x * w, Points[i+2].y + Dir2.y * w));
+    Vec4f(Points[i+2].x + Dir2.x * w - Dir2.x * VectorMagnitude(AD), Points[i+2].y + Dir2.y * w - Dir2.y * VectorMagnitude(AD), Points[i+1].x, Points[i+1].y, v^[FVerticesCount].vec2);
+    Vec2f(Width, th1, v^[FVerticesCount].width);
+
+    Vec4f(P4.x, P4.y, Points[i+2].x, Points[i+2].y, v^[FVerticesCount+1].vec);
+    BD := VectorSub(P4, Vec2f(Points[i+2].x + Dir2.x * w, Points[i+2].y + Dir2.y * w));
+    Vec4f(Points[i+2].x + Dir2.x * w - Dir2.x * VectorMagnitude(BD), Points[i+2].y + Dir2.y * w - Dir2.y * VectorMagnitude(BD), Points[i+1].x, Points[i+1].y, v^[FVerticesCount+1].vec2);
+    Vec2f(Width, th1, v^[FVerticesCount+1].width);
+
+    Inc(FVerticesCount, 2);
+    Inc(FPrimitiveCount, 2);
+    
+    Dir1 := Dir2;
+
+    Inc(i);
+  end;
+  Dir2 := VectorNormalize(VectorSub(Points[i+1], Points[i]));
+  Norm2 := Vec2f(-Dir2.y, Dir2.x);
+  P5  := Vec2f(Points[i+1].x + (Dir2.x - Norm2.x) * w, Points[i+1].y + (Dir2.y - Norm2.y) * w);
+  P6  := Vec2f(Points[i+1].x + (Dir2.x + Norm2.x) * w, Points[i+1].y + (Dir2.y + Norm2.y) * w);
+  Vec4f(P5.x, P5.y, Points[i+1].x, Points[i+1].y, v^[FVerticesCount].vec);
+  Vec4f(Points[i+1].x + Dir2.x * w, Points[i+1].y + Dir2.y * w, Points[i].x, Points[i].y, v^[FVerticesCount].vec2);
+  Vec2f(Width, th1, v^[FVerticesCount].width);
+  Vec4f(P6.x, P6.y, Points[i+1].x, Points[i+1].y, v^[FVerticesCount+1].vec);
+  Vec4f(Points[i+1].x + Dir2.x * w, Points[i+1].y + Dir2.y * w, Points[i].x, Points[i].y, v^[FVerticesCount+1].vec2);
+  Vec2f(Width, th1, v^[FVerticesCount+1].width);
+
+  Inc(FVerticesCount, 2);
+  Inc(FPrimitiveCount, 2);
   FVertexSize := SizeOf(TVert4);
 end;
 
