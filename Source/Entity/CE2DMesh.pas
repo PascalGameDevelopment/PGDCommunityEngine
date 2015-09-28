@@ -104,11 +104,11 @@ begin
 end;
 
 const
-  Points: array[0..3] of TCEVector2f = ((x: -0.5; y: 0.3), (x: 0.3; y: 0.3), (x: +0.6; y: -0.3), (x: 0.7; y: -0.3));
+  Points: array[0..5] of TCEVector2f = ((x: -0.5; y: 0.3), (x: 0.3; y: -0.5), (x: -0.3; y: -0.3), (x: 0.4; y: 0), (x: 0.3; y: 0.3), (x: 0.2; y: 0.6));
 
 procedure TCELineMesh.FillVertexBuffer(Dest: Pointer);
 const
-  th1 = 0.003; th2 = 0.004;
+  th1 = 0.00005; th2 = 0.004;
 
 var
   v: PVert4Array;
@@ -145,14 +145,21 @@ begin
 
     Dir2 := VectorNormalize(VectorSub(Points[i+2], Points[i+1]));
     Norm2 := Vec2f(-Dir2.y, Dir2.x);
-    P31 := Vec2f(Points[i+1].x + (Dir1.x - Norm1.x) * w, Points[i+1].y + (Dir1.y - Norm1.y) * w);
-    P41 := Vec2f(Points[i+1].x + (Dir1.x + Norm1.x) * w, Points[i+1].y + (Dir1.y + Norm1.y) * w);
-    P32 := Vec2f(Points[i+1].x - (Dir2.x + Norm2.x) * w, Points[i+1].y - (Dir2.y + Norm2.y) * w);
-    P42 := Vec2f(Points[i+1].x - (Dir2.x - Norm2.x) * w, Points[i+1].y - (Dir2.y - Norm2.y) * w);
-    P5  := Vec2f(Points[i+2].x + (Dir2.x - Norm2.x) * w, Points[i+2].y + (Dir2.y - Norm2.y) * w);
-    P6  := Vec2f(Points[i+2].x + (Dir2.x + Norm2.x) * w, Points[i+2].y + (Dir2.y + Norm2.y) * w);
-    LineIntersect(P1, P31, P32, P5, P3);
-    LineIntersect(P2, P41, P42, P6, P4);
+    AD := VectorScale(Norm1, w);
+    BD := VectorScale(Norm2, w);
+
+    P2  := VectorAdd(Points[i+0], AD);
+    P1  := VectorSub(Points[i+0], AD);
+    P41 := VectorAdd(Points[i+1], AD);
+    P31 := VectorSub(Points[i+1], AD);
+
+    P42 := VectorAdd(Points[i+1], BD);
+    P32 := VectorSub(Points[i+1], BD);
+    P6  := VectorAdd(Points[i+2], BD);
+    P5  := VectorSub(Points[i+2], BD);
+
+    if LineIntersect(P1, P31, P32, P5, P3) <> irIntersect then P3 := P31;
+    if LineIntersect(P2, P41, P42, P6, P4) <> irIntersect then P4 := P41;
 
     Vec4f(P3.x, P3.y, Points[i+1].x, Points[i+1].y, v^[FVerticesCount].vec);
     AD := VectorSub(P3, Vec2f(Points[i].x - Dir1.x * w, Points[i].y - Dir1.y * w));
@@ -181,6 +188,7 @@ begin
     Inc(FPrimitiveCount, 2);
     
     Dir1 := Dir2;
+    Norm1 := Norm2;
 
     Inc(i);
   end;
