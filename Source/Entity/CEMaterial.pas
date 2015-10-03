@@ -55,6 +55,7 @@ type
     FTexture0: TCEImageResource;
     FVertexShader: TCETextResource;
     FFragmentShader: TCETextResource;
+    FAlphaBlending: Boolean;
 
     function GetTexture0: TCEImageResource;
     procedure SetTexture0(const Value: TCEImageResource);
@@ -64,6 +65,7 @@ type
     property Texture0: TCEImageResource read GetTexture0 write SetTexture0;
     property VertexShader: TCETextResource read FVertexShader write FVertexShader;
     property FragmentShader: TCETextResource read FFragmentShader write FFragmentShader;
+    property AlphaBlending: Boolean read FAlphaBlending write FAlphaBlending;
   end;
 
   // Set of render passes, represents render technique

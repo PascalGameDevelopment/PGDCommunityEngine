@@ -106,11 +106,14 @@ begin
 
   Triangle := TRotatingTriangle.Create(Core.EntityManager);
   Mesh := TCELineMesh.Create(Core.EntityManager);
+  Mesh.Softness := 2/1024;
+  Mesh.Width := 1/1024*4;
   Image := TCEImageResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/test1.bmp'));
   Pass := TCERenderPass.Create(Core.EntityManager);
   Pass.Texture0 := Image;
   Pass.VertexShader := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/vs_line.glsl'));
   Pass.FragmentShader := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/fs_line.glsl'));
+  Pass.AlphaBlending := true;
   Mat := TCEMaterial.Create(Core.EntityManager);
   Mat.TotalTechniques := 1;
   Mat.Technique[0] := TCERenderTechnique.Create(Core.EntityManager);

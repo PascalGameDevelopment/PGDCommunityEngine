@@ -32,7 +32,7 @@ unit CEMesh;
 interface
 
 uses
-  CEBaseTypes, CEEntity, CEVectors;
+  CEBaseTypes, CEEntity, CEVectors, CEUniformsManager;
 
 type
   // Primitive types
@@ -65,29 +65,28 @@ type
   end;
 
   // Vertex attribute data types
-  TVertexAttribDataType = (atShortint, atByte, atSmallint, atWord, atSingle);
-  // Vertex attribute information
-  TVertexAttrib = record
-    DataType: TVertexAttribDataType;
+  TAttributeDataType = (adtShortint, adtByte, adtSmallint, adtWord, adtSingle);
+  // Vertex attribute data information
+  TAttributeData = record
+    DataType: TAttributeDataType;
     Size: Integer;
-    Name: PAnsiChar;
+    Name: PAPIChar;
   end;
-  TVertexAttribs = array[0..15] of TVertexAttrib;
-  PVertexAttribs = ^TVertexAttribs;
+  TAttributeDataArray = array[0..$FFFF] of TAttributeData;
+  PAttributeDataArray = ^TAttributeDataArray;
 
   {
   Encapsulates vertex data needed to render a visible entity
   }
   TCEMesh = class(TCEBaseEntity)
-  private
   protected
-    VertexBuffer, IndexBuffer: TTesselationStatus;       // Move to renderer?
+    VertexBuffer, IndexBuffer: TTesselationStatus;       // TODO: Move to renderer?
     FVerticesCount: Integer;
     FVertexSize: Integer;
     FPrimitiveType: TPrimitiveType;
-    FPrimitiveCount: Integer;
+    FPrimitiveCount: Integer;                            // TODO: remove?
     FVertexAttribsCount: Integer;
-    FVertexAttribs: PVertexAttribs;
+    FVertexAttribs: PAttributeDataArray;
     procedure SetVertexAttribsCount(Count: Integer);
   public
     destructor Destroy; override;
@@ -96,6 +95,8 @@ type
     procedure FillVertexBuffer(Dest: Pointer); virtual;
     // Fill index buffer
     procedure FillIndexBuffer(Dest: Pointer); virtual;
+    // Called by renderer when uniforms for the mesh need to be set
+    procedure SetUniforms(Manager: TCEUniformsManager); virtual;
     // Number of vertices in mesh
     property VerticesCount: Integer read FVerticesCount;
     // Size of each vertex in bytes
@@ -107,7 +108,7 @@ type
     // Number of vertex attributes
     property VertexAttribCount: Integer read FVertexAttribsCount;
     // Vertex attributes info
-    property VertexAttribs: PVertexAttribs read FVertexAttribs;
+    property VertexAttribs: PAttributeDataArray read FVertexAttribs;
   end;
 
   // Used by renderer
@@ -141,12 +142,12 @@ end;
 procedure TCEMesh.SetVertexAttribsCount(Count: Integer);
 begin
   FVertexAttribsCount := Count;
-  ReallocMem(FVertexAttribs, FVertexAttribsCount * SizeOf(TVertexAttrib));
+  ReallocMem(FVertexAttribs, FVertexAttribsCount * SizeOf(TAttributeData));
 end;
 
 destructor TCEMesh.Destroy;
 begin
-  FreeMem(FVertexAttribs, FVertexAttribsCount * SizeOf(TVertexAttrib));
+  FreeMem(FVertexAttribs, FVertexAttribsCount * SizeOf(TAttributeData));
   inherited;
 end;
 
@@ -168,6 +169,11 @@ end;
 procedure TCEMesh.FillIndexBuffer(Dest: Pointer);
 begin
   IndexBuffer.Status := tsTesselated;
+end;
+
+procedure TCEMesh.SetUniforms(Manager: TCEUniformsManager);
+begin
+// do nothing
 end;
 
 end.

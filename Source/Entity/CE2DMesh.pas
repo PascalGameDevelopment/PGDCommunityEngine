@@ -32,7 +32,7 @@ unit CE2DMesh;
 interface
 
 uses
-  CEMesh, CEVectors;
+  CEMesh, CEVectors, CEUniformsManager;
 
 type
   TVert3 = packed record
@@ -58,10 +58,17 @@ type
 
   // Line mesh class
   TCELineMesh = class(TCEMesh)
+  private
+    FWidth, FThreshold: Single;
+    procedure SetWidth(Value: Single);
+    procedure SetSoftness(Value: Single);
   public
     procedure DoInit(); override;
     procedure FillVertexBuffer(Dest: Pointer); override;
-  end;
+    procedure SetUniforms(Manager: TCEUniformsManager); override;
+    property Width: Single read FWidth write SetWidth;
+    property Softness: Single read FThreshold write SetSoftness;
+    end;
 
 implementation
 
@@ -87,35 +94,83 @@ begin
   FVertexSize := SizeOf(TVert3);
 end;
 
+procedure TCELineMesh.SetWidth(Value: Single);
+begin
+  FWidth := Value;
+  VertexBuffer.Status := tsChanged;
+end;
+
+procedure TCELineMesh.SetSoftness(Value: Single);
+begin
+  FThreshold := Value;
+  VertexBuffer.Status := tsChanged;
+end;
+
 procedure TCELineMesh.DoInit();
 begin
   inherited;
-  SetVertexAttribsCount(3);
-  VertexAttribs^[0].DataType := atSingle;
+  SetVertexAttribsCount(2);
+  VertexAttribs^[0].DataType := adtSingle;
   VertexAttribs^[0].Size := 4;
   VertexAttribs^[0].Name := 'position';
-  VertexAttribs^[1].DataType := atSingle;
+  VertexAttribs^[1].DataType := adtSingle;
   VertexAttribs^[1].Size := 4;
   VertexAttribs^[1].Name := 'data';
-  VertexAttribs^[2].DataType := atSingle;
-  VertexAttribs^[2].Size := 2;
-  VertexAttribs^[2].Name := 'width';
+  VertexAttribs^[2].DataType := adtSingle;
   FPrimitiveType := ptTriangleStrip;
+  FWidth := 2/1024;
+  FThreshold := 0;
 end;
 
 const
-  Points: array[0..5] of TCEVector2f = ((x: -0.5; y: 0.3), (x: 0.3; y: -0.5), (x: -0.3; y: -0.3), (x: 0.4; y: 0), (x: 0.3; y: 0.3), (x: 0.2; y: 0.6));
+  Points: array[0..5] of TCEVector2f = ((x: -0.5; y: 0.3), (x: 0.3; y: -0.5), (x: -0.3; y: -0.3), (x: 0.4; y: 0), (x: 0.3; y: 0.3), (x: 0.2; y: 0.6)) ;
+
+procedure CalcDir(const P1, P2: TCEVector2f; w: Single; out Dir: TCEVector2f; out Dist: Single);
+var
+  Zero: Integer;
+begin
+  Dir := VectorSub(P2, P1);
+  Dist := Sqrt(sqr(Dir.X) + sqr(Dir.Y));
+  Zero := Ord(Dist = 0);
+  Dist := w * (1 - Zero) / (Dist + Zero);
+  Dir.X := Dist * Dir.X;
+  Dir.Y := Dist * Dir.Y;
+end;
 
 procedure TCELineMesh.FillVertexBuffer(Dest: Pointer);
-const
-  th1 = 0.00005; th2 = 0.004;
-
 var
   v: PVert4Array;
-  Width, w: Single;
+  w, oow, dist: Single;
   Dir1, Dir2, Norm1, Norm2: TCEVector2f;
-  P1, P2, P31, P32, P41, P42, P3, P4, P5, P6, AD, BD: TCEVector2f;
+  P1, P2, P3, P4: TCEVector2f;
   i, Count: Integer;
+
+procedure PutVertex(Ind: Integer; P, Dir: TCEVector2f; var Dest: TVert4);
+var
+  AD: TCEVector2f;
+begin
+  AD := VectorSub(P, Vec2f(Points[Ind].x - Dir.x, Points[Ind].y - Dir.y));
+  Vec4f(P.x, P.y, Points[Ind + 1].x, Points[Ind + 1].y, Dest.vec);
+  Vec4f(Points[Ind].x - Dir.x + Dir.x * VectorMagnitude(AD) * oow,
+        Points[Ind].y - Dir.y + Dir.y * VectorMagnitude(AD) * oow, Points[Ind].x, Points[Ind].y, Dest.vec2);
+end;
+
+procedure PutVertexDegen(Ind: Integer; P, Dir: TCEVector2f; var Dest: TVert4);
+var
+  AD: TCEVector2f;
+begin
+  AD := VectorSub(P, Vec2f(Points[Ind].x + Dir.x, Points[Ind].y + Dir.y));
+  Vec4f(P.x, P.y, Points[Ind].x, Points[Ind].y, Dest.vec);
+  Vec4f(Points[Ind].x + Dir.x - Dir.x * VectorMagnitude(AD) * oow,
+        Points[Ind].y + Dir.y - Dir.y * VectorMagnitude(AD) * oow, Points[Ind-1].x, Points[Ind-1].y, Dest.vec2);
+end;
+
+procedure PutVertexSide(Ind: Integer; P, Dir: TCEVector2f; var Dest: TVert4);
+begin
+  Vec4f(P.x, P.y, Points[Ind+1].x, Points[Ind+1].y, Dest.vec);
+  Vec4f(Points[Ind].x + Dir.x, Points[Ind].y + Dir.y, Points[Ind].x, Points[Ind].y, Dest.vec2);
+end;
+
 begin
   FVerticesCount := 0;
   FPrimitiveCount := 0;
@@ -123,89 +178,64 @@ begin
   if Count < 2 then Exit;
 
   v := Dest;
-  Width := 0.05;
-  w := Width + th1 + 0.03;
+  w := FWidth + FThreshold;// + 0.03;
+  oow := 1 / w;
 
   // First two points
-  Dir1 := VectorNormalize(VectorSub(points[0+1], points[0]));
+  CalcDir(points[0], points[0+1], w, Dir1, dist);
   Norm1 := Vec2f(-Dir1.y, Dir1.x);
-  P1 := Vec2f(points[0].x - (Dir1.x + Norm1.x) * w, points[0].y - (Dir1.y + Norm1.y) * w);
-  P2 := Vec2f(points[0].x - (Dir1.x - Norm1.x) * w, points[0].y - (Dir1.y - Norm1.y) * w);
-  Vec4f(P1.x, P1.y, points[0+1].x, points[0+1].y, v^[0].vec);
-  Vec4f(points[0].x - Dir1.x * w, points[0].y - Dir1.y * w, points[0].x, points[0].y, v^[0].vec2);
-  Vec2f(Width, th1, v^[0].width);
-  Vec4f(P2.x, P2.y, points[0+1].x, points[0+1].y, v^[1].vec);
-  Vec4f(points[0].x - Dir1.x * w, points[0].y - Dir1.y * w, points[0].x, points[0].y, v^[1].vec2);
-  Vec2f(Width, th1, v^[1].width);
+  P1 := Vec2f(points[0].x - (Dir1.x + Norm1.x), points[0].y - (Dir1.y + Norm1.y));
+  P2 := Vec2f(points[0].x - (Dir1.x - Norm1.x), points[0].y - (Dir1.y - Norm1.y));
+
+  PutVertexSide(0, P1, VectorScale(Dir1, -1), v^[0]);
+  PutVertexSide(0, P2, VectorScale(Dir1, -1), v^[1]);
   FVerticesCount := 2;
 
   i := 0;
   while i < Count-2 do
   begin
-
-    Dir2 := VectorNormalize(VectorSub(Points[i+2], Points[i+1]));
+    CalcDir(points[i+1], points[i+2], w, Dir2, dist);
     Norm2 := Vec2f(-Dir2.y, Dir2.x);
-    AD := VectorScale(Norm1, w);
-    BD := VectorScale(Norm2, w);
+    if LineIntersect(VectorSub(Points[i+0], Norm1), VectorSub(Points[i+1], Norm1),
+                     VectorSub(Points[i+1], Norm2), VectorSub(Points[i+2], Norm2), P3) <> irIntersect then
+      P3 := VectorSub(Points[i+1], Norm2);
+    if LineIntersect(VectorAdd(Points[i+0], Norm1), VectorAdd(Points[i+1], Norm1),
+                     VectorAdd(Points[i+1], Norm2), VectorAdd(Points[i+2], Norm2), P4) <> irIntersect then
+      P4 := VectorAdd(Points[i+1], Norm2);
 
-    P2  := VectorAdd(Points[i+0], AD);
-    P1  := VectorSub(Points[i+0], AD);
-    P41 := VectorAdd(Points[i+1], AD);
-    P31 := VectorSub(Points[i+1], AD);
+    PutVertex(i, P3, Dir1, v^[FVerticesCount]);
+    PutVertex(i, P4, Dir1, v^[FVerticesCount+1]);
 
-    P42 := VectorAdd(Points[i+1], BD);
-    P32 := VectorSub(Points[i+1], BD);
-    P6  := VectorAdd(Points[i+2], BD);
-    P5  := VectorSub(Points[i+2], BD);
+    PutVertexDegen(i+2, P3, Dir2, v^[FVerticesCount+2]);
+    PutVertexDegen(i+2, P4, Dir2, v^[FVerticesCount+3]);
 
-    if LineIntersect(P1, P31, P32, P5, P3) <> irIntersect then P3 := P31;
-    if LineIntersect(P2, P41, P42, P6, P4) <> irIntersect then P4 := P41;
+    Inc(FVerticesCount, 4);
+    Inc(FPrimitiveCount, 4);
 
-    Vec4f(P3.x, P3.y, Points[i+1].x, Points[i+1].y, v^[FVerticesCount].vec);
-    AD := VectorSub(P3, Vec2f(Points[i].x - Dir1.x * w, Points[i].y - Dir1.y * w));
-    Vec4f(Points[i].x - Dir1.x * w + Dir1.x * VectorMagnitude(AD), Points[i].y - Dir1.y * w + Dir1.y * VectorMagnitude(AD), Points[i].x, Points[i].y, v^[FVerticesCount].vec2);
-    Vec2f(Width, th1, v^[FVerticesCount].width);
-
-    Vec4f(P4.x, P4.y, Points[i+1].x, Points[i+1].y, v^[FVerticesCount+1].vec);
-    BD := VectorSub(P4, Vec2f(Points[i].x - Dir1.x * w, Points[i].y - Dir1.y * w));
-    Vec4f(Points[i].x - Dir1.x * w + Dir1.x * VectorMagnitude(BD), Points[i].y - Dir1.y * w + Dir1.y * VectorMagnitude(BD), Points[i].x, Points[i].y, v^[FVerticesCount+1].vec2);
-    Vec2f(Width, th1, v^[FVerticesCount+1].width);
-
-    Inc(FVerticesCount, 2);
-    Inc(FPrimitiveCount, 2);
-
-    Vec4f(P3.x, P3.y, Points[i+2].x, Points[i+2].y, v^[FVerticesCount].vec);                 // Two degenerated triangles
-    AD := VectorSub(P3, Vec2f(Points[i+2].x + Dir2.x * w, Points[i+2].y + Dir2.y * w));
-    Vec4f(Points[i+2].x + Dir2.x * w - Dir2.x * VectorMagnitude(AD), Points[i+2].y + Dir2.y * w - Dir2.y * VectorMagnitude(AD), Points[i+1].x, Points[i+1].y, v^[FVerticesCount].vec2);
-    Vec2f(Width, th1, v^[FVerticesCount].width);
-
-    Vec4f(P4.x, P4.y, Points[i+2].x, Points[i+2].y, v^[FVerticesCount+1].vec);
-    BD := VectorSub(P4, Vec2f(Points[i+2].x + Dir2.x * w, Points[i+2].y + Dir2.y * w));
-    Vec4f(Points[i+2].x + Dir2.x * w - Dir2.x * VectorMagnitude(BD), Points[i+2].y + Dir2.y * w - Dir2.y * VectorMagnitude(BD), Points[i+1].x, Points[i+1].y, v^[FVerticesCount+1].vec2);
-    Vec2f(Width, th1, v^[FVerticesCount+1].width);
-
-    Inc(FVerticesCount, 2);
-    Inc(FPrimitiveCount, 2);
-    
     Dir1 := Dir2;
     Norm1 := Norm2;
 
     Inc(i);
   end;
-  Dir2 := VectorNormalize(VectorSub(Points[i+1], Points[i]));
+  CalcDir(Points[i], Points[i+1], w, Dir2, dist);
   Norm2 := Vec2f(-Dir2.y, Dir2.x);
-  P5  := Vec2f(Points[i+1].x + (Dir2.x - Norm2.x) * w, Points[i+1].y + (Dir2.y - Norm2.y) * w);
-  P6  := Vec2f(Points[i+1].x + (Dir2.x + Norm2.x) * w, Points[i+1].y + (Dir2.y + Norm2.y) * w);
-  Vec4f(P5.x, P5.y, Points[i+1].x, Points[i+1].y, v^[FVerticesCount].vec);
-  Vec4f(Points[i+1].x + Dir2.x * w, Points[i+1].y + Dir2.y * w, Points[i].x, Points[i].y, v^[FVerticesCount].vec2);
-  Vec2f(Width, th1, v^[FVerticesCount].width);
-  Vec4f(P6.x, P6.y, Points[i+1].x, Points[i+1].y, v^[FVerticesCount+1].vec);
-  Vec4f(Points[i+1].x + Dir2.x * w, Points[i+1].y + Dir2.y * w, Points[i].x, Points[i].y, v^[FVerticesCount+1].vec2);
-  Vec2f(Width, th1, v^[FVerticesCount+1].width);
+  Vec4f(Points[i+1].x + Dir2.x - Norm2.x, Points[i+1].y + Dir2.y - Norm2.y, Points[i+1].x, Points[i+1].y, v^[FVerticesCount].vec);
+  Vec4f(Points[i+1].x + Dir2.x, Points[i+1].y + Dir2.y, Points[i].x, Points[i].y, v^[FVerticesCount].vec2);
+  Vec4f(Points[i+1].x + Dir2.x + Norm2.x, Points[i+1].y + Dir2.y + Norm2.y, Points[i+1].x, Points[i+1].y, v^[FVerticesCount+1].vec);
+  Vec4f(Points[i+1].x + Dir2.x, Points[i+1].y + Dir2.y, Points[i].x, Points[i].y, v^[FVerticesCount+1].vec2);
 
   Inc(FVerticesCount, 2);
   Inc(FPrimitiveCount, 2);
   FVertexSize := SizeOf(TVert4);
+  VertexBuffer.Status := tsChanged;
+end;
+
+procedure TCELineMesh.SetUniforms(Manager: TCEUniformsManager);
+var
+  inv: Single;
+begin
+  inv := 1 / (FWidth + FThreshold);
+  Manager.SetSingleVec2('width', Vec2f(inv, MinS(1, FWidth / (2 / 1024)) * FWidth / MaxS(0.0000001, inv * FThreshold)));
 end;
 
 end.
