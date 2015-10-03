@@ -33,7 +33,7 @@ unit CEBaseRenderer;
 interface
 
 uses
-  CEBaseTypes, CEBaseApplication, CEMesh, CEMaterial;
+  CEBaseTypes, CEBaseApplication, CEMesh, CEMaterial, CEUniformsManager;
 
 type
   // Render target clear flags
@@ -58,6 +58,7 @@ type
   TCEBaseRenderer = class
   private
   protected
+    FUniformsManager: TCEUniformsManager;
     FActive: Boolean;
     // One time initialization
     procedure DoInit(); virtual; abstract;

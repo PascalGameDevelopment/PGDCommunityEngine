@@ -32,7 +32,8 @@ unit CEOpenGLES2Renderer;
 interface
 
 uses
-  CEBaseTypes, CEBaseRenderer, CEBaseApplication, CEMesh, CEMaterial, CEOpenGL,
+  CEBaseTypes, CEVectors,
+  CEBaseRenderer, CEBaseApplication, CEMesh, CEMaterial, CEOpenGL, CEUniformsManager,
   {$IFDEF MOBILE}
     gles20,
   {$ELSE}                                     // Use emulation layer for desktops
@@ -47,9 +48,9 @@ type
   TCEOpenGL4Renderer = class(TCEBaseRenderer)
   private
     {$IFDEF WINDOWS}
-      FOGLContext: HGLRC;                    // OpenGL rendering context
-      FOGLDC: HDC;
-      FRenderWindowHandle: HWND;
+    FOGLContext: HGLRC;                    // OpenGL rendering context
+    FOGLDC: HDC;
+    FRenderWindowHandle: HWND;
     {$ENDIF}
     PhaseLocation: TGLint;
 
@@ -74,10 +75,21 @@ type
     procedure NextFrame(); override;
   end;
 
+  TCEOpenGLES2UniformsManager = class(TCEUniformsManager)
+  private
+    ShaderProgram: Integer;
+  public
+    procedure SetInteger(Name: PAPIChar; Value: Integer); override;
+    procedure SetSingle(Name: PAPIChar; Value: Single); override;
+    procedure SetSingleVec2(Name: PAPIChar; const Value: TCEVector2f); override;
+    procedure SetSingleVec3(Name: PAPIChar; const Value: TCEVector3f); override;
+    procedure SetSingleVec4(Name: PAPIChar; const Value: TCEVector4f); override;
+  end;
+
 implementation
 
 uses
-  CECommon, CEVectors, CEImageResource;
+  CECommon, CEImageResource;
 
 function PrintShaderInfoLog(Shader: TGLUint; ShaderType: string): Boolean;
 var
@@ -135,6 +147,8 @@ begin
   {$ENDIF}
   CELog.Log('Context succesfully created');
 
+  FUniformsManager := TCEOpenGLES2UniformsManager.Create();
+
   // Init GL settings
   glClearColor(0, 0, 0, 0);
   glEnable(GL_TEXTURE_2D);
@@ -162,6 +176,8 @@ begin
   {$ELSE}
   raise Exception.Create('Not implemented for this platform');
   {$ENDIF}
+
+  FUniformsManager.Free();
 
   Shaders.ForEach(FreeCallback, nil);
   Shaders.Free();
@@ -206,18 +222,6 @@ begin
   FOGLDC := 0;
 end;
 {$ENDIF}
-
-procedure TCEOpenGL4Renderer.Clear(Flags: TCEClearFlags; Color: TCEColor; Z: Single; Stencil: Cardinal);
-begin
-  if (Flags = []) or not Active then Exit;
-
-  glDepthMask(GL_TRUE);
-  glClearColor(Color.R * ONE_OVER_255, Color.G * ONE_OVER_255, Color.B * ONE_OVER_255, Color.A * ONE_OVER_255);
-  glClearDepthf(Z);
-  glClearStencil(Stencil);
-
-  glClear(GL_COLOR_BUFFER_BIT * Ord(cfColor in Flags) or GL_DEPTH_BUFFER_BIT * Ord(cfDepth in Flags) or GL_STENCIL_BITS * Ord(cfStencil in Flags));
-end;
 
 function TCEOpenGL4Renderer.InitShader(Pass: TCERenderPass): Integer;
 var
@@ -283,16 +287,22 @@ begin
   glBindTexture(GL_TEXTURE_2D, TexId);
   glActiveTexture(GL_TEXTURE0);
   glEnable(GL_TEXTURE_2D);
+
+  if Pass.AlphaBlending then
+  begin
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  end;
 end;
 
-function GetGLType(Value: TVertexAttribDataType): GLenum;
+function GetGLType(Value: TAttributeDataType): GLenum;
 begin
   case Value of
-    atShortint: Result := GL_BYTE;
-    atByte: Result := GL_UNSIGNED_BYTE;
-    atSmallint: Result := GL_SHORT;
-    atWord: Result := GL_UNSIGNED_SHORT;
-    atSingle: Result := GL_FLOAT;
+    adtShortint: Result := GL_BYTE;
+    adtByte: Result := GL_UNSIGNED_BYTE;
+    adtSmallint: Result := GL_SHORT;
+    adtWord: Result := GL_UNSIGNED_SHORT;
+    adtSingle: Result := GL_FLOAT;
   end;
 end;
 
@@ -325,15 +335,30 @@ begin
     glVertexAttribPointer(i, Mesh.VertexAttribs^[i].Size, GetGLType(Mesh.VertexAttribs^[i].DataType), GL_FALSE, Mesh.VertexSize, PtrOffs(nil, i*SizeOf(TCEVector4f)));
   end;
 
+  TCEOpenGLES2UniformsManager(FUniformsManager).ShaderProgram := CurShader.ShaderProgram;
+  Mesh.SetUniforms(FUniformsManager);
+
   case Mesh.PrimitiveType of
-    ptPointList: glDrawArrays(GL_POINTS, 0, Mesh.VerticesCount);
-    ptLineList: glDrawArrays(GL_LINES, 0, Mesh.VerticesCount);
-    ptLineStrip: glDrawArrays(GL_LINE_STRIP, 0, Mesh.VerticesCount);
-    ptTriangleList: glDrawArrays(GL_TRIANGLES, 0, Mesh.VerticesCount);
-    ptTriangleStrip: glDrawArrays(GL_TRIANGLE_STRIP, 0, Mesh.VerticesCount);
-    ptTriangleFan: glDrawArrays(GL_TRIANGLE_FAN, 0, Mesh.VerticesCount);
+    ptPointList: glDrawArrays(GL_POINTS, 0, Mesh.PrimitiveCount);
+    ptLineList: glDrawArrays(GL_LINES, 0, Mesh.PrimitiveCount * 2);
+    ptLineStrip: glDrawArrays(GL_LINE_STRIP, 0, Mesh.PrimitiveCount + 1);
+    ptTriangleList: glDrawArrays(GL_TRIANGLES, 0, Mesh.PrimitiveCount * 3);
+    ptTriangleStrip: glDrawArrays(GL_TRIANGLE_STRIP, 0, Mesh.PrimitiveCount + 2);
+    ptTriangleFan: glDrawArrays(GL_TRIANGLE_FAN, 0, Mesh.PrimitiveCount + 2);
     ptQuads:;
   end;
+end;
+
+procedure TCEOpenGL4Renderer.Clear(Flags: TCEClearFlags; Color: TCEColor; Z: Single; Stencil: Cardinal);
+begin
+  if (Flags = []) or not Active then Exit;
+
+  glDepthMask(GL_TRUE);
+  glClearColor(Color.R * ONE_OVER_255, Color.G * ONE_OVER_255, Color.B * ONE_OVER_255, Color.A * ONE_OVER_255);
+  glClearDepthf(Z);
+  glClearStencil(Stencil);
+
+  glClear(GL_COLOR_BUFFER_BIT * Ord(cfColor in Flags) or GL_DEPTH_BUFFER_BIT * Ord(cfDepth in Flags) or GL_STENCIL_BITS * Ord(cfStencil in Flags));
 end;
 
 procedure TCEOpenGL4Renderer.NextFrame;
@@ -346,6 +371,38 @@ begin
 
     SwapBuffers(FOGLDC);                  // Display the scene
   {$ENDIF}
+end;
+
+function GetUniformLocation(ShaderProgram: Integer; Name: PAPIChar): Integer;
+begin
+  Result := glGetUniformLocation(ShaderProgram, Name);
+  if Result < 0 then
+    CELog.Warning('Can''t find uniform location for name: ' + Name);
+end;
+
+procedure TCEOpenGLES2UniformsManager.SetInteger(Name: PAPIChar; Value: Integer);
+begin
+  glUniform1i(GetUniformLocation(ShaderProgram, Name), Value);
+end;
+
+procedure TCEOpenGLES2UniformsManager.SetSingle(Name: PAPIChar; Value: Single);
+begin
+  glUniform1f(GetUniformLocation(ShaderProgram, Name), Value);
+end;
+
+procedure TCEOpenGLES2UniformsManager.SetSingleVec2(Name: PAPIChar; const Value: TCEVector2f);
+begin
+  glUniform2f(GetUniformLocation(ShaderProgram, Name), Value.x, Value.y);
+end;
+
+procedure TCEOpenGLES2UniformsManager.SetSingleVec3(Name: PAPIChar; const Value: TCEVector3f);
+begin
+  glUniform3f(GetUniformLocation(ShaderProgram, Name), Value.x, Value.y, Value.z);
+end;
+
+procedure TCEOpenGLES2UniformsManager.SetSingleVec4(Name: PAPIChar; const Value: TCEVector4f);
+begin
+  glUniform4f(GetUniformLocation(ShaderProgram, Name), Value.x, Value.y, Value.z, Value.w);
 end;
 
 end.

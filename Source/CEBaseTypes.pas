@@ -65,6 +65,9 @@ type
   TCEEntityClassName = TCEEntityName;
   {$ENDIF}
 
+  // Character pointer type for system APIs interop
+  PAPIChar = PAnsiChar;
+
   // Pointer to 32-bit color
   PCEColor = ^TCEColor;
   // 32-bit color (A8R8G8B8)
@@ -369,4 +372,4 @@ end;
 {$ENDIF}
 
 end.
-
+
