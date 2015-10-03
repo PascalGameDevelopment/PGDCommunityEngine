@@ -45,6 +45,11 @@ type
     x, y, z, w: single;
   end;
 
+  T2DPointArray = array[0..$FFFFFF] of TCEVector2f;
+  T3DPointArray = array[0..$FFFFFF] of TCEVector3f;
+  P2DPointArray = ^T2DPointArray;
+  P3DPointArray = ^T3DPointArray;
+
   TCEVector3fArray = array[0..$FFFFFF] of TCEVector3f;
 
   TCEMatrix3 = array[0..2, 0..2] of single;

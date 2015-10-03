@@ -60,15 +60,22 @@ type
   TCELineMesh = class(TCEMesh)
   private
     FWidth, FThreshold: Single;
+    FCount: Integer;
+    FPoints: P2DPointArray;
     procedure SetWidth(Value: Single);
     procedure SetSoftness(Value: Single);
+    procedure SetCount(Value: Integer);
+    function GetPoint(Index: Integer): TCEVector2f;
+    procedure SetPoint(Index: Integer; const Value: TCEVector2f);
   public
     procedure DoInit(); override;
     procedure FillVertexBuffer(Dest: Pointer); override;
     procedure SetUniforms(Manager: TCEUniformsManager); override;
     property Width: Single read FWidth write SetWidth;
     property Softness: Single read FThreshold write SetSoftness;
-    end;
+    property Count: Integer read FCount write SetCount;
+    property Point[Index: Integer]: TCEVector2f read GetPoint write SetPoint;
+  end;
 
 implementation
 
@@ -106,6 +113,25 @@ begin
   VertexBuffer.Status := tsChanged;
 end;
 
+procedure TCELineMesh.SetCount(Value: Integer);
+begin
+  if FCount = Value then Exit;
+  FCount := Value;
+  ReallocMem(FPoints, FCount * SizeOf(TCEVector2f));
+end;
+
+function TCELineMesh.GetPoint(Index: Integer): TCEVector2f;
+begin
+  Assert((Index >= 0) and (Index < Count), 'Invalid index');
+  Result := FPoints^[Index];
+end;
+
+procedure TCELineMesh.SetPoint(Index: Integer; const Value: TCEVector2f);
+begin
+  Assert((Index >= 0) and (Index < Count), 'Invalid index');
+  FPoints^[Index] := Value;
+end;
+
 procedure TCELineMesh.DoInit();
 begin
   inherited;
@@ -120,10 +146,8 @@ begin
   FPrimitiveType := ptTriangleStrip;
   FWidth := 2/1024;
   FThreshold := 0;
+  Count := 0;
 end;
-
-const
-  Points: array[0..5] of TCEVector2f = ((x: -0.5; y: 0.3), (x: 0.3; y: -0.5), (x: -0.3; y: -0.3), (x: 0.4; y: 0), (x: 0.3; y: 0.3), (x: 0.2; y: 0.6)) ;
 
 procedure CalcDir(const P1, P2: TCEVector2f; w: Single; out Dir: TCEVector2f; out Dist: Single);
 var
@@ -143,38 +167,37 @@ var
   w, oow, dist: Single;
   Dir1, Dir2, Norm1, Norm2: TCEVector2f;
   P1, P2, P3, P4: TCEVector2f;
-  i, Count: Integer;
+  i: Integer;
 
 procedure PutVertex(Ind: Integer; P, Dir: TCEVector2f; var Dest: TVert4);
 var
   AD: TCEVector2f;
 begin
-  AD := VectorSub(P, Vec2f(Points[Ind].x - Dir.x, Points[Ind].y - Dir.y));
-  Vec4f(P.x, P.y, Points[Ind + 1].x, Points[Ind + 1].y, Dest.vec);
-  Vec4f(Points[Ind].x - Dir.x + Dir.x * VectorMagnitude(AD) * oow,
-        Points[Ind].y - Dir.y + Dir.y * VectorMagnitude(AD) * oow, Points[Ind].x, Points[Ind].y, Dest.vec2);
+  AD := VectorSub(P, Vec2f(FPoints^[Ind].x - Dir.x, FPoints^[Ind].y - Dir.y));
+  Vec4f(P.x, P.y, FPoints^[Ind + 1].x, FPoints^[Ind + 1].y, Dest.vec);
+  Vec4f(FPoints^[Ind].x - Dir.x + Dir.x * VectorMagnitude(AD) * oow,
+        FPoints^[Ind].y - Dir.y + Dir.y * VectorMagnitude(AD) * oow, FPoints^[Ind].x, FPoints^[Ind].y, Dest.vec2);
 end;
 
 procedure PutVertexDegen(Ind: Integer; P, Dir: TCEVector2f; var Dest: TVert4);
 var
   AD: TCEVector2f;
 begin
-  AD := VectorSub(P, Vec2f(Points[Ind].x + Dir.x, Points[Ind].y + Dir.y));
-  Vec4f(P.x, P.y, Points[Ind].x, Points[Ind].y, Dest.vec);
-  Vec4f(Points[Ind].x + Dir.x - Dir.x * VectorMagnitude(AD) * oow,
-        Points[Ind].y + Dir.y - Dir.y * VectorMagnitude(AD) * oow, Points[Ind-1].x, Points[Ind-1].y, Dest.vec2);
+  AD := VectorSub(P, Vec2f(FPoints^[Ind].x + Dir.x, FPoints^[Ind].y + Dir.y));
+  Vec4f(P.x, P.y, FPoints^[Ind].x, FPoints^[Ind].y, Dest.vec);
+  Vec4f(FPoints^[Ind].x + Dir.x - Dir.x * VectorMagnitude(AD) * oow,
+        FPoints^[Ind].y + Dir.y - Dir.y * VectorMagnitude(AD) * oow, FPoints^[Ind-1].x, FPoints^[Ind-1].y, Dest.vec2);
 end;
 
 procedure PutVertexSide(Ind: Integer; P, Dir: TCEVector2f; var Dest: TVert4);
 begin
-  Vec4f(P.x, P.y, Points[Ind+1].x, Points[Ind+1].y, Dest.vec);
-  Vec4f(Points[Ind].x + Dir.x, Points[Ind].y + Dir.y, Points[Ind].x, Points[Ind].y, Dest.vec2);
+  Vec4f(P.x, P.y, FPoints^[Ind+1].x, FPoints^[Ind+1].y, Dest.vec);
+  Vec4f(FPoints^[Ind].x + Dir.x, FPoints^[Ind].y + Dir.y, FPoints^[Ind].x, FPoints^[Ind].y, Dest.vec2);
 end;
 
 begin
   FVerticesCount := 0;
   FPrimitiveCount := 0;
-  Count := Length(Points);
   if Count < 2 then Exit;
 
   v := Dest;
@@ -182,10 +205,10 @@ begin
   oow := 1 / w;
 
   // First two points
-  CalcDir(points[0], points[0+1], w, Dir1, dist);
+  CalcDir(FPoints^[0], FPoints^[0+1], w, Dir1, dist);
   Norm1 := Vec2f(-Dir1.y, Dir1.x);
-  P1 := Vec2f(points[0].x - (Dir1.x + Norm1.x), points[0].y - (Dir1.y + Norm1.y));
-  P2 := Vec2f(points[0].x - (Dir1.x - Norm1.x), points[0].y - (Dir1.y - Norm1.y));
+  P1 := Vec2f(FPoints^[0].x - (Dir1.x + Norm1.x), FPoints^[0].y - (Dir1.y + Norm1.y));
+  P2 := Vec2f(FPoints^[0].x - (Dir1.x - Norm1.x), FPoints^[0].y - (Dir1.y - Norm1.y));
 
   PutVertexSide(0, P1, VectorScale(Dir1, -1), v^[0]);
   PutVertexSide(0, P2, VectorScale(Dir1, -1), v^[1]);
@@ -194,14 +217,14 @@ begin
   i := 0;
   while i < Count-2 do
   begin
-    CalcDir(points[i+1], points[i+2], w, Dir2, dist);
+    CalcDir(FPoints^[i+1], FPoints^[i+2], w, Dir2, dist);
     Norm2 := Vec2f(-Dir2.y, Dir2.x);
-    if LineIntersect(VectorSub(Points[i+0], Norm1), VectorSub(Points[i+1], Norm1),
-                     VectorSub(Points[i+1], Norm2), VectorSub(Points[i+2], Norm2), P3) <> irIntersect then
-      P3 := VectorSub(Points[i+1], Norm2);
-    if LineIntersect(VectorAdd(Points[i+0], Norm1), VectorAdd(Points[i+1], Norm1),
-                     VectorAdd(Points[i+1], Norm2), VectorAdd(Points[i+2], Norm2), P4) <> irIntersect then
-      P4 := VectorAdd(Points[i+1], Norm2);
+    if LineIntersect(VectorSub(FPoints^[i+0], Norm1), VectorSub(FPoints^[i+1], Norm1),
+                     VectorSub(FPoints^[i+1], Norm2), VectorSub(FPoints^[i+2], Norm2), P3) <> irIntersect then
+      P3 := VectorSub(FPoints^[i+1], Norm2);
+    if LineIntersect(VectorAdd(FPoints^[i+0], Norm1), VectorAdd(FPoints^[i+1], Norm1),
+                     VectorAdd(FPoints^[i+1], Norm2), VectorAdd(FPoints^[i+2], Norm2), P4) <> irIntersect then
+      P4 := VectorAdd(FPoints^[i+1], Norm2);
 
     PutVertex(i, P3, Dir1, v^[FVerticesCount]);
     PutVertex(i, P4, Dir1, v^[FVerticesCount+1]);
@@ -217,12 +240,12 @@ begin
 
     Inc(i);
   end;
-  CalcDir(Points[i], Points[i+1], w, Dir2, dist);
+  CalcDir(FPoints^[i], FPoints^[i+1], w, Dir2, dist);
   Norm2 := Vec2f(-Dir2.y, Dir2.x);
-  Vec4f(Points[i+1].x + Dir2.x - Norm2.x, Points[i+1].y + Dir2.y - Norm2.y, Points[i+1].x, Points[i+1].y, v^[FVerticesCount].vec);
-  Vec4f(Points[i+1].x + Dir2.x, Points[i+1].y + Dir2.y, Points[i].x, Points[i].y, v^[FVerticesCount].vec2);
-  Vec4f(Points[i+1].x + Dir2.x + Norm2.x, Points[i+1].y + Dir2.y + Norm2.y, Points[i+1].x, Points[i+1].y, v^[FVerticesCount+1].vec);
-  Vec4f(Points[i+1].x + Dir2.x, Points[i+1].y + Dir2.y, Points[i].x, Points[i].y, v^[FVerticesCount+1].vec2);
+  Vec4f(FPoints^[i+1].x + Dir2.x - Norm2.x, FPoints^[i+1].y + Dir2.y - Norm2.y, FPoints^[i+1].x, FPoints^[i+1].y, v^[FVerticesCount].vec);
+  Vec4f(FPoints^[i+1].x + Dir2.x, FPoints^[i+1].y + Dir2.y, FPoints^[i].x, FPoints^[i].y, v^[FVerticesCount].vec2);
+  Vec4f(FPoints^[i+1].x + Dir2.x + Norm2.x, FPoints^[i+1].y + Dir2.y + Norm2.y, FPoints^[i+1].x, FPoints^[i+1].y, v^[FVerticesCount+1].vec);
+  Vec4f(FPoints^[i+1].x + Dir2.x, FPoints^[i+1].y + Dir2.y, FPoints^[i].x, FPoints^[i].y, v^[FVerticesCount+1].vec2);
 
   Inc(FVerticesCount, 2);
   Inc(FPrimitiveCount, 2);
