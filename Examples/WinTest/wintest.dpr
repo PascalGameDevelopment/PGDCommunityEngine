@@ -106,8 +106,17 @@ begin
 
   Triangle := TRotatingTriangle.Create(Core.EntityManager);
   Mesh := TCELineMesh.Create(Core.EntityManager);
-  Mesh.Softness := 2/1024;
+  Mesh.Softness := 2/1024*2;
   Mesh.Width := 1/1024*4;
+
+  Mesh.Count := 6;
+  Mesh.Point[0] := Vec2f(-0.5,  0.3);
+  Mesh.Point[1] := Vec2f( 0.3, -0.5);
+  Mesh.Point[2] := Vec2f(-0.3, -0.3);
+  Mesh.Point[3] := Vec2f( 0.4,  0.0);
+  Mesh.Point[4] := Vec2f( 0.3,  0.3);
+  Mesh.Point[5] := Vec2f( 0.2,  0.6);
+
   Image := TCEImageResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/test1.bmp'));
   Pass := TCERenderPass.Create(Core.EntityManager);
   Pass.Texture0 := Image;
@@ -139,6 +148,9 @@ begin
     speed := Clamps(speed, -360, 360);
 
     if Core.Input.Pressed[vkALT] and Core.Input.Pressed[vkX] then App.Terminated := True;
+    if Core.Input.MouseState.Buttons[mbLeft] = baDown then
+      Mesh.Point[1] := Vec2f(Core.Input.MouseState.X/512-1, 1-Core.Input.MouseState.Y/512);
+
     Core.Process();
   end;
 

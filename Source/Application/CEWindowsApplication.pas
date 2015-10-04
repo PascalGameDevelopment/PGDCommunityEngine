@@ -167,7 +167,7 @@ begin
   if ScreenY = 0 then ScreenY := 480;
 
   FWindowHandle := Windows.CreateWindowW(FWindowClass.lpszClassName, PWideChar(FName), WindowStyle,
-                                        (ScreenX - 1024) div 2+300, (ScreenY - 768) div 2, 1024+4, 1024+28,
+                                        (ScreenX - 1024) div 2+300, (ScreenY - 1024) div 2, 1024+4, 1024+28,
                                         0, 0, HInstance, nil);
   if FWindowHandle = 0 then
   begin

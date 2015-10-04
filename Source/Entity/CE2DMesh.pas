@@ -56,7 +56,7 @@ type
     procedure FillVertexBuffer(Dest: Pointer); override;
   end;
 
-  // Line mesh class
+  // 2D antialiased multi-segment line mesh class
   TCELineMesh = class(TCEMesh)
   private
     FWidth, FThreshold: Single;
@@ -71,9 +71,13 @@ type
     procedure DoInit(); override;
     procedure FillVertexBuffer(Dest: Pointer); override;
     procedure SetUniforms(Manager: TCEUniformsManager); override;
+    // Line width
     property Width: Single read FWidth write SetWidth;
+    // Antialiasing softness. 0 - no antialiasing.
     property Softness: Single read FThreshold write SetSoftness;
+    // Number of points
     property Count: Integer read FCount write SetCount;
+    // Array of points in multi-segment line
     property Point[Index: Integer]: TCEVector2f read GetPoint write SetPoint;
   end;
 
