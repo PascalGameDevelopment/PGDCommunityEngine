@@ -79,11 +79,11 @@ type
   private
     ShaderProgram: Integer;
   public
-    procedure SetInteger(Name: PAPIChar; Value: Integer); override;
-    procedure SetSingle(Name: PAPIChar; Value: Single); override;
-    procedure SetSingleVec2(Name: PAPIChar; const Value: TCEVector2f); override;
-    procedure SetSingleVec3(Name: PAPIChar; const Value: TCEVector3f); override;
-    procedure SetSingleVec4(Name: PAPIChar; const Value: TCEVector4f); override;
+    procedure SetInteger(const Name: PAPIChar; Value: Integer); override;
+    procedure SetSingle(const Name: PAPIChar; Value: Single); override;
+    procedure SetSingleVec2(const Name: PAPIChar; const Value: TCEVector2f); override;
+    procedure SetSingleVec3(const Name: PAPIChar; const Value: TCEVector3f); override;
+    procedure SetSingleVec4(const Name: PAPIChar; const Value: TCEVector4f); override;
   end;
 
 implementation
@@ -373,34 +373,34 @@ begin
   {$ENDIF}
 end;
 
-function GetUniformLocation(ShaderProgram: Integer; Name: PAPIChar): Integer;
+function GetUniformLocation(ShaderProgram: Integer; const Name: PAPIChar): Integer;
 begin
   Result := glGetUniformLocation(ShaderProgram, Name);
   if Result < 0 then
     CELog.Warning('Can''t find uniform location for name: ' + Name);
 end;
 
-procedure TCEOpenGLES2UniformsManager.SetInteger(Name: PAPIChar; Value: Integer);
+procedure TCEOpenGLES2UniformsManager.SetInteger(const Name: PAPIChar; Value: Integer);
 begin
   glUniform1i(GetUniformLocation(ShaderProgram, Name), Value);
 end;
 
-procedure TCEOpenGLES2UniformsManager.SetSingle(Name: PAPIChar; Value: Single);
+procedure TCEOpenGLES2UniformsManager.SetSingle(const Name: PAPIChar; Value: Single);
 begin
   glUniform1f(GetUniformLocation(ShaderProgram, Name), Value);
 end;
 
-procedure TCEOpenGLES2UniformsManager.SetSingleVec2(Name: PAPIChar; const Value: TCEVector2f);
+procedure TCEOpenGLES2UniformsManager.SetSingleVec2(const Name: PAPIChar; const Value: TCEVector2f);
 begin
   glUniform2f(GetUniformLocation(ShaderProgram, Name), Value.x, Value.y);
 end;
 
-procedure TCEOpenGLES2UniformsManager.SetSingleVec3(Name: PAPIChar; const Value: TCEVector3f);
+procedure TCEOpenGLES2UniformsManager.SetSingleVec3(const Name: PAPIChar; const Value: TCEVector3f);
 begin
   glUniform3f(GetUniformLocation(ShaderProgram, Name), Value.x, Value.y, Value.z);
 end;
 
-procedure TCEOpenGLES2UniformsManager.SetSingleVec4(Name: PAPIChar; const Value: TCEVector4f);
+procedure TCEOpenGLES2UniformsManager.SetSingleVec4(const Name: PAPIChar; const Value: TCEVector4f);
 begin
   glUniform4f(GetUniformLocation(ShaderProgram, Name), Value.x, Value.y, Value.z, Value.w);
 end;

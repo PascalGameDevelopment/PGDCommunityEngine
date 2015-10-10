@@ -32,7 +32,7 @@ unit CE2DMesh;
 interface
 
 uses
-  CEMesh, CEVectors, CEUniformsManager;
+  CEBaseTypes, CEMesh, CEVectors, CEUniformsManager;
 
 type
   // Circle mesh class
@@ -72,12 +72,15 @@ type
   TCEPolygonMesh = class(TCEMesh)
   private
     FThreshold: Single;
+    FColor: TCEColor;
     FCount: Integer;
     FPoints: P2DPointArray;
     procedure SetSoftness(Value: Single);
+    procedure SetColor(const Value: TCEColor);
     procedure SetCount(Value: Integer);
     function GetPoint(Index: Integer): TCEVector2f;
     procedure SetPoint(Index: Integer; const Value: TCEVector2f);
+    procedure CalcVertex(const P1, D1, P2, D2: TCEVector2f; out Res: TCEVector2f);
   public
     destructor Destroy; override;
     procedure DoInit(); override;
@@ -85,6 +88,8 @@ type
     procedure SetUniforms(Manager: TCEUniformsManager); override;
     // Antialiasing softness. 0 - no antialiasing.
     property Softness: Single read FThreshold write SetSoftness;
+    // Fill color
+    property Color: TCEColor read FColor write SetColor;
     // Number of points
     property Count: Integer read FCount write SetCount;
     // Array of points in polygon
@@ -302,6 +307,12 @@ begin
   VertexBuffer.Status := tsChanged;
 end;
 
+procedure TCEPolygonMesh.SetColor(const Value: TCEColor);
+begin
+  FColor := Value;
+  VertexBuffer.Status := tsChanged;
+end;
+
 procedure TCEPolygonMesh.SetCount(Value: Integer);
 begin
   if FCount = Value then Exit;
@@ -321,6 +332,23 @@ begin
   FPoints^[Index] := Value;
 end;
 
+procedure TCEPolygonMesh.CalcVertex(const P1, D1, P2, D2: TCEVector2f; out Res: TCEVector2f);
+var
+  Dist: Single;
+  V: TCEVector2f;
+begin
+  if (RayIntersect(P1, D1, P2, D2, Res) <> irIntersect) then
+    Res := P2
+  else begin
+    V := VectorSub(Res, P2);
+    Dist := Sqrt(V.x * V.x + V.y * V.y);
+    if Dist > FThreshold * 4 then
+    begin
+      Res := VectorAdd(P2, VectorScale(V, FThreshold*4/Dist));
+    end;
+  end;
+end;
+
 destructor TCEPolygonMesh.Destroy;
 begin
   SetCount(0);
@@ -336,6 +364,7 @@ begin
   VertexAttribs^[0].Name := 'position';
   FPrimitiveType := ptTriangleList;
   FThreshold := 2;
+  FColor := GetColor(255, 255, 255, 255);
   Count := 3;
   Point[0] := Vec2f(-0.5, -0.5);
   Point[1] := Vec2f( 0.0,  0.6);
@@ -346,7 +375,6 @@ procedure TCEPolygonMesh.FillVertexBuffer(Dest: Pointer);
 const
   tris = 3;
   EPSILON = 0.001;
-
 var
   v: ^TVBPos;
   Center, D00, D01, D12, N00, N01, N12, P1, P2, P3, P4: TCEVector2f;
@@ -386,35 +414,18 @@ begin
     N01 := Vec2f(D01.y * dist01, -D01.x * dist01);
     N12 := Vec2f(D12.y * dist12, -D12.x * dist12);
 
-    if (LineIntersect(VectorSub(FPoints^[i0], N00), VectorSub(FPoints^[i],  N00),
-                     VectorSub(FPoints^[i],  N01), VectorSub(FPoints^[i1], N01), P1) <> irIntersect)
-      or (VectorMagnitude(VectorSub(P1, FPoints^[i])) > FThreshold*4*4)
-    then
-      P1 := VectorSub(FPoints^[i], N00);
-    if (LineIntersect(VectorSub(FPoints^[i],  N01), VectorSub(FPoints^[i1], N01),
-                     VectorSub(FPoints^[i1], N12), VectorSub(FPoints^[i2], N12), P2) <> irIntersect)
-      or (VectorMagnitude(VectorSub(P2, FPoints^[i1])) > FThreshold*4*4)
-    then
-      P2 := VectorSub(FPoints^[i1], N01);
-
-    if (LineIntersect(VectorAdd(FPoints^[i0], N00), VectorAdd(FPoints^[i],  N00),
-      VectorAdd(FPoints^[i],  N01), VectorAdd(FPoints^[i1], N01), P3) <> irIntersect)
-      or (VectorMagnitude(VectorSub(P3, FPoints^[i])) > FThreshold*4*4)
-    then
-      P3 := VectorAdd(FPoints^[i], N00);
-    if (LineIntersect(VectorAdd(FPoints^[i],  N01), VectorAdd(FPoints^[i1], N01),
-      VectorAdd(FPoints^[i1], N12), VectorAdd(FPoints^[i2], N12), P4) <> irIntersect)
-      or (VectorMagnitude(VectorSub(P4, FPoints^[i1])) > FThreshold*4*4)
-    then
-      P4 := VectorAdd(FPoints^[i1], N01);
+    CalcVertex(VectorSub(FPoints^[i0], N00), D00, VectorSub(FPoints^[i],  N01), D01, P1);
+    CalcVertex(VectorSub(FPoints^[i],  N01), D01, VectorSub(FPoints^[i1], N12), D12, P2);
+    CalcVertex(VectorAdd(FPoints^[i0], N00), D00, VectorAdd(FPoints^[i],  N01), D01, P3);
+    CalcVertex(VectorAdd(FPoints^[i],  N01), D01, VectorAdd(FPoints^[i1], N12), D12, P4);
 
     Vec3f(Center.x, Center.y, 1, v^[i * tris*3].vec);
     Vec3f(P1.x, P1.y, 1, v^[i * tris*3 + 1].vec);
     Vec3f(P2.x, P2.y, 1, v^[i * tris*3 + 2].vec);
 
-    Vec3f(FPoints[i].x*0+P3.x, FPoints[i].y*0+P3.y, 0, v^[i * tris*3 + 5].vec);
-    Vec3f(P1.x, P1.y, 1*sharp, v^[i * tris*3 + 3].vec);
-    Vec3f(P2.x, P2.y, 1*sharp, v^[i * tris*3 + 4].vec);
+    Vec3f(FPoints[i].x*0+P3.x, FPoints[i].y*0+P3.y, 0, v^[i * tris*3 + 3].vec);
+    Vec3f(P1.x, P1.y, 1*sharp, v^[i * tris*3 + 4].vec);
+    Vec3f(P2.x, P2.y, 1*sharp, v^[i * tris*3 + 5].vec);
 
     Vec3f(FPoints[i].x*0+P3.x, FPoints[i].y*0+P3.y, 0, v^[i * tris*3 + 6].vec);
     Vec3f(P2.x, P2.y, 1*sharp, v^[i * tris*3 + 7].vec);
@@ -430,7 +441,7 @@ procedure TCEPolygonMesh.SetUniforms(Manager: TCEUniformsManager);
 var
   inv: Single;
 begin
-  Manager.SetSingleVec2('width', Vec2f(FThreshold, 1.0));
+  Manager.SetSingleVec4('color', Vec4f(Color.R * ONE_OVER_255, Color.G * ONE_OVER_255, Color.B * ONE_OVER_255, Color.A * ONE_OVER_255));
 end;
 
 end.
