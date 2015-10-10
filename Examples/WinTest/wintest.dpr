@@ -63,7 +63,7 @@ end;
 procedure TCERotatingTriangleMesh.FillVertexBuffer(Dest: Pointer);
 var
   a: Single;
-  v: ^TVert3Array;
+  v: ^TVBPos;
 begin
   inherited;
   a := Angle * pi / 180;
@@ -75,7 +75,7 @@ begin
   Vec3f(cos(a + 4 * pi / 3), sin(a + 4 * pi / 3), 0, v^[2].vec);
   //v^[2].u := 0.5; v^[2].v := 0.5;
   FVerticesCount := 3;
-  FVertexSize := SizeOf(TVert3);
+  FVertexSize := SizeOf(TVBRecPos);
 end;
 
 procedure TRotatingTriangle.Update(const DeltaTime: Single);
@@ -87,7 +87,7 @@ var
   App: TCEWindowsApplication;
   Renderer: TCEBaseRenderer;
   Core: TCECore;
-  Mesh: TCELineMesh;
+  Mesh: TCEPolygonMesh;
   Image: TCEImageResource;
   Mat: TCEMaterial;
   Pass: TCERenderPass;
@@ -105,23 +105,25 @@ begin
   Core.Input := TCEOSMessageInput.Create();
 
   Triangle := TRotatingTriangle.Create(Core.EntityManager);
-  Mesh := TCELineMesh.Create(Core.EntityManager);
-  Mesh.Softness := 2/1024*2;
-  Mesh.Width := 1/1024*4;
-
+  {Mesh := TCELineMesh.Create(Core.EntityManager);
+  Mesh.Softness := 2 / 1024 * 2;
+  Mesh.Width := 1 / 1024 * 4;
   Mesh.Count := 6;
   Mesh.Point[0] := Vec2f(-0.5,  0.3);
   Mesh.Point[1] := Vec2f( 0.3, -0.5);
   Mesh.Point[2] := Vec2f(-0.3, -0.3);
   Mesh.Point[3] := Vec2f( 0.4,  0.0);
   Mesh.Point[4] := Vec2f( 0.3,  0.3);
-  Mesh.Point[5] := Vec2f( 0.2,  0.6);
+  Mesh.Point[5] := Vec2f( 0.2,  0.6);}
+
+  Mesh := TCEPolygonMesh.Create(Core.EntityManager);
+  Mesh.Softness := 2 / 1024*2.5;
 
   Image := TCEImageResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/test1.bmp'));
   Pass := TCERenderPass.Create(Core.EntityManager);
   Pass.Texture0 := Image;
-  Pass.VertexShader := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/vs_line.glsl'));
-  Pass.FragmentShader := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/fs_line.glsl'));
+  Pass.VertexShader := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/vs_poly.glsl'));
+  Pass.FragmentShader := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/fs_poly.glsl'));
   Pass.AlphaBlending := true;
   Mat := TCEMaterial.Create(Core.EntityManager);
   Mat.TotalTechniques := 1;
@@ -149,7 +151,7 @@ begin
 
     if Core.Input.Pressed[vkALT] and Core.Input.Pressed[vkX] then App.Terminated := True;
     if Core.Input.MouseState.Buttons[mbLeft] = baDown then
-      Mesh.Point[1] := Vec2f(Core.Input.MouseState.X/512-1, 1-Core.Input.MouseState.Y/512);
+      Mesh.Point[1] := Vec2f(Core.Input.MouseState.X / 512 - 1, 1 - Core.Input.MouseState.Y / 512);
 
     Core.Process();
   end;

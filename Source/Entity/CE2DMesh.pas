@@ -35,20 +35,6 @@ uses
   CEMesh, CEVectors, CEUniformsManager;
 
 type
-  TVert3 = packed record
-    vec: TCEVector3f;
-    //u, v: Single;
-  end;
-  TVert4 = packed record
-    vec: TCEVector4f;
-    vec2: TCEVector4f;
-    width: TCEVector2f;
-    //u, v: Single;
-  end;
-  TVert3Array = array[0..$FFFF] of TVert3;
-  TVert4Array = array[0..$FFFF] of TVert4;
-  PVert4Array = ^TVert4Array;
-
   // Circle mesh class
   TCECircleMesh = class(TCEMesh)
   private
@@ -68,6 +54,7 @@ type
     function GetPoint(Index: Integer): TCEVector2f;
     procedure SetPoint(Index: Integer; const Value: TCEVector2f);
   public
+    destructor Destroy; override;
     procedure DoInit(); override;
     procedure FillVertexBuffer(Dest: Pointer); override;
     procedure SetUniforms(Manager: TCEUniformsManager); override;
@@ -81,10 +68,47 @@ type
     property Point[Index: Integer]: TCEVector2f read GetPoint write SetPoint;
   end;
 
+    // 2D antialiased polygon mesh class
+  TCEPolygonMesh = class(TCEMesh)
+  private
+    FThreshold: Single;
+    FCount: Integer;
+    FPoints: P2DPointArray;
+    procedure SetSoftness(Value: Single);
+    procedure SetCount(Value: Integer);
+    function GetPoint(Index: Integer): TCEVector2f;
+    procedure SetPoint(Index: Integer; const Value: TCEVector2f);
+  public
+    destructor Destroy; override;
+    procedure DoInit(); override;
+    procedure FillVertexBuffer(Dest: Pointer); override;
+    procedure SetUniforms(Manager: TCEUniformsManager); override;
+    // Antialiasing softness. 0 - no antialiasing.
+    property Softness: Single read FThreshold write SetSoftness;
+    // Number of points
+    property Count: Integer read FCount write SetCount;
+    // Array of points in polygon
+    property Point[Index: Integer]: TCEVector2f read GetPoint write SetPoint;
+  end;
+
+  // Vertex buffer type with position element
+  TVBRecPos = packed record
+    vec: TCEVector3f;
+    //u, v: Single;
+  end;
+  TVBPos = array[0..$FFFF] of TVBRecPos;
+
 implementation
 
 uses
   CECommon;
+
+type
+  TLineVertex = packed record
+    vec: TCEVector4f;
+    vec2: TCEVector4f;
+  end;
+  TLineVertexBuffer = array[0..$FFFF] of TLineVertex;
 
 procedure TCECircleMesh.FillVertexBuffer(Dest: Pointer);
 const
@@ -92,7 +116,7 @@ const
   RADIUS = 0.5;
 var
   i: Integer;
-  v: ^TVert3Array;
+  v: ^TVBPos;
 begin
   v := Dest;
   for i := 0 to SEGMENTS - 1 do begin
@@ -102,7 +126,7 @@ begin
   end;
   FVerticesCount := SEGMENTS * 3;
   FPrimitiveCount := SEGMENTS;
-  FVertexSize := SizeOf(TVert3);
+  FVertexSize := SizeOf(TVBRecPos);
 end;
 
 procedure TCELineMesh.SetWidth(Value: Single);
@@ -136,6 +160,12 @@ begin
   FPoints^[Index] := Value;
 end;
 
+destructor TCELineMesh.Destroy;
+begin
+  SetCount(0);
+  inherited Destroy();
+end;
+
 procedure TCELineMesh.DoInit();
 begin
   inherited;
@@ -146,7 +176,6 @@ begin
   VertexAttribs^[1].DataType := adtSingle;
   VertexAttribs^[1].Size := 4;
   VertexAttribs^[1].Name := 'data';
-  VertexAttribs^[2].DataType := adtSingle;
   FPrimitiveType := ptTriangleStrip;
   FWidth := 2/1024;
   FThreshold := 0;
@@ -167,13 +196,13 @@ end;
 
 procedure TCELineMesh.FillVertexBuffer(Dest: Pointer);
 var
-  v: PVert4Array;
+  v: ^TLineVertexBuffer;
   w, oow, dist: Single;
   Dir1, Dir2, Norm1, Norm2: TCEVector2f;
   P1, P2, P3, P4: TCEVector2f;
   i: Integer;
 
-procedure PutVertex(Ind: Integer; P, Dir: TCEVector2f; var Dest: TVert4);
+procedure PutVertex(Ind: Integer; P, Dir: TCEVector2f; var Dest: TLineVertex);
 var
   AD: TCEVector2f;
 begin
@@ -183,7 +212,7 @@ begin
         FPoints^[Ind].y - Dir.y + Dir.y * VectorMagnitude(AD) * oow, FPoints^[Ind].x, FPoints^[Ind].y, Dest.vec2);
 end;
 
-procedure PutVertexDegen(Ind: Integer; P, Dir: TCEVector2f; var Dest: TVert4);
+procedure PutVertexDegen(Ind: Integer; P, Dir: TCEVector2f; var Dest: TLineVertex);
 var
   AD: TCEVector2f;
 begin
@@ -193,7 +222,7 @@ begin
         FPoints^[Ind].y + Dir.y - Dir.y * VectorMagnitude(AD) * oow, FPoints^[Ind-1].x, FPoints^[Ind-1].y, Dest.vec2);
 end;
 
-procedure PutVertexSide(Ind: Integer; P, Dir: TCEVector2f; var Dest: TVert4);
+procedure PutVertexSide(Ind: Integer; P, Dir: TCEVector2f; var Dest: TLineVertex);
 begin
   Vec4f(P.x, P.y, FPoints^[Ind+1].x, FPoints^[Ind+1].y, Dest.vec);
   Vec4f(FPoints^[Ind].x + Dir.x, FPoints^[Ind].y + Dir.y, FPoints^[Ind].x, FPoints^[Ind].y, Dest.vec2);
@@ -253,7 +282,7 @@ begin
 
   Inc(FVerticesCount, 2);
   Inc(FPrimitiveCount, 2);
-  FVertexSize := SizeOf(TVert4);
+  FVertexSize := SizeOf(TLineVertex);
   VertexBuffer.Status := tsChanged;
 end;
 
@@ -263,6 +292,145 @@ var
 begin
   inv := 1 / (FWidth + FThreshold);
   Manager.SetSingleVec2('width', Vec2f(inv, MinS(1, FWidth / (2 / 1024)) * FWidth / MaxS(0.0000001, inv * FThreshold)));
+end;
+
+{ TCEPolygonMesh }
+
+procedure TCEPolygonMesh.SetSoftness(Value: Single);
+begin
+  FThreshold := Value;
+  VertexBuffer.Status := tsChanged;
+end;
+
+procedure TCEPolygonMesh.SetCount(Value: Integer);
+begin
+  if FCount = Value then Exit;
+  FCount := Value;
+  ReallocMem(FPoints, FCount * SizeOf(TCEVector2f));
+end;
+
+function TCEPolygonMesh.GetPoint(Index: Integer): TCEVector2f;
+begin
+  Assert((Index >= 0) and (Index < Count), 'Invalid index');
+  Result := FPoints^[Index];
+end;
+
+procedure TCEPolygonMesh.SetPoint(Index: Integer; const Value: TCEVector2f);
+begin
+  Assert((Index >= 0) and (Index < Count), 'Invalid index');
+  FPoints^[Index] := Value;
+end;
+
+destructor TCEPolygonMesh.Destroy;
+begin
+  SetCount(0);
+  inherited Destroy();
+end;
+
+procedure TCEPolygonMesh.DoInit();
+begin
+  inherited;
+  SetVertexAttribsCount(1);
+  VertexAttribs^[0].DataType := adtSingle;
+  VertexAttribs^[0].Size := 3;
+  VertexAttribs^[0].Name := 'position';
+  FPrimitiveType := ptTriangleList;
+  FThreshold := 2;
+  Count := 3;
+  Point[0] := Vec2f(-0.5, -0.5);
+  Point[1] := Vec2f( 0.0,  0.6);
+  Point[2] := Vec2f( 0.5, -0.4);
+end;
+
+procedure TCEPolygonMesh.FillVertexBuffer(Dest: Pointer);
+const
+  tris = 3;
+  EPSILON = 0.001;
+
+var
+  v: ^TVBPos;
+  Center, D00, D01, D12, N00, N01, N12, P1, P2, P3, P4: TCEVector2f;
+  i, i0, i1, i2: Integer;
+  dist00, dist01, dist12, sharp: Single;
+begin
+  FVerticesCount := 0;
+  FPrimitiveCount := 0;
+  if Count < 3 then Exit;
+
+  v := Dest;
+
+  Center.x := 0;
+  Center.y := 0;
+  for i := 0 to Count - 1 do
+    VectorAdd(Center, FPoints^[i], Center);
+  VectorScale(Center, Center, 1 / Count);
+
+  for i := 0 to Count - 1 do
+  begin
+    i0 := (i - 1 + Count) mod Count;
+    i1 := (i + 1) mod Count;
+    i2 := (i + 2) mod Count;
+
+    VectorSub(D00, FPoints[i0], FPoints[i]);
+    VectorSub(D01, FPoints[i],  FPoints[i1]);
+    VectorSub(D12, FPoints[i1], FPoints[i2]);
+
+    dist00 := FThreshold / VectorMagnitude(D00)/2;
+    dist01 := FThreshold / VectorMagnitude(D01)/2;
+    dist12 := FThreshold / VectorMagnitude(D12)/2;
+    sharp := 1;
+    if (abs(D01.x) < EPSILON) or (abs(D01.y) < EPSILON) or (abs(abs(D01.x) - abs(D01.y)) < EPSILON) then
+      sharp := 2;
+
+    N00 := Vec2f(D00.y * dist00, -D00.x * dist00);
+    N01 := Vec2f(D01.y * dist01, -D01.x * dist01);
+    N12 := Vec2f(D12.y * dist12, -D12.x * dist12);
+
+    if (LineIntersect(VectorSub(FPoints^[i0], N00), VectorSub(FPoints^[i],  N00),
+                     VectorSub(FPoints^[i],  N01), VectorSub(FPoints^[i1], N01), P1) <> irIntersect)
+      or (VectorMagnitude(VectorSub(P1, FPoints^[i])) > FThreshold*4*4)
+    then
+      P1 := VectorSub(FPoints^[i], N00);
+    if (LineIntersect(VectorSub(FPoints^[i],  N01), VectorSub(FPoints^[i1], N01),
+                     VectorSub(FPoints^[i1], N12), VectorSub(FPoints^[i2], N12), P2) <> irIntersect)
+      or (VectorMagnitude(VectorSub(P2, FPoints^[i1])) > FThreshold*4*4)
+    then
+      P2 := VectorSub(FPoints^[i1], N01);
+
+    if (LineIntersect(VectorAdd(FPoints^[i0], N00), VectorAdd(FPoints^[i],  N00),
+      VectorAdd(FPoints^[i],  N01), VectorAdd(FPoints^[i1], N01), P3) <> irIntersect)
+      or (VectorMagnitude(VectorSub(P3, FPoints^[i])) > FThreshold*4*4)
+    then
+      P3 := VectorAdd(FPoints^[i], N00);
+    if (LineIntersect(VectorAdd(FPoints^[i],  N01), VectorAdd(FPoints^[i1], N01),
+      VectorAdd(FPoints^[i1], N12), VectorAdd(FPoints^[i2], N12), P4) <> irIntersect)
+      or (VectorMagnitude(VectorSub(P4, FPoints^[i1])) > FThreshold*4*4)
+    then
+      P4 := VectorAdd(FPoints^[i1], N01);
+
+    Vec3f(Center.x, Center.y, 1, v^[i * tris*3].vec);
+    Vec3f(P1.x, P1.y, 1, v^[i * tris*3 + 1].vec);
+    Vec3f(P2.x, P2.y, 1, v^[i * tris*3 + 2].vec);
+
+    Vec3f(FPoints[i].x*0+P3.x, FPoints[i].y*0+P3.y, 0, v^[i * tris*3 + 5].vec);
+    Vec3f(P1.x, P1.y, 1*sharp, v^[i * tris*3 + 3].vec);
+    Vec3f(P2.x, P2.y, 1*sharp, v^[i * tris*3 + 4].vec);
+
+    Vec3f(FPoints[i].x*0+P3.x, FPoints[i].y*0+P3.y, 0, v^[i * tris*3 + 6].vec);
+    Vec3f(P2.x, P2.y, 1*sharp, v^[i * tris*3 + 7].vec);
+    Vec3f(FPoints[i1].x*0+P4.x, FPoints[i1].y*0+P4.y, 0, v^[i * tris*3 + 8].vec);
+  end;
+  FVerticesCount := Count * 3 * tris;
+  FPrimitiveCount := Count * tris;
+  FVertexSize := SizeOf(v^[0]);
+  VertexBuffer.Status := tsChanged;
+end;
+
+procedure TCEPolygonMesh.SetUniforms(Manager: TCEUniformsManager);
+var
+  inv: Single;
+begin
+  Manager.SetSingleVec2('width', Vec2f(FThreshold, 1.0));
 end;
 
 end.
