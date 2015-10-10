@@ -204,10 +204,10 @@ type
 
     property Parent: TCEBaseEntity read FParent write SetParent;
     property Childs: TCEEntityList read FChilds;
+    property Manager: TCEEntityManager read FManager;
   published
     // Name used for references to the entity
     property Name: TCEEntityName read FName write SetName;
-    property Manager: TCEEntityManager read FManager;
   end;
 
 implementation

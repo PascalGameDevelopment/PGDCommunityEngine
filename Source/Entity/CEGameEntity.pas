@@ -91,7 +91,7 @@ end;
 
 procedure TCEGameEntity.SetMaterial(const Value: TCEMaterial);
 begin
-  if Assigned(Manager) then TCEGameEntityManager(Manager).MapRenderable(FMaterial, Value, FMesh);
+  if Assigned(Manager) then TCEGameEntityManager(Manager).MapRenderable(FMaterial, Value, nil);
   FMaterial := Value;
 end;
 
