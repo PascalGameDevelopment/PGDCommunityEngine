@@ -56,7 +56,7 @@ type
   TCEMatrix4 = array[0..3, 0..3] of single;
   TCEMatrix = TCEMatrix4;
 
-  // Line or segment intersection test result
+    // Line or segment intersection test result
   TIntersectResult = (irIntersect, irCoincident, irParallel, irOutOfSegment);
 
   function Vec2f(x, y: Single): TCEVector2f; overload;
@@ -67,6 +67,8 @@ type
   procedure Vec4f(x, y, z, W: Single; out dest: TCEVector4f); overload;
 
   function VectorNormalize(const V: TCEVector2f): TCEVector2f; overload;
+  procedure VectorNormalize(out Result: TCEVector2f; const V: TCEVector2f); overload;
+  procedure VectorNormalize(out Result: TCEVector2f; const V: TCEVector2f; len: Single); overload;
   function VectorNormalize(const V: TCEVector3f): TCEVector3f; overload;
   function VectorAdd(const V1, V2: TCEVector2f): TCEVector2f; overload;
   procedure VectorAdd(out Result: TCEVector3f; const V1, V2: TCEVector3f); overload;
@@ -83,6 +85,7 @@ type
   function VectorMagnitude(const V: TCEVector2f): Single; overload;
   function VectorMagnitude(const V: TCEVector3f): Single; overload;
   function LineIntersect(const AP1, AP2, BP1, BP2: TCEVector2f; out Hit: TCEVector2f): TIntersectResult;
+  function RayIntersect(const AP1, ADir, BP1, BDir: TCEVector2f; out Hit: TCEVector2f): TIntersectResult;
   function SegmentIntersect(const AP1, AP2, BP1, BP2: TCEVector2f; out Hit: TCEVector2f): TIntersectResult;
 
 implementation
@@ -146,6 +149,30 @@ begin
   Result.X := Sq * V.X;
   Result.Y := Sq * V.Y;
   Result.Z := Sq * V.Z;
+end;
+
+procedure VectorNormalize(out Result: TCEVector2f; const V: TCEVector2f); overload;
+var
+  Sq: Single;
+  Zero: Integer;
+begin
+  Sq := Sqrt(sqr(V.X) + sqr(V.Y));       // TODO: switch to invsqrt()
+  Zero := Ord(Sq = 0);
+  Sq := (1 - Zero) / (Sq + Zero);
+  Result.X := Sq * V.X;
+  Result.Y := Sq * V.Y;
+end;
+
+procedure VectorNormalize(out Result: TCEVector2f; const V: TCEVector2f; len: Single); overload;
+var
+  Sq: Single;
+  Zero: Integer;
+begin
+  Sq := Sqrt(sqr(V.X) + sqr(V.Y));       // TODO: switch to invsqrt()
+  Zero := Ord(Sq = 0);
+  Sq := len * (1 - Zero) / (Sq + Zero);
+  Result.X := Sq * V.X;
+  Result.Y := Sq * V.Y;
 end;
 
 function VectorAdd(const V1, V2: TCEVector2f): TCEVector2f; overload;
@@ -248,13 +275,18 @@ const
   EPSILON = 0.000001;
 
 function LineIntersect(const AP1, AP2, BP1, BP2: TCEVector2f; out Hit: TCEVector2f): TIntersectResult;
+begin
+  Result := RayIntersect(AP1, Vec2f(AP2.x - AP1.x, AP2.y - AP1.y), BP1, Vec2f(BP2.x - BP1.x, BP2.y - BP1.y), Hit);
+end;
+
+function RayIntersect(const AP1, ADir, BP1, BDir: TCEVector2f; out Hit: TCEVector2f): TIntersectResult;
 var
   Denominator, NumA, NumB: Single;
   Ua, Ub: Single;
 begin
-  Denominator := (BP2.y - BP1.y) * (AP2.x - AP1.x) - (BP2.x - BP1.x) * (AP2.y - AP1.y);
-  NumA := (BP2.x - BP1.x) * (AP1.y - BP1.y) - (BP2.y - BP1.y) * (AP1.x - BP1.x);
-  NumB := (AP2.x - AP1.x) * (AP1.y - BP1.y) - (AP2.y - AP1.y) * (AP1.x - BP1.x);
+  Denominator := BDir.y * ADir.x - BDir.x * ADir.y;
+  NumA := BDir.x * (AP1.y - BP1.y) - BDir.y * (AP1.x - BP1.x);
+  NumB := ADir.x * (AP1.y - BP1.y) - ADir.y * (AP1.x - BP1.x);
   if (Abs(Denominator) < EPSILON) then
   begin
     if (Abs(NumA) < EPSILON) and (Abs(NumB) < EPSILON) then
@@ -265,8 +297,8 @@ begin
     Denominator := 1 / Denominator;
     ua := NumA * Denominator;
     ub := NumB * Denominator;
-    Hit.X := AP1.x + ua * (AP2.x - AP1.x);
-    Hit.Y := AP1.y + ua * (AP2.y - AP1.y);
+    Hit.X := AP1.x + ua * ADir.x;
+    Hit.Y := AP1.y + ua * ADir.y;
     Result := irIntersect;
   end;
 end;

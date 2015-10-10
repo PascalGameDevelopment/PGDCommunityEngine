@@ -117,7 +117,7 @@ begin
   Mesh.Point[5] := Vec2f( 0.2,  0.6);}
 
   Mesh := TCEPolygonMesh.Create(Core.EntityManager);
-  Mesh.Softness := 2 / 1024*2.5;
+  Mesh.Softness := 12 / 1024*1.5;
 
   Image := TCEImageResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/test1.bmp'));
   Pass := TCERenderPass.Create(Core.EntityManager);

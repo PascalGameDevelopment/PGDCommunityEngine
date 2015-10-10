@@ -365,21 +365,27 @@ begin
   FPrimitiveType := ptTriangleList;
   FThreshold := 2;
   FColor := GetColor(255, 255, 255, 255);
-  Count := 3;
-  Point[0] := Vec2f(-0.5, -0.5);
-  Point[1] := Vec2f( 0.0,  0.6);
-  Point[2] := Vec2f( 0.5, -0.4);
+  Count := 4;
+  Point[3] := Vec2f(-0.5, -0.5);
+  Point[2] := Vec2f( 0.0,  -0.4);
+  Point[1] := Vec2f( 0.2, 0.4);
+  Point[0] := Vec2f(-0.3, 0.5);
 end;
 
 procedure TCEPolygonMesh.FillVertexBuffer(Dest: Pointer);
 const
   tris = 3;
-  EPSILON = 0.001;
+  EPSILON = 0.002;
+
+function Sharpness(dx, dy: Single): Single;
+begin
+  Result := 1-Ord((abs(dx) < EPSILON) or (abs(dy) < EPSILON) or (abs(abs(dx) - abs(dy)) < EPSILON))*0.7;
+end;
+
 var
   v: ^TVBPos;
-  Center, D00, D01, D12, N00, N01, N12, P1, P2, P3, P4: TCEVector2f;
-  i, i0, i1, i2: Integer;
-  dist00, dist01, dist12, sharp: Single;
+  Center, D01, D12, N01, N12, P1, P2, P3, P4: TCEVector2f;
+  i, i1, i2: Integer;
 begin
   FVerticesCount := 0;
   FPrimitiveCount := 0;
@@ -393,43 +399,42 @@ begin
     VectorAdd(Center, FPoints^[i], Center);
   VectorScale(Center, Center, 1 / Count);
 
+  VectorSub(D12, FPoints^[Count-1], FPoints^[0]);
+  VectorSub(D01, FPoints^[0],  FPoints^[1]);
+  VectorScale(N01, Vec2f(D01.y, -D01.x), FThreshold / VectorMagnitude(D01) * 0.5 * Sharpness(D01.x, D01.y));
+
+  CalcVertex(VectorSub(FPoints^[Count-1], VectorScale(Vec2f(D12.y, -D12.x), FThreshold / VectorMagnitude(D12) * 0.5 * Sharpness(D12.x, D12.y))),
+             D12, VectorSub(FPoints^[0],  N01), D01, P1);
+  VectorAdd(P3, FPoints^[0],  VectorSub(FPoints^[0],  P1));
+
+  i1 := 1;
+  i2 := 2;
   for i := 0 to Count - 1 do
   begin
-    i0 := (i - 1 + Count) mod Count;
-    i1 := (i + 1) mod Count;
-    i2 := (i + 2) mod Count;
+    VectorSub(D12, FPoints^[i1], FPoints^[i2]);
+    VectorNormalize(N12, Vec2f(D12.y, -D12.x), FThreshold * 0.5 * Sharpness(D12.x, D12.y));
 
-    VectorSub(D00, FPoints[i0], FPoints[i]);
-    VectorSub(D01, FPoints[i],  FPoints[i1]);
-    VectorSub(D12, FPoints[i1], FPoints[i2]);
-
-    dist00 := FThreshold / VectorMagnitude(D00)/2;
-    dist01 := FThreshold / VectorMagnitude(D01)/2;
-    dist12 := FThreshold / VectorMagnitude(D12)/2;
-    sharp := 1;
-    if (abs(D01.x) < EPSILON) or (abs(D01.y) < EPSILON) or (abs(abs(D01.x) - abs(D01.y)) < EPSILON) then
-      sharp := 2;
-
-    N00 := Vec2f(D00.y * dist00, -D00.x * dist00);
-    N01 := Vec2f(D01.y * dist01, -D01.x * dist01);
-    N12 := Vec2f(D12.y * dist12, -D12.x * dist12);
-
-    CalcVertex(VectorSub(FPoints^[i0], N00), D00, VectorSub(FPoints^[i],  N01), D01, P1);
-    CalcVertex(VectorSub(FPoints^[i],  N01), D01, VectorSub(FPoints^[i1], N12), D12, P2);
-    CalcVertex(VectorAdd(FPoints^[i0], N00), D00, VectorAdd(FPoints^[i],  N01), D01, P3);
-    CalcVertex(VectorAdd(FPoints^[i],  N01), D01, VectorAdd(FPoints^[i1], N12), D12, P4);
+    CalcVertex(VectorSub(FPoints^[i], N01), D01, VectorSub(FPoints^[i1], N12), D12, P2);
+    VectorAdd(P4, FPoints^[i1], VectorSub(FPoints^[i1], P2));
 
     Vec3f(Center.x, Center.y, 1, v^[i * tris*3].vec);
     Vec3f(P1.x, P1.y, 1, v^[i * tris*3 + 1].vec);
     Vec3f(P2.x, P2.y, 1, v^[i * tris*3 + 2].vec);
 
-    Vec3f(FPoints[i].x*0+P3.x, FPoints[i].y*0+P3.y, 0, v^[i * tris*3 + 3].vec);
-    Vec3f(P1.x, P1.y, 1*sharp, v^[i * tris*3 + 4].vec);
-    Vec3f(P2.x, P2.y, 1*sharp, v^[i * tris*3 + 5].vec);
+    Vec3f(P3.x, P3.y, 0, v^[i * tris*3 + 3].vec);
+    Vec3f(P1.x, P1.y, 1, v^[i * tris*3 + 4].vec);
+    Vec3f(P2.x, P2.y, 1, v^[i * tris*3 + 5].vec);
 
-    Vec3f(FPoints[i].x*0+P3.x, FPoints[i].y*0+P3.y, 0, v^[i * tris*3 + 6].vec);
-    Vec3f(P2.x, P2.y, 1*sharp, v^[i * tris*3 + 7].vec);
-    Vec3f(FPoints[i1].x*0+P4.x, FPoints[i1].y*0+P4.y, 0, v^[i * tris*3 + 8].vec);
+    Vec3f(P3.x, P3.y, 0, v^[i * tris*3 + 6].vec);
+    Vec3f(P2.x, P2.y, 1, v^[i * tris*3 + 7].vec);
+    Vec3f(P4.x, P4.y, 0, v^[i * tris*3 + 8].vec);
+
+    D01 := D12;
+    N01 := N12;
+    P1 := P2;
+    P3 := P4;
+    i1 := i1 + 1 - Count * Ord(i1 = Count-1);
+    i2 := i2 + 1 - Count * Ord(i2 = Count-1);
   end;
   FVerticesCount := Count * 3 * tris;
   FPrimitiveCount := Count * tris;
@@ -438,8 +443,6 @@ begin
 end;
 
 procedure TCEPolygonMesh.SetUniforms(Manager: TCEUniformsManager);
-var
-  inv: Single;
 begin
   Manager.SetSingleVec4('color', Vec4f(Color.R * ONE_OVER_255, Color.G * ONE_OVER_255, Color.B * ONE_OVER_255, Color.A * ONE_OVER_255));
 end;
