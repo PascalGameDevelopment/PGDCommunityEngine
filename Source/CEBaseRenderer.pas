@@ -59,6 +59,7 @@ type
   private
   protected
     FUniformsManager: TCEUniformsManager;
+    FBufferManager: TCERenderBufferManager;
     FActive: Boolean;
     // One time initialization
     procedure DoInit(); virtual; abstract;

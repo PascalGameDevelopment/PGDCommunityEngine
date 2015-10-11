@@ -38,32 +38,6 @@ type
   // Primitive types
   TPrimitiveType = (ptPointList, ptLineList, ptLineStrip, ptTriangleList, ptTriangleStrip, ptTriangleFan, ptQuads);
 
-  //  Tesselation status
-  TTesselationState = (// Tesselator was cardinally changed, including maximum number of vertices and/or indices
-                       tsMaxSizeChanged,
-                       // Tesselator data was changed
-                       tsChanged,
-                       // Tesselator data was not changed so no reason to tesselate it again
-                       tsTesselated);
-
-  // Type of tesselator used to render a mesh
-  TTesselatorType = (// Triangulated data of the mesh rarely or never changes
-                     ttStatic,
-                     // Triangulated data changes nearly every frame (particle system, etc)
-                     ttDynamic);
-
-  PTesselationStatus = ^TTesselationStatus;
-  { Current tesselation status data structure
-    <b>BufferIndex</b>      - index of buffer in API-independent buffers
-    <b>Offset</b>           - offset within the buffer in bytes
-    <b>Status</b>           - current tesselation state
-    should not be modified manually }
-  TTesselationStatus = record
-    BufferIndex, Offset: Integer;
-    TesselatorType: TTesselatorType;
-    Status: TTesselationState;
-  end;
-
   // Vertex attribute data types
   TAttributeDataType = (adtShortint, adtByte, adtSmallint, adtWord, adtSingle);
   // Vertex attribute data information
@@ -80,7 +54,7 @@ type
   }
   TCEMesh = class(TCEBaseEntity)
   protected
-    VertexBuffer, IndexBuffer: TTesselationStatus;       // TODO: Move to renderer?
+    VertexBuffer, IndexBuffer: TCEDataStatus;
     FVerticesCount: Integer;
     FVertexSize: Integer;
     FPrimitiveType: TPrimitiveType;
@@ -112,29 +86,29 @@ type
   end;
 
   // Used by renderer
-  function GetVB(const Mesh: TCEMesh): PTesselationStatus; {$I inline.inc}
+  function GetVB(const Mesh: TCEMesh): PCEDataStatus; {$I inline.inc}
   // Used by renderer
-  function GetIB(const Mesh: TCEMesh): PTesselationStatus; {$I inline.inc}
-  procedure InitTesselationStatus(Status: PTesselationStatus); {$I inline.inc}
+  function GetIB(const Mesh: TCEMesh): PCEDataStatus; {$I inline.inc}
+  procedure InitTesselationStatus(Status: PCEDataStatus); {$I inline.inc}
 
 implementation
 
-function GetVB(const Mesh: TCEMesh): PTesselationStatus; {$I inline.inc}
+function GetVB(const Mesh: TCEMesh): PCEDataStatus; {$I inline.inc}
 begin
   Result := @Mesh.VertexBuffer;
 end;
 
-function GetIB(const Mesh: TCEMesh): PTesselationStatus; {$I inline.inc}
+function GetIB(const Mesh: TCEMesh): PCEDataStatus; {$I inline.inc}
 begin
   Result := @Mesh.IndexBuffer;
 end;
 
-procedure InitTesselationStatus(Status: PTesselationStatus); {$I inline.inc}
+procedure InitTesselationStatus(Status: PCEDataStatus); {$I inline.inc}
 begin
   Status.BufferIndex := -1;
   Status.Offset := 0;
-  Status.Status := tsMaxSizeChanged;
-  Status.TesselatorType := ttStatic;
+  Status.Status := dsSizeChanged;
+  Status.DataType := dtStatic;
 end;
 
 { TCEMesh }
@@ -163,12 +137,12 @@ end;
 
 procedure TCEMesh.FillVertexBuffer(Dest: Pointer);
 begin
-  VertexBuffer.Status := tsTesselated;
+  VertexBuffer.Status := dsValid;
 end;
 
 procedure TCEMesh.FillIndexBuffer(Dest: Pointer);
 begin
-  IndexBuffer.Status := tsTesselated;
+  IndexBuffer.Status := dsValid;
 end;
 
 procedure TCEMesh.SetUniforms(Manager: TCEUniformsManager);

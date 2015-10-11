@@ -137,13 +137,13 @@ end;
 procedure TCELineMesh.SetWidth(Value: Single);
 begin
   FWidth := Value;
-  VertexBuffer.Status := tsChanged;
+  VertexBuffer.Status := dsChanged;
 end;
 
 procedure TCELineMesh.SetSoftness(Value: Single);
 begin
   FThreshold := Value;
-  VertexBuffer.Status := tsChanged;
+  VertexBuffer.Status := dsChanged;
 end;
 
 procedure TCELineMesh.SetCount(Value: Integer);
@@ -288,7 +288,7 @@ begin
   Inc(FVerticesCount, 2);
   Inc(FPrimitiveCount, 2);
   FVertexSize := SizeOf(TLineVertex);
-  VertexBuffer.Status := tsChanged;
+  VertexBuffer.Status := dsChanged;
 end;
 
 procedure TCELineMesh.SetUniforms(Manager: TCEUniformsManager);
@@ -304,16 +304,16 @@ end;
 procedure TCEPolygonMesh.SetSoftness(Value: Single);
 begin
   if (FThreshold <> 0) and (Value = 0) or (FThreshold = 0) and (Value <> 0) then
-    VertexBuffer.Status := tsMaxSizeChanged
+    VertexBuffer.Status := dsSizeChanged
   else
-    VertexBuffer.Status := tsChanged;
+    VertexBuffer.Status := dsChanged;
   FThreshold := Value;
 end;
 
 procedure TCEPolygonMesh.SetColor(const Value: TCEColor);
 begin
   FColor := Value;
-  VertexBuffer.Status := tsChanged;
+  VertexBuffer.Status := dsChanged;
 end;
 
 procedure TCEPolygonMesh.SetCount(Value: Integer);
@@ -368,11 +368,6 @@ begin
   FPrimitiveType := ptTriangleList;
   FThreshold := 2;
   FColor := GetColor(255, 255, 255, 255);
-  Count := 4;
-  Point[3] := Vec2f(-0.5, -0.5);
-  Point[2] := Vec2f( 0.0,  -0.4);
-  Point[1] := Vec2f( 0.2, 0.4);
-  Point[0] := Vec2f(-0.3, 0.5);
 end;
 
 procedure TCEPolygonMesh.FillVertexBuffer(Dest: Pointer);
@@ -446,7 +441,7 @@ begin
   FVerticesCount := Count * 3 * (1 + 2*Ord(FThreshold > 0));
   FPrimitiveCount := Count * (1 + 2*Ord(FThreshold > 0));
   FVertexSize := SizeOf(v^[0]);
-  VertexBuffer.Status := tsChanged;
+  VertexBuffer.Status := dsChanged;
 end;
 
 procedure TCEPolygonMesh.SetUniforms(Manager: TCEUniformsManager);

@@ -54,7 +54,7 @@ type
     {$ENDIF}
     PhaseLocation: TGLint;
 
-    VertexData: Pointer;
+    VertexData: Pointer;                  // TODO: eliminate
     VBO: GLUInt;
 
     Shaders: TGLSLShaderList;
@@ -86,6 +86,13 @@ type
     procedure SetSingleVec4(const Name: PAPIChar; const Value: TCEVector4f); override;
   end;
 
+  TCEOpenGLES2BufferManager = class(TCERenderBufferManager)
+  protected
+    procedure ApiAddBuffer(Index: Integer); override;
+    property Buffers: PCEDataBufferList read FBuffers;
+  public
+  end;
+
 implementation
 
 uses
@@ -104,7 +111,7 @@ begin
     glGetShaderiv(Shader, GL_INFO_LOG_LENGTH, @len);
     if len > 0 then
     begin
-      getmem(Buffer, len+1);
+      getmem(Buffer, len + 1);
       glGetShaderInfoLog(Shader, len, nil, Buffer);
       CELog.Error(ShaderType + ': ' + Buffer);
       freemem(Buffer);
@@ -130,9 +137,9 @@ type
   TLib = PWideChar;
 begin
   {$IFNDEF MOBILE}
-    {$ifdef windows}
-    LoadGLESv2(TLib(GetPathRelativeToFile(ParamStr(0), '../Library/regal/regal32.dll')));
-    {$endif}
+  {$IFDEF WINDOWS}
+  LoadGLESv2(TLib(GetPathRelativeToFile(ParamStr(0), '../Library/regal/regal32.dll')));
+  {$ENDIF}
   {$ENDIF}
 end;
 
@@ -148,6 +155,7 @@ begin
   CELog.Log('Context succesfully created');
 
   FUniformsManager := TCEOpenGLES2UniformsManager.Create();
+  FBufferManager := TCEOpenGLES2BufferManager.Create();
 
   // Init GL settings
   glClearColor(0, 0, 0, 0);
@@ -178,6 +186,7 @@ begin
   {$ENDIF}
 
   FUniformsManager.Free();
+  FBufferManager.Free();
 
   Shaders.ForEach(FreeCallback, nil);
   Shaders.Free();
@@ -230,7 +239,6 @@ begin
   Sh := TCEGLSLShader.Create();
   Sh.ShaderProgram  := glCreateProgram();
   Sh.VertexShader   := CreateShader(GL_VERTEX_SHADER,   PAnsiChar(Pass.VertexShader.Text));
-
   Sh.FragmentShader := CreateShader(GL_FRAGMENT_SHADER, PAnsiChar(Pass.FragmentShader.Text));
   if (sh.VertexShader = 0) or (sh.FragmentShader = 0) then
   begin
@@ -242,11 +250,12 @@ begin
   glAttachShader(Sh.ShaderProgram, Sh.FragmentShader);
   glLinkProgram(Sh.ShaderProgram);
   Shaders.Add(Sh);
-  Result := Shaders.Count-1;
+  Result := Shaders.Count - 1;
 end;
 
 function InitTexture(Image: TCEImageResource): glUint;
 begin
+  if not Assigned(Image) then Exit;
   glGenTextures(1, @Result);
   glBindTexture(GL_TEXTURE_2D, Result);
 //  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, Image.ActualLevels);
@@ -309,21 +318,20 @@ end;
 procedure TCEOpenGL4Renderer.RenderMesh(Mesh: TCEMesh);
 var
   i: Integer;
-  ts: PTesselationStatus;
+  ts: PCEDataStatus;
+  Buffer: PCEDataBuffer;
 begin
   Assert(Assigned(Mesh));
   if not Active then Exit;
   ts := CEMesh.GetVB(Mesh);
 
-  if ts^.BufferIndex = -1 then begin
-    // Create buffer
-    glGenBuffers(1, @VBO);
-    ts^.BufferIndex := VBO;
-    ts^.Status := tsMaxSizeChanged;   // Not tesselated yet as vertex buffer is just created
-  end;
+  if ts^.BufferIndex = DATA_NOT_ALLOCATED then
+    ts^.BufferIndex := FBufferManager.GetOrCreate(Mesh.VertexSize, ts, Buffer)
+  else
+    Buffer := @TCEOpenGLES2BufferManager(FBufferManager).Buffers^[ts^.BufferIndex];
 
-  glBindBuffer(GL_ARRAY_BUFFER, ts^.BufferIndex);
-  if ts^.Status <> tsTesselated then begin
+  glBindBuffer(GL_ARRAY_BUFFER, Buffer^.Id);
+  if ts^.Status <> dsValid then begin
     Mesh.FillVertexBuffer(VertexData);
     glBufferData(GL_ARRAY_BUFFER, Mesh.VerticesCount * Mesh.VertexSize, VertexData, GL_STATIC_DRAW);
   end;
@@ -332,7 +340,8 @@ begin
   begin
     glBindAttribLocation(CurShader.ShaderProgram, i, Mesh.VertexAttribs^[i].Name);
     glEnableVertexAttribArray(i);
-    glVertexAttribPointer(i, Mesh.VertexAttribs^[i].Size, GetGLType(Mesh.VertexAttribs^[i].DataType), GL_FALSE, Mesh.VertexSize, PtrOffs(nil, i*SizeOf(TCEVector4f)));
+    glVertexAttribPointer(i, Mesh.VertexAttribs^[i].Size, GetGLType(Mesh.VertexAttribs^[i].DataType), GL_FALSE,
+      Mesh.VertexSize, PtrOffs(nil, i * SizeOf(TCEVector4f)));
   end;
 
   TCEOpenGLES2UniformsManager(FUniformsManager).ShaderProgram := CurShader.ShaderProgram;
@@ -358,18 +367,16 @@ begin
   glClearDepthf(Z);
   glClearStencil(Stencil);
 
-  glClear(GL_COLOR_BUFFER_BIT * Ord(cfColor in Flags) or GL_DEPTH_BUFFER_BIT * Ord(cfDepth in Flags) or GL_STENCIL_BITS * Ord(cfStencil in Flags));
+  glClear(GL_COLOR_BUFFER_BIT * Ord(cfColor in Flags) or GL_DEPTH_BUFFER_BIT * Ord(cfDepth in Flags) or
+  GL_STENCIL_BITS * Ord(cfStencil in Flags));
 end;
 
 procedure TCEOpenGL4Renderer.NextFrame;
 begin
   if not Active then Exit;
   {$IFDEF WINDOWS}
-
-    glUniform1f(PhaseLocation,(gettickcount() mod 2000)*0.001*pi);
-
-
-    SwapBuffers(FOGLDC);                  // Display the scene
+  glUniform1f(PhaseLocation,(gettickcount() mod 2000)*0.001*pi);
+  SwapBuffers(FOGLDC);                  // Display the scene
   {$ENDIF}
 end;
 
@@ -379,6 +386,8 @@ begin
   if Result < 0 then
     CELog.Warning('Can''t find uniform location for name: ' + Name);
 end;
+
+{ TCEOpenGLES2UniformsManager }
 
 procedure TCEOpenGLES2UniformsManager.SetInteger(const Name: PAPIChar; Value: Integer);
 begin
@@ -403,6 +412,14 @@ end;
 procedure TCEOpenGLES2UniformsManager.SetSingleVec4(const Name: PAPIChar; const Value: TCEVector4f);
 begin
   glUniform4f(GetUniformLocation(ShaderProgram, Name), Value.x, Value.y, Value.z, Value.w);
+end;
+
+{ TCEOpenGLES2BufferManager }
+
+procedure TCEOpenGLES2BufferManager.ApiAddBuffer(Index: Integer);
+begin
+  Assert((Index >= 0) and (Index < Count), 'Invalid index');
+  glGenBuffers(1, @FBuffers^[Index].Id);
 end;
 
 end.

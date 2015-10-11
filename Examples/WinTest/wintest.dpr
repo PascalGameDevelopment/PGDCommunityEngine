@@ -32,7 +32,7 @@ program wintest;
 
 uses
   CEWindowsApplication, CEBaseRenderer, CEOpenGLES2Renderer, CEBaseInput, CEOSMessageInput,
-  CEMesh, CECommon, CEOSUtils, CEResource, CEGameEntity, CE2DMesh,
+  CEMesh, CECommon, CEOSUtils, CEResource, CEGameEntity, CE2DMesh, CEUniformsManager,
   CEBaseTypes, CEMessage, CEInputMessage, CEVectors, CEImageResource, CEMaterial, CECore;
 
 type
@@ -57,7 +57,7 @@ var
 procedure TCERotatingTriangleMesh.SetAngle(const Value: Single);
 begin
   FAngle := Value;
-  VertexBuffer.Status := tsChanged; // Invalidate buffer
+  VertexBuffer.Status := dsChanged; // Invalidate buffer
 end;
 
 procedure TCERotatingTriangleMesh.FillVertexBuffer(Dest: Pointer);
@@ -78,6 +78,24 @@ begin
   FVertexSize := SizeOf(TVBRecPos);
 end;
 
+function CreateRenderPass(EntityManager: TCEGameEntityManager; AlphaBlend: Boolean;
+    const TextureUrl: string; const VSUrl: string; const PSUrl: string): TCERenderPass;
+var
+  Image: TCEImageResource;
+begin
+Result := TCERenderPass.Create(EntityManager);
+  if TextureUrl <> '' then
+  begin
+    Image := TCEImageResource.CreateFromUrl(TextureUrl);
+    Result.Texture0 := Image;
+  end;
+  if VSUrl <> '' then
+    Result.VertexShader := TCETextResource.CreateFromUrl(VSUrl);
+  if PSUrl <> '' then
+    Result.FragmentShader := TCETextResource.CreateFromUrl(PSUrl);
+  Result.AlphaBlending := AlphaBlend;
+end;
+
 procedure TRotatingTriangle.Update(const DeltaTime: Single);
 begin
   //TCERotatingTriangleMesh(Mesh).Angle := TCERotatingTriangleMesh(Mesh).Angle + speed * DeltaTime;
@@ -87,12 +105,12 @@ var
   App: TCEWindowsApplication;
   Renderer: TCEBaseRenderer;
   Core: TCECore;
-  Mesh: TCEPolygonMesh;
-  Image: TCEImageResource;
+  PolyMesh: TCEPolygonMesh;
+  LineMesh: TCELineMesh;
   Mat: TCEMaterial;
-  Pass: TCERenderPass;
+  PolyPass, LinePass: TCERenderPass;
   Sh: TCETextResource;
-  Triangle: TRotatingTriangle;
+  Polygon, Line: TRotatingTriangle;
 begin
   {$IF Declared(ReportMemoryLeaksOnShutdown)}
   ReportMemoryLeaksOnShutdown := True;
@@ -104,34 +122,41 @@ begin
   Core.Renderer := Renderer;
   Core.Input := TCEOSMessageInput.Create();
 
-  Triangle := TRotatingTriangle.Create(Core.EntityManager);
-  {Mesh := TCELineMesh.Create(Core.EntityManager);
-  Mesh.Softness := 2 / 1024 * 2;
-  Mesh.Width := 1 / 1024 * 4;
-  Mesh.Count := 6;
-  Mesh.Point[0] := Vec2f(-0.5,  0.3);
-  Mesh.Point[1] := Vec2f( 0.3, -0.5);
-  Mesh.Point[2] := Vec2f(-0.3, -0.3);
-  Mesh.Point[3] := Vec2f( 0.4,  0.0);
-  Mesh.Point[4] := Vec2f( 0.3,  0.3);
-  Mesh.Point[5] := Vec2f( 0.2,  0.6);}
+  Polygon := TRotatingTriangle.Create(Core.EntityManager);
 
-  Mesh := TCEPolygonMesh.Create(Core.EntityManager);
-  Mesh.Softness := 12 / 1024*1.5;
+  Line := TRotatingTriangle.Create(Core.EntityManager);
+  LineMesh := TCELineMesh.Create(Core.EntityManager);
+  LineMesh.Softness := 2 / 1024 * 1.5;
+  LineMesh.Width := 1 / 1024 * 100.2;
+  LineMesh.Count := 6;
+  LineMesh.Point[0] := Vec2f(-0.5,  0.3);
+  LineMesh.Point[1] := Vec2f( 0.3, -0.5);
+  LineMesh.Point[2] := Vec2f(-0.3, -0.3);
+  LineMesh.Point[3] := Vec2f( 0.4,  0.0);
+  LineMesh.Point[4] := Vec2f( 0.3,  0.3);
+  LineMesh.Point[5] := Vec2f( 0.2,  0.6);
 
-  Image := TCEImageResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/test1.bmp'));
-  Pass := TCERenderPass.Create(Core.EntityManager);
-  Pass.Texture0 := Image;
-  Pass.VertexShader := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/vs_poly.glsl'));
-  Pass.FragmentShader := TCETextResource.CreateFromUrl(GetPathRelativeToFile(ParamStr(0), '../Assets/fs_poly.glsl'));
-  Pass.AlphaBlending := true;
+  PolyMesh := TCEPolygonMesh.Create(Core.EntityManager);
+  PolyMesh.Count := 4;
+  PolyMesh.Point[3] := Vec2f(-0.5, -0.5);
+  PolyMesh.Point[2] := Vec2f( 0.0,  -0.4);
+  PolyMesh.Point[1] := Vec2f( 0.2, 0.4);
+  PolyMesh.Point[0] := Vec2f(-0.3, 0.5);
+  PolyMesh.Softness := 2 / 1024*1.5;
+  PolyMesh.Color := GetColor(100, 200, 150, 255);
+
+  PolyPass := CreateRenderPass(Core.EntityManager, true, '',
+    GetPathRelativeToFile(ParamStr(0), '../Assets/vs_poly.glsl'), GetPathRelativeToFile(ParamStr(0), '../Assets/fs_poly.glsl'));
+  LinePass := CreateRenderPass(Core.EntityManager, true, '',
+    GetPathRelativeToFile(ParamStr(0), '../Assets/vs_line.glsl'), GetPathRelativeToFile(ParamStr(0), '../Assets/fs_line.glsl'));
   Mat := TCEMaterial.Create(Core.EntityManager);
   Mat.TotalTechniques := 1;
   Mat.Technique[0] := TCERenderTechnique.Create(Core.EntityManager);
   Mat.Technique[0].TotalPasses := 1;
-  Mat.Technique[0].Pass[0] := Pass;
-  Triangle.Mesh := Mesh;
+  Mat.Technique[0].Pass[0] := PolyPass;
+  Polygon.Mesh := PolyMesh;
   //Triangle.Material := Mat;
+  Line.Mesh := LineMesh;
 
   App.MessageHandler := Core.Input.HandleMessage;
   //Core.OnUpdateDelegate := Mesh.Update;
@@ -142,8 +167,10 @@ begin
   begin
     Renderer.Clear([cfColor, cfDepth], GetColor(40, 30, 130, 0), 1.0, 0);
 
-    Renderer.ApplyRenderPass(Mat.Technique[0].Pass[0]);
-    Renderer.RenderMesh(Mesh);
+    Renderer.ApplyRenderPass(PolyPass);
+    Renderer.RenderMesh(PolyMesh);
+    Renderer.ApplyRenderPass(LinePass);
+    Renderer.RenderMesh(LineMesh);
 
     if Core.Input.Pressed[vkNUMPAD6] or (Core.Input.MouseState.Buttons[mbLeft] = baDown) then speed := speed + 4;
     if Core.Input.Pressed[vkNUMPAD4] or (Core.Input.MouseState.Buttons[mbRight] = baDown) then speed := speed - 4;
@@ -151,16 +178,17 @@ begin
 
     if Core.Input.Pressed[vkALT] and Core.Input.Pressed[vkX] then App.Terminated := True;
     if Core.Input.MouseState.Buttons[mbLeft] = baDown then
-      Mesh.Point[1] := Vec2f(Core.Input.MouseState.X / 512 - 1, 1 - Core.Input.MouseState.Y / 512);
+      PolyMesh.Point[1] := Vec2f(Core.Input.MouseState.X / 512 - 1, 1 - Core.Input.MouseState.Y / 512);
 
     Core.Process();
   end;
 
-  Pass.VertexShader.Free();
-  Pass.FragmentShader.Free();
-  Pass.Free();
-  Image.Free();
-  Triangle.Free();
+  PolyPass.VertexShader.Free();
+  PolyPass.FragmentShader.Free();
+  PolyPass.Free();
+  PolyPass.Texture0.Free();
+  Line.Free();
+  Polygon.Free();
   Core.Free();
   Readln;
 end.

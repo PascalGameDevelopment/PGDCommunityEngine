@@ -243,7 +243,7 @@ end;
 function TCEBaseEntity.ResolveObjectLink(const PropertyName: string): TCEBaseEntity;
 begin
   Result := nil;
-  if not Assigned(FManager) then Exit;
+  if not Assigned(FManager) or not Assigned(FEntityLinkMap) then Exit;
   Result := FManager.Find(FEntityLinkMap[PropertyName]);
 //  if Assigned(Result) then
 //    FEntityLinkMap[PropertyName] := '';                 // TODO: Link was resolved so no need to store full name
