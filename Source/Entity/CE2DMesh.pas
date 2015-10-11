@@ -303,8 +303,11 @@ end;
 
 procedure TCEPolygonMesh.SetSoftness(Value: Single);
 begin
+  if (FThreshold <> 0) and (Value = 0) or (FThreshold = 0) and (Value <> 0) then
+    VertexBuffer.Status := tsMaxSizeChanged
+  else
+    VertexBuffer.Status := tsChanged;
   FThreshold := Value;
-  VertexBuffer.Status := tsChanged;
 end;
 
 procedure TCEPolygonMesh.SetColor(const Value: TCEColor);
@@ -373,11 +376,10 @@ begin
 end;
 
 procedure TCEPolygonMesh.FillVertexBuffer(Dest: Pointer);
-const
-  tris = 3;
-  EPSILON = 0.002;
 
 function Sharpness(dx, dy: Single): Single;
+const
+  EPSILON = 0.002;
 begin
   Result := 1-Ord((abs(dx) < EPSILON) or (abs(dy) < EPSILON) or (abs(abs(dx) - abs(dy)) < EPSILON))*0.7;
 end;
@@ -417,17 +419,22 @@ begin
     CalcVertex(VectorSub(FPoints^[i], N01), D01, VectorSub(FPoints^[i1], N12), D12, P2);
     VectorAdd(P4, FPoints^[i1], VectorSub(FPoints^[i1], P2));
 
-    Vec3f(Center.x, Center.y, 1, v^[i * tris*3].vec);
-    Vec3f(P1.x, P1.y, 1, v^[i * tris*3 + 1].vec);
-    Vec3f(P2.x, P2.y, 1, v^[i * tris*3 + 2].vec);
+    Vec3f(Center.x, Center.y, 1, v^[0].vec);
+    Vec3f(P1.x, P1.y, 1, v^[1].vec);
+    Vec3f(P2.x, P2.y, 1, v^[2].vec);
+    v := PtrOffs(v, SizeOf(v^[0]) * 3);
 
-    Vec3f(P3.x, P3.y, 0, v^[i * tris*3 + 3].vec);
-    Vec3f(P1.x, P1.y, 1, v^[i * tris*3 + 4].vec);
-    Vec3f(P2.x, P2.y, 1, v^[i * tris*3 + 5].vec);
+    if FThreshold > 0 then
+    begin
+      Vec3f(P3.x, P3.y, 0, v^[0].vec);
+      Vec3f(P1.x, P1.y, 1, v^[1].vec);
+      Vec3f(P2.x, P2.y, 1, v^[2].vec);
 
-    Vec3f(P3.x, P3.y, 0, v^[i * tris*3 + 6].vec);
-    Vec3f(P2.x, P2.y, 1, v^[i * tris*3 + 7].vec);
-    Vec3f(P4.x, P4.y, 0, v^[i * tris*3 + 8].vec);
+      Vec3f(P3.x, P3.y, 0, v^[3].vec);
+      Vec3f(P2.x, P2.y, 1, v^[4].vec);
+      Vec3f(P4.x, P4.y, 0, v^[5].vec);
+      v := PtrOffs(v, SizeOf(v^[0]) * 6);
+    end;
 
     D01 := D12;
     N01 := N12;
@@ -436,8 +443,8 @@ begin
     i1 := i1 + 1 - Count * Ord(i1 = Count-1);
     i2 := i2 + 1 - Count * Ord(i2 = Count-1);
   end;
-  FVerticesCount := Count * 3 * tris;
-  FPrimitiveCount := Count * tris;
+  FVerticesCount := Count * 3 * (1 + 2*Ord(FThreshold > 0));
+  FPrimitiveCount := Count * (1 + 2*Ord(FThreshold > 0));
   FVertexSize := SizeOf(v^[0]);
   VertexBuffer.Status := tsChanged;
 end;
