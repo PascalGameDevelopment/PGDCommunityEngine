@@ -87,6 +87,14 @@ type
   function LineIntersect(const AP1, AP2, BP1, BP2: TCEVector2f; out Hit: TCEVector2f): TIntersectResult;
   function RayIntersect(const AP1, ADir, BP1, BDir: TCEVector2f; out Hit: TCEVector2f): TIntersectResult;
   function SegmentIntersect(const AP1, AP2, BP1, BP2: TCEVector2f; out Hit: TCEVector2f): TIntersectResult;
+  // Signed area of a triangle > 0 if points specified in CCW order and < 0 otherwise
+  function SignedAreaX2(const A, B, C: TCEVector2f): Single;
+
+  function VectorDot(const V1, V2: TCEVector2f): Single; overload;
+  function VectorDot(const V1, V2: TCEVector3f): Single; overload;
+  function VectorCross(const V1, V2: TCEVector3f): TCEVector3f; overload;
+  function VectorReflect(const V, N: TCEVector2f): TCEVector2f; overload;
+  function VectorReflect(const V, N: TCEVector3f): TCEVector3f; overload;
 
 implementation
 
@@ -331,6 +339,47 @@ begin
     end else
       Result := irOutOfSegment;
   end;
+end;
+
+function SignedAreaX2(const A, B, C: TCEVector2f): Single;
+begin
+  Result := (B.x - A.x) * (C.y - A.y) + (B.y - A.y) * (C.x - A.x);
+end;
+
+function VectorDot(const V1, V2: TCEVector2f): Single; overload;
+begin
+  Result := V1.X*V2.X + V1.Y*V2.Y;
+end;
+
+function VectorDot(const V1, V2: TCEVector3f): Single; overload;
+begin
+  Result := V1.X*V2.X + V1.Y*V2.Y + V1.Z*V2.Z;
+end;
+
+function VectorCross(const V1, V2: TCEVector3f): TCEVector3f; overload;
+begin
+  Result.X := V1.Y*V2.Z - V1.Z*V2.Y;
+  Result.Y := V1.Z*V2.X - V1.X*V2.Z;
+  Result.Z := V1.X*V2.Y - V1.Y*V2.X;
+end;
+
+function VectorReflect(const V, N: TCEVector2f): TCEVector2f; overload;
+// N - reflecting surface's normal
+var d : Single;
+begin
+  d := -VectorDot(V, N) * 2;
+  Result.X := (d * N.X) + V.X;
+  Result.Y := (d * N.Y) + V.Y;
+end;
+
+function VectorReflect(const V, N: TCEVector3f): TCEVector3f; overload;
+// N - reflecting surface's normal
+var d : Single;
+begin
+  d := -VectorDot(V, N) * 2;
+  Result.X := (d * N.X) + V.X;
+  Result.Y := (d * N.Y) + V.Y;
+  Result.Z := (d * N.Z) + V.Z;
 end;
 
 end.
