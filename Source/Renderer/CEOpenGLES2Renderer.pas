@@ -150,7 +150,7 @@ begin
   {$IFDEF WINDOWS}
   if not DoInitGAPIWin(App) then Exit;
   {$ELSE}
-  raise Exception.Create('Not implemented for this platform yet');
+  raise Exception.Create  ('Not implemented for this platform yet');
   {$ENDIF}
   CELog.Log('Context succesfully created');
 
@@ -160,7 +160,8 @@ begin
   // Init GL settings
   glClearColor(0, 0, 0, 0);
   glEnable(GL_TEXTURE_2D);
-  glCullFace(GL_NONE);
+  //glCullFace(GL_FRONT);
+   glEnable(GL_CULL_FACE);
   glDepthFunc(GL_LEQUAL);
   glEnable(GL_DEPTH_TEST);
 
