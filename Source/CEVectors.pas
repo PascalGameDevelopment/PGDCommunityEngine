@@ -84,17 +84,22 @@ type
   function VectorScale(const V: TCEVector3f; const Factor: Single): TCEVector3f; overload;
   function VectorMagnitude(const V: TCEVector2f): Single; overload;
   function VectorMagnitude(const V: TCEVector3f): Single; overload;
+  function VectorMagnitudeSq(const V: TCEVector2f): Single; overload;
+  function VectorMagnitudeSq(const V: TCEVector3f): Single; overload;
   function LineIntersect(const AP1, AP2, BP1, BP2: TCEVector2f; out Hit: TCEVector2f): TIntersectResult;
   function RayIntersect(const AP1, ADir, BP1, BDir: TCEVector2f; out Hit: TCEVector2f): TIntersectResult;
   function SegmentIntersect(const AP1, AP2, BP1, BP2: TCEVector2f; out Hit: TCEVector2f): TIntersectResult;
-  // Signed area of a triangle > 0 if points specified in CCW order and < 0 otherwise
-  function SignedAreaX2(const A, B, C: TCEVector2f): Single;
+  // Signed area of ABC triangle > 0 if points specified in CCW order and < 0 otherwise
+  function SignedAreaX2(const A, B, C: TCEVector2f): Single; overload;
+  // Signed area of a triangle with edges AB and AC > 0 if points specified in CCW order and < 0 otherwise
+  function SignedAreaX2(const AB, AC: TCEVector2f): Single; overload;
 
   function VectorDot(const V1, V2: TCEVector2f): Single; overload;
   function VectorDot(const V1, V2: TCEVector3f): Single; overload;
   function VectorCross(const V1, V2: TCEVector3f): TCEVector3f; overload;
   function VectorReflect(const V, N: TCEVector2f): TCEVector2f; overload;
   function VectorReflect(const V, N: TCEVector3f): TCEVector3f; overload;
+  function GetNearestPointIndex(const Points: P2DPointArray; Count: Integer; const Point: TCEVector2f): Integer;
 
 implementation
 
@@ -279,6 +284,16 @@ begin
   Result := Sqrt(Sqr(V.X) + Sqr(V.Y) + Sqr(V.Z));
 end;
 
+function VectorMagnitudeSq(const V: TCEVector2f): Single; overload;
+begin
+  Result := Sqr(V.X) + Sqr(V.Y);
+end;
+
+function VectorMagnitudeSq(const V: TCEVector3f): Single; overload;
+begin
+  Result := Sqr(V.X) + Sqr(V.Y) + Sqr(V.Z);
+end;
+
 const
   EPSILON = 0.000001;
 
@@ -341,9 +356,14 @@ begin
   end;
 end;
 
-function SignedAreaX2(const A, B, C: TCEVector2f): Single;
+function SignedAreaX2(const A, B, C: TCEVector2f): Single; overload;
 begin
-  Result := (B.x - A.x) * (C.y - A.y) + (B.y - A.y) * (C.x - A.x);
+  Result := (B.x - A.x) * (C.y - A.y) - (B.y - A.y) * (C.x - A.x);
+end;
+
+function SignedAreaX2(const AB, AC: TCEVector2f): Single; overload;
+begin
+  Result := AB.x * AC.y - AB.y * AC.x;
 end;
 
 function VectorDot(const V1, V2: TCEVector2f): Single; overload;
@@ -380,6 +400,27 @@ begin
   Result.X := (d * N.X) + V.X;
   Result.Y := (d * N.Y) + V.Y;
   Result.Z := (d * N.Z) + V.Z;
+end;
+
+function GetNearestPointIndex(const Points: P2DPointArray; Count: Integer; const Point: TCEVector2f): Integer;
+var
+  i: Integer;
+  dist, maxDist: Single;
+  P: ^TCEVector2f;
+begin
+  Result := 0;
+  P := @Points^[0];
+  maxDist := VectorMagnitudeSq(VectorSub(P^, Point));
+  for i := 1 to Count - 1 do
+  begin
+    Inc(P);
+    Dist := VectorMagnitudeSq(VectorSub(P^, Point));
+    if Dist < maxDist then
+    begin
+      Result := i;
+      maxDist := Dist;
+    end;
+  end;
 end;
 
 end.
