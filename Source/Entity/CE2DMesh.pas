@@ -56,6 +56,7 @@ type
     property Count: Integer read FCount write SetCount;
     // Array of points in multi-segment line
     property Point[Index: Integer]: TCEVector2f read GetPoint write SetPoint;
+    property Points: P2DPointArray read FPoints;
   end;
 
   // 2D antialiased multi-segment line mesh class
@@ -119,7 +120,10 @@ type
     vec: TCEVector4f;
     vec2: TCEVector4f;
   end;
+  PLineVertex = ^TLineVertex;
   TLineVertexBuffer = array[0..$FFFF] of TLineVertex;
+
+  TCVRes = (rIntersect, rCoDir, rInvDir, rSharp);
 
 procedure TCECircleMesh.FillVertexBuffer(Dest: Pointer);
 const
@@ -209,9 +213,6 @@ begin
   Dir.Y := Dist * Dir.Y;
 end;
 
-type
-  TCVRes = (rIntersect, rCoDir, rInvDir, rSharp);
-
 function CalcVertex(const P1, D1, P2, D2: TCEVector2f; Width: Single; out Res: TCEVector2f): TCVRes;
 var
   Dist: Single;
@@ -230,56 +231,58 @@ begin
   end else if VectorDot(D1, D2) < 0 then
   begin
     Res := VectorAdd(P2, D2);
+    Res := P2;
     Result := rInvDir;
   end else begin
-    Res := VectorScale(VectorAdd(P1, P2), 0.5);
+    Res := P2;
     Result := rCoDir;
   end;
 end;
 
 procedure TCELineMesh.FillVertexBuffer(Dest: Pointer);
-
+const
+  CUT_ANGLE = 15/180*pi;
+  //CUT_COS = Cos(CUT_ANGLE);
+  //CUT_WIDTH = Cos(CUT_ANGLE/2)/Sin(CUT_ANGLE/2);
 var
-  v: ^TLineVertexBuffer;
   w, oow, dist: Single;
-  Dir1, Dir2, Norm1, Norm2: TCEVector2f;
+  Dir1, Dir2: TCEVector2f;
 
-procedure PutVertexDegen(const P1, P2, P, Dir: TCEVector2f; var Dest: TLineVertex);
-var
-  AD: TCEVector2f;
+procedure PutVertexPair(const A, B, P1, P2, Dir: TCEVector2f; var Dest: PLineVertex);
+var d: Single;
 begin
-  AD := VectorSub(P, Vec2f(P2.x + Dir.x, P2.y + Dir.y));
-  Vec4f(P.x, P.y, P2.x, P2.y, Dest.vec);
-  Vec4f(P2.x + Dir.x - Dir.x * VectorMagnitude(AD) * oow,
-        P2.y + Dir.y - Dir.y * VectorMagnitude(AD) * oow, P1.x, P1.y, Dest.vec2);
+  d := ((P1.x - B.x) * Dir.x + (P1.y - B.y) * Dir.y) * oow * oow;
+  Vec4f(P1.x, P1.y, B.x, B.y, Dest^.vec);
+  Vec4f(B.x + Dir.x * d, B.y + Dir.y * d, A.x, A.y, Dest^.vec2);
+  Inc(Dest);
+  d := ((P2.x - B.x) * Dir.x + (P2.y - B.y) * Dir.y) * oow * oow;
+  Vec4f(P2.x, P2.y, B.x, B.y, Dest^.vec);
+  Vec4f(B.x + Dir.x * d, B.y + Dir.y * d, A.x, A.y, Dest^.vec2);
+  Inc(Dest);
 end;
 
-procedure CalcSegment(const P0, P1, P2: TCEVector2f);
+procedure CalcSegment(const P0, P1, P2: TCEVector2f; ind: Integer; var Dest: PLineVertex);
 var
-  cvRes: TCVRes;
-  P3, P4: TCEVector2f;
+  P3, P4, Norm1, Norm2: TCEVector2f;
 begin
-  Norm1 := Vec2f(-Dir1.y, Dir1.x);
   CalcDir(P1, P2, w, Dir2, dist);
+  Norm1 := Vec2f(-Dir1.y, Dir1.x);
   Norm2 := Vec2f(-Dir2.y, Dir2.x);
-  cvRes := CalcVertex(VectorSub(P0, Norm1), Dir1, VectorSub(P1, Norm2), Dir2, FWidth * 80, P3);
-  VectorAdd(P4, P1, VectorSub(P1, P3));
-  dist := (P4.x - P1.x) * Dir1.x + (P4.y - P1.y) * Dir1.y;
-  //if virt then dist := 1;
-  Vec4f(P4.x, P4.y, P1.x, P1.y, v^[FVerticesCount].vec);
-  Vec4f(P1.x + Dir1.x * dist * oow * oow,
-        P1.y + Dir1.y * dist * oow * oow,
-        P0.x, P0.y, v^[FVerticesCount].vec2);
 
-  dist := (P3.x - P1.x) * Dir1.x + (P3.y - P1.y) * Dir1.y;
-  //if virt then dist := 1;
-  Vec4f(P3.x, P3.y, P1.x, P1.y, v^[FVerticesCount+1].vec);
-  Vec4f(P1.x + Dir1.x * dist * oow * oow,
-    P1.y + Dir1.y * dist * oow * oow,
-    P0.x, P0.y, v^[FVerticesCount + 1].vec2);
+  // 2*w = h * sin(a/2)
+  // d = 2*w/sin(a/2)*cos(a/2)
 
-  PutVertexDegen(P1 ,P2, P4, Dir2, v^[FVerticesCount + 2]);
-  PutVertexDegen(P1 ,P2, P3, Dir2, v^[FVerticesCount + 3]);
+  if CalcVertex(VectorSub(P0, Norm1), Dir1, VectorSub(P1, Norm2), Dir2, FWidth * 2 * Cos(CUT_ANGLE/2)/Sin(CUT_ANGLE/2), P3) <> rIntersect then
+    VectorAdd(P4, P1, VectorSub(P1, P3))
+  else
+    VectorAdd(P4, P1, VectorSub(P1, P3));
+    //VectorAdd(P4, P1, Norm1);
+
+  if ind = 0 then
+    PutVertexPair(P0, P1, P4, P3, Dir1, Dest)
+  else
+    PutVertexPair(P0, P1, P3, P4, Dir1, Dest);
+  PutVertexPair(P1, P2, P4, P3, Dir2, Dest);
 
   Inc(FVerticesCount, 4);
   Inc(FPrimitiveCount, 4);
@@ -288,17 +291,9 @@ end;
 
 var
   i: Integer;
-  P1, P2, P3, P4, Tmp1, Tmp2: TCEVector2f;
-
-procedure PutVertex(Ind: Integer; P, Dir: TCEVector2f; var Dest: TLineVertex);
-var
-  AD: TCEVector2f;
-begin
-  AD := VectorSub(P, Vec2f(FPoints^[Ind].x - Dir.x, FPoints^[Ind].y - Dir.y));
-  Vec4f(P.x, P.y, FPoints^[Ind + 1].x, FPoints^[Ind + 1].y, Dest.vec);
-  Vec4f(FPoints^[Ind].x - Dir.x + Dir.x * VectorMagnitude(AD) * oow,
-    FPoints^[Ind].y - Dir.y + Dir.y * VectorMagnitude(AD) * oow, FPoints^[Ind].x, FPoints^[Ind].y, Dest.vec2);
-end;
+  v: PLineVertex;
+  Tmp1, Tmp2: TCEVector2f;
+  sa: single;
 
 begin
   FVerticesCount := 0;
@@ -310,55 +305,46 @@ begin
   oow := 1 / w;
 
   // First two points
-  CalcDir(FPoints^[0], FPoints^[0 + 1], w, Dir1, dist);
-  Norm1 := Vec2f(-Dir1.y, Dir1.x);
-  P2 := Vec2f(FPoints^[0].x - (Dir1.x + Norm1.x), FPoints^[0].y - (Dir1.y + Norm1.y));
-  P1 := Vec2f(FPoints^[0].x - (Dir1.x - Norm1.x), FPoints^[0].y - (Dir1.y - Norm1.y));
-
-  Vec4f(P1.x, P1.y, FPoints^[1].x, FPoints^[1].y, v^[0].vec);
-  Vec4f(FPoints^[0].x - Dir1.x, FPoints^[0].y - Dir1.y, FPoints^[0].x, FPoints^[0].y, v^[0].vec2);
-
-  Vec4f(P2.x, P2.y, FPoints^[1].x, FPoints^[1].y, v^[1].vec);
-  Vec4f(FPoints^[0].x - Dir1.x, FPoints^[0].y - Dir1.y, FPoints^[0].x, FPoints^[0].y, v^[1].vec2);
+  CalcDir(FPoints^[0], FPoints^[1], w, Dir1, dist);
+  Tmp2 := Vec2f(-Dir1.y, Dir1.x);
+  VectorSub(Tmp1, FPoints^[0], Dir1);
+  PutVertexPair(FPoints^[0], FPoints^[1], VectorAdd(Tmp1, Tmp2), VectorSub(Tmp1, Tmp2), Dir1, v);
   FVerticesCount := 2;
 
   i := 0;
   while i < Count - 2 do
   begin
-    VectorSub(Tmp1, FPoints^[i+1], FPoints^[i+0]);
-    VectorSub(Tmp2, FPoints^[i+2], FPoints^[i+1]);
-    if VectorDot(Tmp1, Tmp2) > 0 then
-      CalcSegment(FPoints^[i + 0], FPoints^[i + 1], FPoints^[i + 2])
+    VectorSub(Tmp1, FPoints^[i + 0], FPoints^[i + 1]);
+    VectorSub(Tmp2, FPoints^[i + 2], FPoints^[i + 1]);
+    if VectorDot(Tmp1, Tmp2) < 0 then
+      CalcSegment(FPoints^[i + 0], FPoints^[i + 1], FPoints^[i + 2], 0, v)
     else begin
       VectorNormalize(Tmp1, Tmp1);
       VectorNormalize(Tmp2, Tmp2);
       Dist := VectorDot(Tmp1, Tmp2);
-      if Dist < -0.9 then
-        Tmp2 := Vec2f(-(Tmp1.y-Tmp2.y)*0.5 * w * 0.01, (Tmp1.x-Tmp2.x)*0.5 * w * 0.01)
+      if Dist < Cos(CUT_ANGLE) then
+        CalcSegment(FPoints^[i + 0], FPoints^[i + 1], FPoints^[i + 2], 0, v)
+        //VectorSub(Tmp2, Tmp2, Tmp1);
+        //VectorNormalize(Tmp2, Tmp2, w * 0.001);
       else begin
-        VectorAdd(Tmp2, Tmp1, Tmp2);
-        VectorNormalize(Tmp2, Tmp2, w * 0.01);
+        if SignedAreaX2(Tmp1, Tmp2) > 0 then
+          sa := -1 else sa := 1;
+        Tmp2 := Vec2f(-(-Tmp1.y - Tmp2.y) * 0.5 * w * 0.001 * sa, (-Tmp1.x - Tmp2.x) * 0.5 * w * 0.001 * sa);
+        VectorSub(Tmp1, FPoints^[i + 1], Tmp2);
+        VectorAdd(Tmp2, FPoints^[i + 1], Tmp2);
+        CalcSegment(FPoints^[i + 0], Tmp1, Tmp2, Ord(sa > 0)*0, v);
+        CalcSegment(Tmp1, Tmp2, FPoints^[i + 2], Ord(sa > 0)*2, v);
       end;
-      //if SignedAreaX2(FPoints^[i + 0], FPoints^[i + 1], FPoints^[i + 2]) < 0 then
-      VectorSub(Tmp1, FPoints^[i + 1], Tmp2);
-      VectorAdd(Tmp2, FPoints^[i + 1], Tmp2);
-      //else
-//        VectorAdd(Tmp1, FPoints^[i + 1], VectorScale(Norm1, 0.01));
-      CalcSegment(FPoints^[i + 0], Tmp1, Tmp2);
-      CalcSegment(Tmp1, Tmp2, FPoints^[i + 2]);
     end;
     Inc(i);
   end;
-  CalcDir(FPoints^[i], FPoints^[i+1], w, Dir2, dist);
-  Norm2 := Vec2f(-Dir2.y, Dir2.x);
-  Vec4f(FPoints^[i+1].x + Dir2.x + Norm2.x, FPoints^[i+1].y + Dir2.y + Norm2.y, FPoints^[i+1].x, FPoints^[i+1].y, v^[FVerticesCount].vec);
-  Vec4f(FPoints^[i+1].x + Dir2.x, FPoints^[i+1].y + Dir2.y, FPoints^[i].x, FPoints^[i].y, v^[FVerticesCount].vec2);
-  Vec4f(FPoints^[i+1].x + Dir2.x - Norm2.x, FPoints^[i+1].y + Dir2.y - Norm2.y, FPoints^[i+1].x, FPoints^[i+1].y, v^[FVerticesCount+1].vec);
-  Vec4f(FPoints^[i+1].x + Dir2.x, FPoints^[i+1].y + Dir2.y, FPoints^[i].x, FPoints^[i].y, v^[FVerticesCount+1].vec2);
+  CalcDir(FPoints^[i], FPoints^[i + 1], w, Dir2, dist);
+  VectorAdd(Tmp1, FPoints^[i+1], Dir2);
+  Tmp2 := Vec2f(-Dir2.y, Dir2.x);
+  PutVertexPair(FPoints^[i], FPoints^[i+1], VectorAdd(Tmp1, Tmp2), VectorSub(Tmp1, Tmp2), Dir2, v);
 
   Inc(FVerticesCount, 2);
   Inc(FPrimitiveCount, 2);
-  //FPrimitiveCount := 2+2+2;
   FVertexSize := SizeOf(TLineVertex);
   VertexBuffer.Status := dsChanged;
 end;

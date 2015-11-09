@@ -36,7 +36,7 @@ uses
   CEBaseTypes, CEMessage, CEInputMessage, CEVectors, CEImageResource, CEMaterial, CECore;
 
 type
-  // Example mesh class
+    // Example mesh class
   TCERotatingTriangleMesh = class(TCEMesh)
   private
     FAngle: Single;
@@ -83,7 +83,7 @@ function CreateRenderPass(EntityManager: TCEGameEntityManager; AlphaBlend: Boole
 var
   Image: TCEImageResource;
 begin
-Result := TCERenderPass.Create(EntityManager);
+  Result := TCERenderPass.Create(EntityManager);
   if TextureUrl <> '' then
   begin
     Image := TCEImageResource.CreateFromUrl(TextureUrl);
@@ -111,6 +111,8 @@ var
   PolyPass, LinePass: TCERenderPass;
   Sh: TCETextResource;
   Polygon, Line: TRotatingTriangle;
+  ClickPoint: TCEVector2f;
+  Ind: Integer;
 begin
   {$IF Declared(ReportMemoryLeaksOnShutdown)}
   ReportMemoryLeaksOnShutdown := True;
@@ -127,14 +129,16 @@ begin
   Line := TRotatingTriangle.Create(Core.EntityManager);
   LineMesh := TCELineMesh.Create(Core.EntityManager);
   LineMesh.Softness := 2 / 1024 * 1.5;
-  LineMesh.Width := 1 / 1024 * 100.2;
-  LineMesh.Count := 6;
+  LineMesh.Width := 1 / 1024 * 63;
+  LineMesh.Count := 3;
   LineMesh.Point[0] := Vec2f(-0.5,  0.3);
-  LineMesh.Point[1] := Vec2f( 0.3, -0.5);
+  LineMesh.Point[2] := Vec2f(0.4,  0.35);
+  LineMesh.Point[1] := Vec2f(0.5,  0.3);
+  {LineMesh.Point[1] := Vec2f( 0.3, -0.5);
   LineMesh.Point[2] := Vec2f(-0.3, -0.3);
   LineMesh.Point[3] := Vec2f( 0.4,  0.0);
-  LineMesh.Point[4] := Vec2f( 0.3,  0.3);
-  LineMesh.Point[5] := Vec2f( 0.2,  0.6);
+  LineMesh.Point[4] := Vec2f( 0.5,  0.3);
+  LineMesh.Point[5] := Vec2f( 0.2,  0.6);}
 
   PolyMesh := TCEPolygonMesh.Create(Core.EntityManager);
   PolyMesh.Count := 4;
@@ -142,13 +146,15 @@ begin
   PolyMesh.Point[2] := Vec2f( 0.0,  -0.4);
   PolyMesh.Point[1] := Vec2f( 0.2, 0.4);
   PolyMesh.Point[0] := Vec2f(-0.3, 0.5);
-  PolyMesh.Softness := 2 / 1024*1.5;
+  PolyMesh.Softness := 2 / 1024 * 1.5;
   PolyMesh.Color := GetColor(100, 200, 150, 255);
 
-  PolyPass := CreateRenderPass(Core.EntityManager, true, '',
-    GetPathRelativeToFile(ParamStr(0), '../Assets/vs_poly.glsl'), GetPathRelativeToFile(ParamStr(0), '../Assets/fs_poly.glsl'));
-  LinePass := CreateRenderPass(Core.EntityManager, true, '',
-    GetPathRelativeToFile(ParamStr(0), '../Assets/vs_line.glsl'), GetPathRelativeToFile(ParamStr(0), '../Assets/fs_line.glsl'));
+  PolyPass := CreateRenderPass(Core.EntityManager, False, '',
+  GetPathRelativeToFile(ParamStr(0), '../Assets/vs_poly.glsl'),
+  GetPathRelativeToFile(ParamStr(0), '../Assets/fs_poly.glsl'));
+  LinePass := CreateRenderPass(Core.EntityManager, False, '',
+  GetPathRelativeToFile(ParamStr(0), '../Assets/vs_line.glsl'),
+  GetPathRelativeToFile(ParamStr(0), '../Assets/fs_line.glsl'));
   Mat := TCEMaterial.Create(Core.EntityManager);
   Mat.TotalTechniques := 1;
   Mat.Technique[0] := TCERenderTechnique.Create(Core.EntityManager);
@@ -165,7 +171,7 @@ begin
 
   while not App.Terminated do
   begin
-    Renderer.Clear([cfColor, cfDepth], GetColor(40, 30, 130, 0), 1.0, 0);
+    Renderer.Clear([cfColor, cfDepth], GetColor(40, 130, 130, 0), 1.0, 0);
 
     Renderer.ApplyRenderPass(PolyPass);
     Renderer.RenderMesh(PolyMesh);
@@ -178,8 +184,11 @@ begin
 
     if Core.Input.Pressed[vkALT] and Core.Input.Pressed[vkX] then App.Terminated := True;
     if Core.Input.MouseState.Buttons[mbLeft] = baDown then
-      PolyMesh.Point[1] := Vec2f(Core.Input.MouseState.X / 512 - 1, 1 - Core.Input.MouseState.Y / 512);
-
+    begin
+      ClickPoint := Vec2f(Core.Input.MouseState.X / 512 - 1, 1 - Core.Input.MouseState.Y / 512);
+      Ind := GetNearestPointIndex(LineMesh.Points, LineMesh.Count, ClickPoint);
+      LineMesh.Point[Ind] := ClickPoint;
+    end;
     Core.Process();
   end;
 
