@@ -241,9 +241,9 @@ end;
 
 procedure TCELineMesh.FillVertexBuffer(Dest: Pointer);
 const
-  CUT_ANGLE = 15/180*pi;
-  //CUT_COS = Cos(CUT_ANGLE);
-  //CUT_WIDTH = Cos(CUT_ANGLE/2)/Sin(CUT_ANGLE/2);
+  //CUT_ANGLE = 15/180*pi;
+  COS_CUT_ANGLE = 0.96592582628906831;
+  CTG_CUT_ANGLE_2 = 2 * 7.5957541127251513;  //2 * Cos(CUT_ANGLE/2)/Sin(CUT_ANGLE/2)
 var
   w, oow, dist: Single;
   Dir1, Dir2: TCEVector2f;
@@ -272,11 +272,11 @@ begin
   // 2*w = h * sin(a/2)
   // d = 2*w/sin(a/2)*cos(a/2)
 
-  if CalcVertex(VectorSub(P0, Norm1), Dir1, VectorSub(P1, Norm2), Dir2, FWidth * 2 * Cos(CUT_ANGLE/2)/Sin(CUT_ANGLE/2), P3) <> rIntersect then
-    VectorAdd(P4, P1, VectorSub(P1, P3))
-  else
+  CalcVertex(VectorSub(P0, Norm1), Dir1, VectorSub(P1, Norm2), Dir2, FWidth * CTG_CUT_ANGLE_2, P3);// <> rIntersect then
     VectorAdd(P4, P1, VectorSub(P1, P3));
-    //VectorAdd(P4, P1, Norm1);
+  //else
+  //if ind = 0 then
+//    VectorAdd(P4, P1, Norm1);
 
   if ind = 0 then
     PutVertexPair(P0, P1, P4, P3, Dir1, Dest)
@@ -321,12 +321,10 @@ begin
     else begin
       VectorNormalize(Tmp1, Tmp1);
       VectorNormalize(Tmp2, Tmp2);
-      Dist := VectorDot(Tmp1, Tmp2);
-      if Dist < Cos(CUT_ANGLE) then
+{      Dist := VectorDot(Tmp1, Tmp2);       //TODO:optimize
+      if Dist < COS_CUT_ANGLE then
         CalcSegment(FPoints^[i + 0], FPoints^[i + 1], FPoints^[i + 2], 0, v)
-        //VectorSub(Tmp2, Tmp2, Tmp1);
-        //VectorNormalize(Tmp2, Tmp2, w * 0.001);
-      else begin
+      else begin}
         if SignedAreaX2(Tmp1, Tmp2) > 0 then
           sa := -1 else sa := 1;
         Tmp2 := Vec2f(-(-Tmp1.y - Tmp2.y) * 0.5 * w * 0.001 * sa, (-Tmp1.x - Tmp2.x) * 0.5 * w * 0.001 * sa);
@@ -334,7 +332,7 @@ begin
         VectorAdd(Tmp2, FPoints^[i + 1], Tmp2);
         CalcSegment(FPoints^[i + 0], Tmp1, Tmp2, Ord(sa > 0)*0, v);
         CalcSegment(Tmp1, Tmp2, FPoints^[i + 2], Ord(sa > 0)*2, v);
-      end;
+      //end;
     end;
     Inc(i);
   end;
