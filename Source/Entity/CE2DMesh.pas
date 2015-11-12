@@ -56,6 +56,7 @@ type
     property Count: Integer read FCount write SetCount;
     // Array of points in multi-segment line
     property Point[Index: Integer]: TCEVector2f read GetPoint write SetPoint;
+    // Points as pointer to array
     property Points: P2DPointArray read FPoints;
   end;
 
@@ -81,13 +82,8 @@ type
   private
     FThreshold: Single;
     FColor: TCEColor;
-    FCount: Integer;
-    FPoints: P2DPointArray;
     procedure SetSoftness(Value: Single);
     procedure SetColor(const Value: TCEColor);
-    procedure SetCount(Value: Integer);
-    function GetPoint(Index: Integer): TCEVector2f;
-    procedure SetPoint(Index: Integer; const Value: TCEVector2f);
   public
     destructor Destroy; override;
     procedure DoInit(); override;
@@ -97,10 +93,6 @@ type
     property Softness: Single read FThreshold write SetSoftness;
     // Fill color
     property Color: TCEColor read FColor write SetColor;
-    // Number of points
-    property Count: Integer read FCount write SetCount;
-    // Array of points in polygon
-    property Point[Index: Integer]: TCEVector2f read GetPoint write SetPoint;
   end;
 
   // Vertex buffer type with position element
@@ -370,25 +362,6 @@ procedure TCEPolygonMesh.SetColor(const Value: TCEColor);
 begin
   FColor := Value;
   VertexBuffer.Status := dsChanged;
-end;
-
-procedure TCEPolygonMesh.SetCount(Value: Integer);
-begin
-  if FCount = Value then Exit;
-  FCount := Value;
-  ReallocMem(FPoints, FCount * SizeOf(TCEVector2f));
-end;
-
-function TCEPolygonMesh.GetPoint(Index: Integer): TCEVector2f;
-begin
-  Assert((Index >= 0) and (Index < Count), 'Invalid index');
-  Result := FPoints^[Index];
-end;
-
-procedure TCEPolygonMesh.SetPoint(Index: Integer; const Value: TCEVector2f);
-begin
-  Assert((Index >= 0) and (Index < Count), 'Invalid index');
-  FPoints^[Index] := Value;
 end;
 
 destructor TCEPolygonMesh.Destroy;
