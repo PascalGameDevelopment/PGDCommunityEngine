@@ -11,6 +11,7 @@ void main() {
     float distSq = (dat.x*dat.x + dat.y*dat.y);
     float dist = inversesqrt(min(endDist, distSq + distMask));
     float alpha = width.y*(dist*dat.z - width.x);
-    //gl_FragColor = vec4(1.0, 1.0, 1.0, alpha);
-    gl_FragColor = alpha;
+    gl_FragColor = vec4(1.0, 1.0, 1.0, alpha);
+    //gl_FragColor = alpha;
+    //gl_FragColor = pos;
 }
