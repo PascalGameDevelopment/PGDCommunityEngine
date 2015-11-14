@@ -149,10 +149,10 @@ begin
   PolyMesh.Softness := 2 / 1024 * 1.5;
   PolyMesh.Color := GetColor(100, 200, 150, 255);
 
-  PolyPass := CreateRenderPass(Core.EntityManager, False, '',
+  PolyPass := CreateRenderPass(Core.EntityManager, true, '',
   GetPathRelativeToFile(ParamStr(0), '../Assets/vs_poly.glsl'),
   GetPathRelativeToFile(ParamStr(0), '../Assets/fs_poly.glsl'));
-  LinePass := CreateRenderPass(Core.EntityManager, False, '',
+  LinePass := CreateRenderPass(Core.EntityManager, true, '',
   GetPathRelativeToFile(ParamStr(0), '../Assets/vs_line.glsl'),
   GetPathRelativeToFile(ParamStr(0), '../Assets/fs_line.glsl'));
   Mat := TCEMaterial.Create(Core.EntityManager);
@@ -186,8 +186,8 @@ begin
     if Core.Input.MouseState.Buttons[mbLeft] = baDown then
     begin
       ClickPoint := Vec2f(Core.Input.MouseState.X / 512 - 1, 1 - Core.Input.MouseState.Y / 512);
-      Ind := GetNearestPointIndex(LineMesh.Points, LineMesh.Count, ClickPoint);
-      LineMesh.Point[Ind] := ClickPoint;
+      Ind := GetNearestPointIndex(PolyMesh.Points, PolyMesh.Count, ClickPoint);
+      PolyMesh.Point[Ind] := ClickPoint;
     end;
     Core.Process();
   end;

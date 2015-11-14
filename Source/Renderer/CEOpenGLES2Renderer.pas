@@ -55,7 +55,6 @@ type
     PhaseLocation: TGLint;
 
     VertexData: Pointer;                  // TODO: eliminate
-    VBO: GLUInt;
 
     Shaders: TGLSLShaderList;
     CurShader: TCEGLSLShader;
@@ -111,10 +110,10 @@ begin
     glGetShaderiv(Shader, GL_INFO_LOG_LENGTH, @len);
     if len > 0 then
     begin
-      getmem(Buffer, len + 1);
+      GetMem(Buffer, len + 1);
       glGetShaderInfoLog(Shader, len, nil, Buffer);
-      CELog.Error(ShaderType + ': ' + Buffer);
-      freemem(Buffer);
+      CELog.Error(ShaderType + ': ' + string(Buffer));
+      FreeMem(Buffer);
     end;
   end;
 end;
@@ -161,7 +160,7 @@ begin
   glClearColor(0, 0, 0, 0);
   glEnable(GL_TEXTURE_2D);
   //glCullFace(GL_FRONT);
-   glEnable(GL_CULL_FACE);
+  glEnable(GL_CULL_FACE);
   glDepthFunc(GL_LEQUAL);
   glEnable(GL_DEPTH_TEST);
 
@@ -307,6 +306,7 @@ end;
 
 function GetGLType(Value: TAttributeDataType): GLenum;
 begin
+  Result := GL_FLOAT;
   case Value of
     adtShortint: Result := GL_BYTE;
     adtByte: Result := GL_UNSIGNED_BYTE;

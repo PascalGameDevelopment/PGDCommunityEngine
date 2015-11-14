@@ -298,7 +298,7 @@ end;
 procedure TCEBaseEntity.InternalInit;
 begin
   Assert((not Assigned(FParent)) or (FParent.FManager = FManager), 'Entity manager should be same as parent''s');
-  FName := Copy(ClassName, STRING_INDEX_BASE+1, Length(ClassName)-1);
+  FName := Copy(AnsiString(ClassName), STRING_INDEX_BASE+1, Length(ClassName)-1);
   FPropertiesInSync := True;
   DoInit();
 end;
@@ -479,7 +479,7 @@ begin
   EntityClass := FManager.GetEntityClass(s);
   if EntityClass = nil then
   begin
-    CELog.Error(ClassName + '.LoadItem: Unknown item class "' + s + '". Substitued by TItem');
+    CELog.Error(ClassName + '.LoadItem: Unknown item class "' + string(s) + '". Substitued by TItem');
     EntityClass := TCEBaseEntity;  // TPropertyEntity;
   end;
 

@@ -160,7 +160,7 @@ end;
 function TCERenderTechnique.GetPass(Index: Integer): TCERenderPass;
 begin
   Assert(Index < TotalPasses);
-  Assert(Length(PassesCache) = TotalPasses, ClassName() + '("' + GetFullName() + '")');
+  Assert(Length(PassesCache) = TotalPasses, ClassName() + '("' + string(GetFullName()) + '")');
   if Assigned(PassesCache[Index]) then
     Result := PassesCache[Index]
   else begin
@@ -171,7 +171,10 @@ end;
 
 procedure TCERenderTechnique.SetPass(Index: Integer; const Value: TCERenderPass);
 begin
-  SetObjectLink(PassPropertyName(Index), IFF(Assigned(Value), Value.GetFullName, ''));
+  if Assigned(Value) then
+    SetObjectLink(PassPropertyName(Index), Value.GetFullName)
+  else
+    SetObjectLink(PassPropertyName(Index), '')
 end;
 
 { TCEMaterial }
@@ -193,7 +196,10 @@ end;
 
 procedure TCEMaterial.SetTechnique(Index: Integer; const Value: TCERenderTechnique);
 begin
-  SetObjectLink(TechPropertyName(Index), IFF(Assigned(Value), Value.GetFullName, ''));
+  if Assigned(Value) then
+    SetObjectLink(TechPropertyName(Index), Value.GetFullName)
+  else
+    SetObjectLink(TechPropertyName(Index), '');
 end;
 
 function TCEMaterial.GetTechniqueByLOD(Lod: Single): TCERenderTechnique;

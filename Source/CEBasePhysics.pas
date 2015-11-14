@@ -38,8 +38,6 @@ type
     {Protected declarations}
   public
     {Public declarations}
-  published
-    {Published declarations}
   end;
 
 implementation

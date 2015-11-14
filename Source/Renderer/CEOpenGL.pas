@@ -217,7 +217,7 @@ begin
       Res.SetBuffer(PAnsiChar(@Buf[0]), Len)
     else begin
       SetString(Str, PAnsiChar(@Buf[0]), Len div SizeOf(Buf[0]));
-      Res.Text := Res.Text + Str;
+      Res.Text := Res.Text + AnsiString(Str);
     end;
     Len := Stream.Read(Buf, BufSize);
   end;
