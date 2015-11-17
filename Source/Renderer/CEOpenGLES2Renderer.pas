@@ -33,7 +33,7 @@ interface
 
 uses
   CEBaseTypes, CEVectors,
-  CEBaseRenderer, CEBaseApplication, CEMesh, CEMaterial, CEOpenGL, CEUniformsManager,
+  CEBaseRenderer, CEBaseApplication, CEMesh, CEMaterial,
   {$IFDEF MOBILE}
     gles20,
   {$ELSE}                                     // Use emulation layer for desktops
@@ -42,7 +42,7 @@ uses
   {$IFDEF WINDOWS}
   Windows,
   {$ENDIF}
-  CELog;
+  CEOpenGL, CEUniformsManager;
 
 type
   TCEOpenGL4Renderer = class(TCEBaseRenderer)
@@ -95,7 +95,7 @@ type
 implementation
 
 uses
-  CECommon, CEImageResource;
+  CECommon, CEImageResource, CELog;
 
 function PrintShaderInfoLog(Shader: TGLUint; ShaderType: string): Boolean;
 var

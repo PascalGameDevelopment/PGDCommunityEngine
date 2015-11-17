@@ -31,7 +31,10 @@ program wintest;
 {$APPTYPE CONSOLE}
 
 uses
-  CEWindowsApplication, CEBaseRenderer, CEOpenGLES2Renderer, CEBaseInput, CEOSMessageInput,
+  CEWindowsApplication, CEBaseRenderer,
+  CEOpenGLES2Renderer,
+  //CEOpenGL4Renderer,
+  CEBaseInput, CEOSMessageInput,
   CEMesh, CECommon, CEOSUtils, CEResource, CEGameEntity, CE2DMesh, CEUniformsManager,
   CEBaseTypes, CEMessage, CEInputMessage, CEVectors, CEImageResource, CEMaterial, CECore;
 
@@ -130,15 +133,15 @@ begin
   LineMesh := TCELineMesh.Create(Core.EntityManager);
   LineMesh.Softness := 2 / 1024 * 1.5;
   LineMesh.Width := 1 / 1024 * 63;
-  LineMesh.Count := 3;
+  LineMesh.Count := 6;
   LineMesh.Point[0] := Vec2f(-0.5,  0.3);
-  LineMesh.Point[2] := Vec2f(0.4,  0.35);
-  LineMesh.Point[1] := Vec2f(0.5,  0.3);
-  {LineMesh.Point[1] := Vec2f( 0.3, -0.5);
+  {LineMesh.Point[2] := Vec2f(0.4,  0.35);
+  LineMesh.Point[1] := Vec2f(0.5,  0.3);}
+  LineMesh.Point[1] := Vec2f( 0.3, -0.5);
   LineMesh.Point[2] := Vec2f(-0.3, -0.3);
   LineMesh.Point[3] := Vec2f( 0.4,  0.0);
   LineMesh.Point[4] := Vec2f( 0.5,  0.3);
-  LineMesh.Point[5] := Vec2f( 0.2,  0.6);}
+  LineMesh.Point[5] := Vec2f( 0.2,  0.6);
 
   PolyMesh := TCEPolygonMesh.Create(Core.EntityManager);
   PolyMesh.Count := 4;
@@ -186,8 +189,8 @@ begin
     if Core.Input.MouseState.Buttons[mbLeft] = baDown then
     begin
       ClickPoint := Vec2f(Core.Input.MouseState.X / 512 - 1, 1 - Core.Input.MouseState.Y / 512);
-      Ind := GetNearestPointIndex(PolyMesh.Points, PolyMesh.Count, ClickPoint);
-      PolyMesh.Point[Ind] := ClickPoint;
+      Ind := GetNearestPointIndex(LineMesh.Points, LineMesh.Count, ClickPoint);
+      LineMesh.Point[Ind] := ClickPoint;
     end;
     Core.Process();
   end;
