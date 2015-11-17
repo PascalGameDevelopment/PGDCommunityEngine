@@ -26,6 +26,7 @@ Base class for the PGDCE network interface
 @author(<INSERT YOUR NAME HERE> (<INSERT YOUR EMAIL ADDRESS OR WEBSITE HERE>))
 }
 
+{$Include PGDCE.inc}
 unit CEBaseNetwork;
 
 interface

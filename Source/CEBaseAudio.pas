@@ -26,6 +26,7 @@ Base definition for the audio interface class within PGDCE
 @author(<INSERT YOUR NAME HERE> (<INSERT YOUR EMAIL ADDRESS OR WEBSITE HERE>))
 }
 
+{$Include PGDCE.inc}
 unit CEBaseAudio;
 
 interface

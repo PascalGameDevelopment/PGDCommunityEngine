@@ -133,7 +133,7 @@ begin
   //glext_LoadExtension('GL_EXT_shader_objects');
   //glext_LoadExtension('ARB_geometry_shader4');
 
-  glEnable(GL_TEXTURE_2D);
+{  glEnable(GL_TEXTURE_2D);
   glEnable(GL_BLEND);
   glDisable(GL_DEPTH_TEST);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -148,7 +148,7 @@ begin
   glOrtho(0, Window.Width, Window.Height, 0, -16, 16);
 
   glMatrixMode( GL_MODELVIEW );
-  glLoadIdentity();
+  glLoadIdentity();}
 end;
 
 procedure TCELinuxApplication.InitializeWindow();
@@ -349,6 +349,7 @@ end;
   var
     FastEventBufferMode: Boolean;
   begin
+    glXSwapBuffers(Window.X11Display, Window.X11Window);
     FastEventBufferMode := False;
     if XPending(Window.X11Display) > 0 then
     begin

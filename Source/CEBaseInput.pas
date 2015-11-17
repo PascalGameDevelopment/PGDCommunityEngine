@@ -23,7 +23,7 @@
 
 Base definition for the input handler class within PGDCE
 
-@author(<INSERT YOUR NAME HERE> (<INSERT YOUR EMAIL ADDRESS OR WEBSITE HERE>))
+@author(George Bakhtadze (avagames@gmail.com))
 }
 
 {$Include PGDCE.inc}
@@ -162,7 +162,7 @@ constructor TCEBaseInput.Create;
 begin
   {$I WI_CONST.inc}
   {$IFNDEF _INPUT_KEYCODES_SET}
-    {$MESSAGE Error 'Virtual key codes are not set'}
+    {.$MESSAGE Error 'Virtual key codes are not set'}
   {$ENDIF}
 end;
 
