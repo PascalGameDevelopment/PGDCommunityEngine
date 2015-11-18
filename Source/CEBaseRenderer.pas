@@ -33,7 +33,7 @@ unit CEBaseRenderer;
 interface
 
 uses
-  CEBaseTypes, CEBaseApplication, CEMesh, CEMaterial, CEUniformsManager;
+  CEMessage, CEBaseTypes, CEBaseApplication, CEMesh, CEMaterial, CEUniformsManager;
 
 type
   // Render target clear flags
@@ -55,7 +55,7 @@ type
   TCEShaderIdentList = array[0..$FFFF] of TCEShaderIdent;
   PCEShaderIdentList = ^TCEShaderIdentList;
 
-  TCEBaseRenderer = class
+  TCEBaseRenderer = class(TCESubSystem)
   private
   protected
     FUniformsManager: TCEUniformsManager;
@@ -67,9 +67,14 @@ type
     function DoInitGAPI(App: TCEBaseApplication): Boolean; virtual; abstract;
     // Finalization of GAPI - render context or device
     procedure DoFinalizeGAPI(); virtual; abstract;
+    // Handle render context resize
+    procedure HandleResize(Msg: TWindowResizeMsg); virtual; abstract;
   public
+    Width, Height: Single;
     constructor Create(App: TCEBaseApplication);
     destructor Destroy(); override;
+    // Handle OS messages
+    procedure HandleMessage(const Msg: TCEMessage); override;
     // Performs render state setup
     procedure ApplyRenderPass(Pass: TCERenderPass); virtual; abstract;
     // Performs necessary draw calls to render the given geometry
@@ -96,6 +101,16 @@ destructor TCEBaseRenderer.Destroy;
 begin
   DoFinalizeGAPI();
   inherited;
+end;
+
+procedure TCEBaseRenderer.HandleMessage(const Msg: TCEMessage);
+begin
+  if Msg.ClassType() = TWindowResizeMsg then
+  begin
+    HandleResize(TWindowResizeMsg(Msg));
+    Width := TWindowResizeMsg(Msg).NewWidth;
+    Height := TWindowResizeMsg(Msg).NewHeight;
+  end;
 end;
 
 end.

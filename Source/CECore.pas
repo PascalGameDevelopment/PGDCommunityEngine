@@ -32,6 +32,7 @@ unit CECore;
 interface
 
 uses
+  CEMessage,
   CEBaseApplication,
   CEBaseRenderer,
   CEBaseAudio,
@@ -54,17 +55,19 @@ type
     procedure DoRender();
   protected
     FApplication: TCEBaseApplication;
-    fRenderer: TCEBaseRenderer;
-    fAudio: TCEBaseAudio;
-    fInput: TCEBaseInput;
-    fPhysics: TCEBasePhysics;
-    fNetwork: TCEBaseNetwork;
+    FRenderer: TCEBaseRenderer;
+    FAudio: TCEBaseAudio;
+    FInput: TCEBaseInput;
+    FPhysics: TCEBasePhysics;
+    FNetwork: TCEBaseNetwork;
     FEntityManager: TCEGameEntityManager;
 
     procedure Update(const DeltaTime: Single); virtual;
   public
     constructor Create;
     destructor Destroy; override;
+    // Handle engine message. For example, OS message.
+    procedure HandleMessage(const Msg: TCEMessage);
     { Performs one step of main cycle. This method is called from TCECore.Run() and may be
       used instead when main program cycle can't be delegated to the engine. }
     procedure Process();
@@ -72,11 +75,11 @@ type
     procedure Run();
     property EntityManager: TCEGameEntityManager read FEntityManager;
     property Application: TCEBaseApplication read FApplication write FApplication;
-    property Renderer: TCEBaseRenderer read fRenderer write fRenderer;
-    property Audio: TCEBaseAudio read fAudio write fAudio;
-    property Input: TCEBaseInput read fInput write fInput;
-    property Physics: TCEBasePhysics read fPhysics write fPhysics;
-    property Network: TCEBaseNetwork read fNetwork write fNetwork;
+    property Renderer: TCEBaseRenderer read FRenderer write FRenderer;
+    property Audio: TCEBaseAudio read FAudio write FAudio;
+    property Input: TCEBaseInput read FInput write FInput;
+    property Physics: TCEBasePhysics read FPhysics write FPhysics;
+    property Network: TCEBaseNetwork read FNetwork write fNetwork;
     property OnUpdateDelegate: TUpdateDelegate read FOnUpdateDelegate write FOnUpdateDelegate;
   end;
 
@@ -123,7 +126,7 @@ end;
 destructor TCECore.Destroy;
 begin
   try
-    fInput.Free;
+    FInput.Free;
   except
   end;
 
@@ -158,6 +161,14 @@ begin
   end;
 
   inherited;
+end;
+
+procedure TCECore.HandleMessage(const Msg: TCEMessage);
+begin
+  if Assigned(Input) then
+    Input.HandleMessage(Msg);
+  if Assigned(Renderer) then
+    Renderer.HandleMessage(Msg);
 end;
 
 procedure TCECore.Process;

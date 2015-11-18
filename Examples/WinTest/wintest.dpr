@@ -32,8 +32,8 @@ program wintest;
 
 uses
   CEWindowsApplication, CEBaseRenderer,
-  CEOpenGLES2Renderer,
-  //CEOpenGL4Renderer,
+  //CEOpenGLES2Renderer,
+  CEOpenGL4Renderer,
   CEBaseInput, CEOSMessageInput,
   CEMesh, CECommon, CEOSUtils, CEResource, CEGameEntity, CE2DMesh, CEUniformsManager,
   CEBaseTypes, CEMessage, CEInputMessage, CEVectors, CEImageResource, CEMaterial, CECore;
@@ -167,7 +167,7 @@ begin
   //Triangle.Material := Mat;
   Line.Mesh := LineMesh;
 
-  App.MessageHandler := Core.Input.HandleMessage;
+  App.MessageHandler := Core.HandleMessage;
   //Core.OnUpdateDelegate := Mesh.Update;
 
   speed := 4;

@@ -32,7 +32,7 @@ unit CEOpenGL4Renderer;
 interface
 
 uses
-  CEBaseTypes, CEBaseRenderer, CEBaseApplication, CEMesh, CEMaterial, CEVectors,
+  CEMessage, CEBaseTypes, CEBaseRenderer, CEBaseApplication, CEMesh, CEMaterial, CEVectors,
   CEOpenGL, dglOpenGL,
   {$IFDEF WINDOWS}
   Windows,
@@ -58,6 +58,7 @@ type
     procedure DoInit(); override;
     function DoInitGAPI(App: TCEBaseApplication): Boolean; override;
     procedure DoFinalizeGAPI(); override;
+    procedure HandleResize(Msg: TWindowResizeMsg); override;
     {$IFDEF WINDOWS}
     function DoInitGAPIWin(App: TCEBaseApplication): Boolean;
     procedure DoFinalizeGAPIWin();
@@ -184,6 +185,11 @@ begin
   Shaders.ForEach(FreeCallback, nil);
   Shaders.Free();
   Shaders := nil;
+end;
+
+procedure TCEOpenGL4Renderer.HandleResize(Msg: TWindowResizeMsg);
+begin
+  WriteLn('Resize renderer: ', Msg.NewWidth, 'x', Msg.NewHeight);
 end;
 
 {$IFDEF WINDOWS}
