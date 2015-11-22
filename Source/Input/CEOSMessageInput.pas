@@ -49,9 +49,6 @@ implementation
 procedure TCEOSMessageInput.HandleKeyboard(Msg: TKeyboardMsg);
 begin
   FKeyboardState[Msg.Key] := Ord(Msg.Action);
-  FKeyboardState[vkShift] := FKeyboardState[vkLShift] or FKeyboardState[vkRShift];
-  FKeyboardState[vkControl] := FKeyboardState[vkLControl] or FKeyboardState[vkRControl];
-  FKeyboardState[vkAlt] := FKeyboardState[vkLAlt] or FKeyboardState[vkRAlt];
 end;
 
 procedure TCEOSMessageInput.HandleMouseMove(Msg: TMouseMoveMsg);

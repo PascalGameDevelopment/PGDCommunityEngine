@@ -102,8 +102,18 @@ procedure TCEXWindowApplication.ProcessXEvents();
     end;
   end;
 
+  function GetModifierMsg(AAction: TButtonAction; AKey: TCEVirtualKey; ACode: Integer): TCEMessage;
+  begin
+    if (AKey = vkLSHIFT) or (AKey = vkRSHIFT) then
+      Result := TKeyboardMsg.Create(AAction, vkSHIFT, ACode);
+    if (AKey = vkLCONTROL) or (AKey = vkRCONTROL) then
+      Result := TKeyboardMsg.Create(AAction, vkCONTROL, ACode);
+    if (AKey = vkLALT) or (AKey = vkRALT) then
+      Result := TKeyboardMsg.Create(AAction, vkALT, ACode);
+  end;
+
 var
-  CEMsg: TCEMessage;
+  CEMsg, CEMsgMod: TCEMessage;
   XEvent: TXEvent;
   KeySym: Integer;
 begin
@@ -111,6 +121,7 @@ begin
   begin
     XNextEvent(FDisplay, @XEvent);
     CEMsg := nil;
+    CEMsgMod := nil;
     case XEvent._Type of
       ClientMessage: if XEvent.xclient.data.l[0] = FDeleteMessage then
         Terminated := True;
@@ -132,11 +143,13 @@ begin
       KeyPress: begin
         KeySym := KeyCodeToSym(XEvent.xkey);
         CEMsg := TKeyboardMsg.Create(baDown, KeySym, XEvent.xkey.keycode);
+        CEMsgMod := GetModifierMsg(baDown, KeySym, XEvent.xkey.keycode);
         CELog.Debug(Format('KeyPress: [%d, %d]', [XEvent.xkey.keycode, KeySym]));
       end;
       KeyRelease: begin
         KeySym := KeyCodeToSym(XEvent.xkey);
         CEMsg := TKeyboardMsg.Create(baUp, KeySym, XEvent.xkey.keycode);
+        CEMsgMod := GetModifierMsg(baUp, KeySym, XEvent.xkey.keycode);
       end;
       MotionNotify: begin
         CEMsg := TMouseMoveMsg.Create(XEvent.XMotion.X, XEvent.XMotion.Y);
@@ -156,8 +169,12 @@ begin
         end;
       end;
     end;
-    if Assigned(MessageHandler) and Assigned(CEMsg) then
-      MessageHandler(CEMsg);
+    if Assigned(MessageHandler) then begin
+      if Assigned(CEMsg) then
+        MessageHandler(CEMsg);
+      if Assigned(CEMsgMod) then
+        MessageHandler(CEMsgMod);
+    end;
   end;
 end;
 
