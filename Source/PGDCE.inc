@@ -34,6 +34,9 @@
   {$IFDEF WIN64}
     {$DEFINE WINDOWS}
   {$ENDIF}
+  {$IFDEF UNIX}
+    {$DEFINE XWINDOW}
+  {$ENDIF}
 {$ENDIF}
 
 {$IFDEF UNICODE}
@@ -44,7 +47,7 @@
   {$INLINE ON}
 {$ENDIF}
 
-{.$DEFINE UNICODE_ONLY}          // Enable for mobile delphi compiler compatibility
+{.$DEFINE UNICODE_ONLY}          // Enable for mobile Delphi compiler compatibility
 
 {$IFOPT D+}
   {$DEFINE CE_DEBUG}
@@ -55,3 +58,5 @@
 
 {$DEFINE FLOAT_IEEE}             // Assume IEEE floating point values representation
 {$DEFINE LOGGING}
+
+{$DEFINE OGLERRORCHECK}          // Check for OpenGL errors

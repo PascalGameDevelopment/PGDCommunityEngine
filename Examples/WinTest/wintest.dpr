@@ -31,7 +31,13 @@ program wintest;
 {$APPTYPE CONSOLE}
 
 uses
-  CEWindowsApplication, CEBaseRenderer,
+  CEBaseApplication,
+  {$IFDEF WINDOWS}
+  CEWindowsApplication,
+  {$ELSE}
+  CEXWindowApplication,
+  {$ENDIF}
+  CEBaseRenderer,
   //CEOpenGLES2Renderer,
   CEOpenGL4Renderer,
   CEBaseInput, CEOSMessageInput,
@@ -105,7 +111,7 @@ begin
 end;
 
 var
-  App: TCEWindowsApplication;
+  App: TCEBaseApplication;
   Renderer: TCEBaseRenderer;
   Core: TCECore;
   PolyMesh: TCEPolygonMesh;
@@ -120,7 +126,11 @@ begin
   {$IF Declared(ReportMemoryLeaksOnShutdown)}
   ReportMemoryLeaksOnShutdown := True;
   {$IFEND}
-  App := TCEWindowsApplication.Create();
+  App := TCEApplicationClass.Create();
+  if App.Terminated then begin
+    App.Free();
+    Exit;
+  end;
   Renderer := TCEOpenGL4Renderer.Create(App);
   Core := TCECore.Create();
   Core.Application := App;
@@ -195,12 +205,11 @@ begin
     Core.Process();
   end;
 
-  PolyPass.VertexShader.Free();
+{  PolyPass.VertexShader.Free();
   PolyPass.FragmentShader.Free();
   PolyPass.Free();
-  PolyPass.Texture0.Free();
-  Line.Free();
+  PolyPass.Texture0.Free();}
+  //Line.Free();
   Polygon.Free();
   Core.Free();
-  Readln;
 end.

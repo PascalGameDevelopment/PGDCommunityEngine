@@ -80,7 +80,7 @@ type
     {Protected declarations}
 
     //These are lifted from CEWindowsApplication.pas
-    procedure DoCreateWindow(); override;
+    function DoCreateWindow(): Boolean; override;
     procedure DoDestroyWindow(); override;
   public
     {Public declarations}
@@ -88,6 +88,8 @@ type
   published
     {Published declarations}
   end;
+
+  TCEApplicationClass = TCELinuxApplication;
 
 implementation
 
@@ -253,8 +255,9 @@ begin
   glxMakeCurrent(Window.X11Display, Window.X11Window, Window.GlXContext);
 end;
 
-procedure TCELinuxApplication.DoCreateWindow();
+function TCELinuxApplication.DoCreateWindow(): Boolean;
 begin
+  Result := False;
   {
   * A note on OverrideXF86ModeSelection:
   *   On some combinations of later X-server (from later 2013 I believe) with some mesa drivers) using XF86 for window sizes breaks.
@@ -266,8 +269,8 @@ begin
 
   InitializeWindow();
   InitializeOpenGL();
+  Result := True;
 end;
-
 
 function TCELinuxApplication.GetEvents_Core(): TCEMessage;
 begin

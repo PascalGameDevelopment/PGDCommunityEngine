@@ -174,6 +174,7 @@ end;
 procedure TCECore.Process;
 begin
   FApplication.Process();
+  if FApplication.Terminated then Exit;
   DoUpdate();
   DoRender();
 end;

@@ -37,7 +37,13 @@ uses
 
 const
   // Window handle config parameter name
-  CFG_WINDOW_HANDLE = 'Windows.WindowHandle';
+  CFG_WINDOW_HANDLE = 'Window.Handle';
+    // X-Window display handle
+  CFG_XWINDOW_DISPLAY = 'XWindow.Display';
+    // X-Window screen handle
+  CFG_XWINDOW_SCREEN = 'XWindow.Screen';
+  // Sleep time when there is no messages in queue and application is deactived
+  INACTIVE_SLEEP_MS = 60;
 
 type
   // Class to store subsystem's parameters
@@ -52,8 +58,10 @@ type
     procedure Remove(const Name: TPropertyName);
     function GetInt64(const Name: TPropertyName): Int64;
     function GetFloat(const Name: TPropertyName): Single;
+    function GetPointer(const Name: TPropertyName): Pointer;
     procedure SetInt64(const Name: TPropertyName; Value: Int64);
     procedure SetFloat(const Name: TPropertyName; Value: Single);
+    procedure SetPointer(const Name: TPropertyName; Value: Pointer);
     property ValuesStr[const Name: TPropertyName]: string read GetValue write SetValue; default;
   end;
 
@@ -65,8 +73,10 @@ type
     FName: UnicodeString;
     FTerminated: Boolean;
     FMessageHandler: TCEMessageHandler;
-    // Actual window creation
-    procedure DoCreateWindow(); virtual; abstract;
+    // Virtual key codes initialization
+    procedure InitKeyCodes(); virtual; abstract;
+    // Actual window creation. Should return True on success.
+    function DoCreateWindow(): Boolean; virtual; abstract;
     // Actual window destruction
     procedure DoDestroyWindow(); virtual; abstract;
   public
@@ -89,21 +99,23 @@ type
 implementation
 
 uses
-  SysUtils;
+  SysUtils, CELog, CECommon;
 
 { TCEBaseApplication }
 
 constructor TCEBaseApplication.Create;
 begin
+  InitKeyCodes();
   FConfig := TCEConfig.Create();
   Name := ExtractFileName(ParamStr(0));
   FConfig['App.Name'] := Name;
   FConfig['App.Path'] := ParamStr(0);
-  DoCreateWindow();
+  Terminated := not DoCreateWindow();
 end;
 
 destructor TCEBaseApplication.Destroy;
 begin
+  CELog.Log('Application shutdown');
   inherited;
   DoDestroyWindow();
   FConfig.Free();
@@ -164,9 +176,19 @@ begin
     Result := Value^.AsSingle
 end;
 
+function TCEConfig.GetPointer(const Name: TPropertyName): Pointer;
+begin
+  Result := Pointer(GetInt64(Name));
+end;
+
 procedure TCEConfig.SetInt64(const Name: TPropertyName; Value: Int64);
 begin
-  Data.AddInt(Name, Value);
+  Data.AddInt64(Name, Value);
+end;
+
+procedure TCEConfig.SetPointer(const Name: TPropertyName; Value: Pointer);
+begin
+  Data.AddInt64(Name, PtrToInt(Value));
 end;
 
 procedure TCEConfig.SetFloat(const Name: TPropertyName; Value: Single);

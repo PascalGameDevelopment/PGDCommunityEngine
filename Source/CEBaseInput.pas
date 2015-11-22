@@ -82,7 +82,6 @@ type
     // Current mouse state
     FMouseState: TMouseState;
   public
-    constructor Create;
     // State of a virtual key. Non-zero value means that the key is pressed.
     property VirtualKey[key: TCEVirtualKey]: Integer read GetVirtualKey;
     // Is a key currently pressed
@@ -119,27 +118,16 @@ var
   vkOEM_102,
   vkF11, vkF12,
   vkF13, vkF14, vkF15,
-  vkKANA, vkABNT_C1,
-  vkCONVERT, vkNOCONVERT,
-  vkYEN, vkABNT_C2,
   vkNUMPADEQUALS, vkCIRCUMFLEX,
   vkAT, vkCOLON, vkUNDERLINE, vkKANJI,
-  vkSTOP,
-  vkAX, vkUNLABELED,
   vkNEXTTRACK,
   vkNUMPADENTER,
   vkRCONTROL,
-  vkMUTE, vkCALCULATOR, vkPLAYPAUSE, vkMEDIASTOP,
-  vkVOLUMEDOWN, vkVOLUMEUP,
-  vkWEBHOME,
   vkNUMPADCOMMA, vkDIVIDE,
   vkSYSRQ, vkRMENU, vkPAUSE,
   vkHOME, vkUP, vkPRIOR, vkLEFT, vkRIGHT, vkEND, vkDOWN,
   vkNEXT, vkINSERT, vkDELETE,
-  vkLOS, vkROS,
-  vkAPPS, vkPOWER, vkSLEEP, vkWAKE,
-  vkWEBSEARCH, vkWEBFAVORITES, vkWEBREFRESH, vkWEBSTOP, vkWEBFORWARD, vkWEBBACK,
-  vkMYCOMPUTER, vkMAIL, vkMEDIASELECT,
+  vkLOS, vkROS, vkAPPS,
   //  Alternate names
   vkBACKSPACE, vkNUMPADSTAR, vkLALT, vkCAPSLOCK,
   vkNUMPADMINUS, vkNUMPADPLUS, vkNUMPADPERIOD, vkNUMPADSLASH,
@@ -147,6 +135,7 @@ var
   vkUPARROW, vkPGUP, vkLEFTARROW, vkRIGHTARROW, vkDOWNARROW, vkPGDN,
   vkPREVTRACK, vkMOUSELEFT, vkMOUSERIGHT, vkMOUSEMIDDLE,
   vkSHIFT, vkCONTROL, vkALT: Integer;
+
   vkMOUSEBUTTON: array[TMouseButton] of Integer;
 
 implementation
@@ -156,14 +145,6 @@ implementation
 function TCEBaseInput.GetVirtualKey(key: TCEVirtualKey): Integer;
 begin
   Result := FKeyboardState[key];
-end;
-
-constructor TCEBaseInput.Create;
-begin
-  {$I WI_CONST.inc}
-  {$IFNDEF _INPUT_KEYCODES_SET}
-    {.$MESSAGE Error 'Virtual key codes are not set'}
-  {$ENDIF}
 end;
 
 function TCEBaseInput.GetPressed(key: TCEVirtualKey): Boolean;

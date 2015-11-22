@@ -23,7 +23,7 @@
 
 Definition for the PGDCE OpenGL 4.x renderer class. Platform specific.
 
-@author(<INSERT YOUR NAME HERE> (<INSERT YOUR EMAIL ADDRESS OR WEBSITE HERE>))
+@author(George Bakhtadze (avagames@gmail.com))
 }
 
 {$Include PGDCE.inc}
@@ -37,6 +37,9 @@ uses
   {$IFDEF WINDOWS}
   Windows,
   {$ENDIF}
+  {$IFDEF XWINDOW}
+  xlib, xutil,
+  {$ENDIF}
   CEUniformsManager;
 
 type
@@ -46,6 +49,11 @@ type
       FOGLContext: HGLRC;                    // OpenGL rendering context
       FOGLDC: HDC;
       FRenderWindowHandle: HWND;
+    {$ENDIF}
+    {$IFDEF XWINDOW}
+      FOGLContext: GLXContext;
+      FDisplay: PXDisplay;
+      FRenderWindowHandle: Cardinal;
     {$ENDIF}
     PhaseLocation: TGLint;
 
@@ -91,7 +99,60 @@ type
 implementation
 
 uses
-  CECommon, CEImageResource, CELog;
+  CECommon, CEImageResource, CELog, CEOSUtils;
+
+// Check and report to log OpenGL error only if debug mode is on
+function ReportGLErrorDebug(const ErrorLabel: string): Cardinal; {$I inline.inc}
+begin
+  {$IFDEF CE_DEBUG}
+  Result := glGetError();
+  if Result <> GL_NO_ERROR then Error(ErrorLabel + ' Error #: ' + IntToStr(Result) + '(' + gluErrorString(Result) + ') at'#13#10);// + GetStackTraceStr(1));
+  {$ELSE}
+  Result := GL_NO_ERROR;
+  {$ENDIF}
+end;
+
+// Check and report to log OpenGL error
+function ReportGLError(const ErrorLabel: string): Cardinal; {$I inline.inc}
+begin
+  {$IFDEF OGLERRORCHECK}
+  Result := glGetError();
+  if Result <> GL_NO_ERROR then
+    Error(ErrorLabel + ' Error #: ' + IntToStr(Result) + '(' + gluErrorString(Result) + ')');
+  {$ENDIF}
+end;
+
+var
+  GLAttributesList: array [0..16] of Integer;
+
+procedure GenerateAttributes_SingleBufferMode();
+begin
+  GLAttributesList[0] := Glx_RGBA;
+  GLAttributesList[1] := Glx_Red_Size;
+  GLAttributesList[2] := 4;
+  GLAttributesList[3] := Glx_Green_Size;
+  GLAttributesList[4] := 4;
+  GLAttributesList[5] := Glx_Blue_Size;
+  GLAttributesList[6] := 4;
+  GLAttributesList[7] := Glx_Depth_Size;
+  GLAttributesList[8] := 16;
+  GLAttributesList[9] := GL_NONE;
+end;
+
+procedure GenerateAttributes_DoubleBufferMode();
+begin
+  GLAttributesList[0] := Glx_RGBA;
+  GLAttributesList[1] := Glx_DoubleBuffer;
+  GLAttributesList[2] := Glx_Red_Size;
+  GLAttributesList[3] := 4;
+  GLAttributesList[4] := Glx_Green_Size;
+  GLAttributesList[5] := 4;
+  GLAttributesList[6] := Glx_Blue_Size;
+  GLAttributesList[7] := 4;
+  GLAttributesList[8] := Glx_Depth_Size;
+  GLAttributesList[9] := 16;
+  GLAttributesList[10] := GL_NONE;
+end;
 
 function PrintShaderInfoLog(Shader: TGLUint; ShaderType: string): Boolean;
 var
@@ -134,14 +195,40 @@ begin
 end;
 
 function TCEOpenGL4Renderer.DoInitGAPI(App: TCEBaseApplication): Boolean;
+{$IFDEF XWINDOW}
+var
+  VisualInfo: PXVisualInfo;
+  ScreenNum: Cardinal;
+{$ENDIF}
 begin
   Result := False;
   Shaders := TGLSLShaderList.Create();
   {$IFDEF WINDOWS}
   if not DoInitGAPIWin(App) then Exit;
-  {$ELSE}
-  //raise Exception.Create  ('Not implemented for this platform yet');
   {$ENDIF}
+
+  {$IFDEF XWINDOW}
+  FDisplay := App.Cfg.GetPointer(CFG_XWINDOW_DISPLAY);
+  if FDisplay = nil then
+  begin
+    CELog.Error('No open X-Window display');
+    Exit;
+  end;
+  ScreenNum := App.Cfg.GetInt64(CFG_XWINDOW_SCREEN);
+  FRenderWindowHandle := App.Cfg.GetInt64(CFG_WINDOW_HANDLE);
+  GenerateAttributes_DoubleBufferMode();
+  VisualInfo := GlxChooseVisual(FDisplay, ScreenNum, @GLAttributesList);
+  if VisualInfo = nil then
+  begin
+    GenerateAttributes_SingleBufferMode();
+    VisualInfo := GlxChooseVisual(FDisplay, ScreenNum, @GLAttributesList);
+  end;
+
+  FOGLContext := GlxCreateContext(FDisplay, VisualInfo, Nil, True);
+  glxMakeCurrent(FDisplay, FRenderWindowHandle, FOGLContext);
+  XFree(VisualInfo);
+  {$ENDIF}
+
   CELog.Log('Context succesfully created');
 
   FUniformsManager := TCEOpenGL4UniformsManager.Create();
@@ -151,9 +238,9 @@ begin
   glClearColor(0, 0, 0, 0);
   glEnable(GL_TEXTURE_2D);
   glCullFace(GL_BACK);
-  //glEnable(GL_CULL_FACE);
+  glEnable(GL_CULL_FACE);
   glDepthFunc(GL_LEQUAL);
-//  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_DEPTH_TEST);
   glDisable(GL_ALPHA_TEST);
   glDisable(GL_STENCIL_TEST);
   glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
@@ -175,8 +262,11 @@ begin
     FreeMem(VertexData);
   {$IFDEF WINDOWS}
   DoFinalizeGAPIWin();
-  {$ELSE}
-  //raise Exception.Create('Not implemented for this platform');
+  {$ENDIF}
+
+  {$IFDEF XWINDOW}
+  glXMakeCurrent(FDisplay, GL_NONE, nil);
+  glXDestroyContext(FDisplay, FOGLContext);
   {$ENDIF}
 
   FUniformsManager.Free();
@@ -189,6 +279,16 @@ end;
 
 procedure TCEOpenGL4Renderer.HandleResize(Msg: TWindowResizeMsg);
 begin
+  glViewport(0, 0, Round(Msg.NewWidth), Round(Msg.NewHeight));    // Set the viewport for the OpenGL window
+
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity;
+  glTranslatef(0.375, 0.375 - Msg.NewHeight, 0);
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  glOrtho(0, Msg.NewWidth, 0, Msg.NewHeight, -1, 1);
+  glScalef(1, -1, 1);
+
   WriteLn('Resize renderer: ', Msg.NewWidth, 'x', Msg.NewHeight);
 end;
 
@@ -378,10 +478,12 @@ end;
 procedure TCEOpenGL4Renderer.NextFrame;
 begin
   if not Active then Exit;
+  glUniform1f(PhaseLocation, (CEOSUtils.getcurrentms() mod 2000)*0.001*pi);
   {$IFDEF WINDOWS}
-  glUniform1f(PhaseLocation,(gettickcount() mod 2000)*0.001*pi);
   SwapBuffers(FOGLDC);                  // Display the scene
-  {$ELSE}
+  {$ENDIF}
+  {$IFDEF XWINDOW}
+  glXSwapBuffers(FDisplay, FRenderWindowHandle);
   {$ENDIF}
 end;
 
