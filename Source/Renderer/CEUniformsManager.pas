@@ -95,6 +95,7 @@ type
     procedure ApiAddBuffer(Index: Integer); virtual; abstract;
     property Buffers: PCEDataBufferList read FBuffers;
   public
+    destructor Destroy(); override;
     function GetOrCreate(ElementSize: Integer; Status: PCEDataStatus; out Res: PCEDataBuffer): Integer;
   end;
 
@@ -118,6 +119,12 @@ begin
   FBuffers^[Count].DataType := Status^.DataType;
   Inc(Count);
   ApiAddBuffer(Count-1);
+end;
+
+destructor TCERenderBufferManager.Destroy();
+begin
+  FreeMem(FBuffers, Count * SizeOf(TCEDataBuffer));
+  inherited;
 end;
 
 function TCERenderBufferManager.GetOrCreate(ElementSize: Integer; Status: PCEDataStatus; out Res: PCEDataBuffer): Integer;

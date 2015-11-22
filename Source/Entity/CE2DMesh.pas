@@ -52,6 +52,7 @@ type
     FCount: Integer;
     FPoints: P2DPointArray;
   public
+    destructor Destroy(); override;
     // Number of points
     property Count: Integer read FCount write SetCount;
     // Array of points in multi-segment line
@@ -67,7 +68,6 @@ type
     procedure SetWidth(Value: Single);
     procedure SetSoftness(Value: Single);
   public
-    destructor Destroy; override;
     procedure DoInit(); override;
     procedure FillVertexBuffer(Dest: Pointer); override;
     procedure SetUniforms(Manager: TCEUniformsManager); override;
@@ -85,7 +85,6 @@ type
     procedure SetSoftness(Value: Single);
     procedure SetColor(const Value: TCEColor);
   public
-    destructor Destroy; override;
     procedure DoInit(); override;
     procedure FillVertexBuffer(Dest: Pointer); override;
     procedure SetUniforms(Manager: TCEUniformsManager); override;
@@ -157,6 +156,12 @@ begin
   FPoints^[Index] := Value;
 end;
 
+destructor TCENPointMesh.Destroy();
+begin
+  SetCount(0);
+  inherited Destroy();
+end;
+
 { TCELineMesh }
 
 procedure TCELineMesh.SetWidth(Value: Single);
@@ -169,12 +174,6 @@ procedure TCELineMesh.SetSoftness(Value: Single);
 begin
   FThreshold := Value;
   VertexBuffer.Status := dsChanged;
-end;
-
-destructor TCELineMesh.Destroy;
-begin
-  SetCount(0);
-  inherited Destroy();
 end;
 
 procedure TCELineMesh.DoInit();
@@ -362,12 +361,6 @@ procedure TCEPolygonMesh.SetColor(const Value: TCEColor);
 begin
   FColor := Value;
   VertexBuffer.Status := dsChanged;
-end;
-
-destructor TCEPolygonMesh.Destroy;
-begin
-  SetCount(0);
-  inherited Destroy();
 end;
 
 procedure TCEPolygonMesh.DoInit();

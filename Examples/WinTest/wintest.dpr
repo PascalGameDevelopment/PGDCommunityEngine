@@ -163,11 +163,11 @@ begin
   PolyMesh.Color := GetColor(100, 200, 150, 255);
 
   PolyPass := CreateRenderPass(Core.EntityManager, true, '',
-  GetPathRelativeToFile(ParamStr(0), '../Assets/vs_poly.glsl'),
-  GetPathRelativeToFile(ParamStr(0), '../Assets/fs_poly.glsl'));
+                              GetPathRelativeToFile(ParamStr(0), '../Assets/vs_poly.glsl'),
+                              GetPathRelativeToFile(ParamStr(0), '../Assets/fs_poly.glsl'));
   LinePass := CreateRenderPass(Core.EntityManager, true, '',
-  GetPathRelativeToFile(ParamStr(0), '../Assets/vs_line.glsl'),
-  GetPathRelativeToFile(ParamStr(0), '../Assets/fs_line.glsl'));
+                              GetPathRelativeToFile(ParamStr(0), '../Assets/vs_line.glsl'),
+                              GetPathRelativeToFile(ParamStr(0), '../Assets/fs_line.glsl'));
   Mat := TCEMaterial.Create(Core.EntityManager);
   Mat.TotalTechniques := 1;
   Mat.Technique[0] := TCERenderTechnique.Create(Core.EntityManager);
@@ -205,10 +205,14 @@ begin
     Core.Process();
   end;
 
-{  PolyPass.VertexShader.Free();
+  PolyPass.VertexShader.Free();
   PolyPass.FragmentShader.Free();
-  PolyPass.Free();
-  PolyPass.Texture0.Free();}
+  //PolyPass.Texture0.Free();
+  //PolyPass.Free();
+  //PolyPass.Texture0.Free();
+  LinePass.VertexShader.Free();
+  LinePass.FragmentShader.Free();
+  //LinePass.Texture0.Free();
   //Line.Free();
   Polygon.Free();
   Core.Free();

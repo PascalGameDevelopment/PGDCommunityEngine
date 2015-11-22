@@ -90,6 +90,7 @@ type
     procedure ApiAddBuffer(Index: Integer); override;
     property Buffers: PCEDataBufferList read FBuffers;
   public
+    destructor Destroy(); override;
   end;
 
 implementation
@@ -184,9 +185,6 @@ begin
   {$ELSE}
   raise Exception.Create('Not implemented for this platform');
   {$ENDIF}
-
-  FUniformsManager.Free();
-  FBufferManager.Free();
 
   Shaders.ForEach(FreeCallback, nil);
   Shaders.Free();
@@ -421,6 +419,15 @@ procedure TCEOpenGLES2BufferManager.ApiAddBuffer(Index: Integer);
 begin
   Assert((Index >= 0) and (Index < Count), 'Invalid index');
   glGenBuffers(1, @FBuffers^[Index].Id);
+end;
+
+destructor TCEOpenGLES2BufferManager.Destroy();
+var
+  i: Integer;
+begin
+  for i := 0 to Count - 1 do
+    glDeleteBuffers(1, @FBuffers^[i].Id);
+  inherited;
 end;
 
 end.

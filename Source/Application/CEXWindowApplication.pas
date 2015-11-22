@@ -69,7 +69,7 @@ uses
 
 procedure WaitKey(const msg: string);
 begin
-  CELog.Debug(msg, '. Press ENTER');
+  CELog.Debug(msg + '. Press ENTER');
   ReadLn();
 end;
 
@@ -346,7 +346,7 @@ begin
                               (ScreenX - 1024) div 2 + 300, (ScreenY - 1024) div 2, 1024, 1024, 0,
                               CopyFromParent, InputOutput, CopyFromParent, CWOverrideRedirect, @X11WindowAttributes);
 
-  CELog.Debug('HWND: ', IntToHex(FWindowHandle, 8));
+  CELog.Debug('HWND: ' + IntToHex(FWindowHandle, 8));
 
   Cfg.SetInt64(CFG_WINDOW_HANDLE, FWindowHandle);
   Cfg.SetPointer(CFG_XWINDOW_DISPLAY, FDisplay);

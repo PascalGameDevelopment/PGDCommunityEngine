@@ -99,6 +99,10 @@ end;
 
 destructor TCEBaseRenderer.Destroy;
 begin
+  if Assigned(FUniformsManager) then
+    FUniformsManager.Free();
+  if Assigned(FBufferManager) then
+    FBufferManager.Free();
   DoFinalizeGAPI();
   inherited;
 end;

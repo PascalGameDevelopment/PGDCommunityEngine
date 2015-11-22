@@ -94,6 +94,7 @@ type
     procedure ApiAddBuffer(Index: Integer); override;
     property Buffers: PCEDataBufferList read FBuffers;
   public
+    destructor Destroy(); override;
   end;
 
 implementation
@@ -106,7 +107,7 @@ function ReportGLErrorDebug(const ErrorLabel: string): Cardinal; {$I inline.inc}
 begin
   {$IFDEF CE_DEBUG}
   Result := glGetError();
-  if Result <> GL_NO_ERROR then Error(ErrorLabel + ' Error #: ' + IntToStr(Result) + '(' + gluErrorString(Result) + ') at'#13#10);// + GetStackTraceStr(1));
+  if Result <> GL_NO_ERROR then Error(ErrorLabel + ' Error #: ' + IntToStr(Result) + '(' + string(gluErrorString(Result)) + ') at'#13#10);// + GetStackTraceStr(1));
   {$ELSE}
   Result := GL_NO_ERROR;
   {$ENDIF}
@@ -118,7 +119,7 @@ begin
   {$IFDEF OGLERRORCHECK}
   Result := glGetError();
   if Result <> GL_NO_ERROR then
-    Error(ErrorLabel + ' Error #: ' + IntToStr(Result) + '(' + gluErrorString(Result) + ')');
+    Error(ErrorLabel + ' Error #: ' + IntToStr(Result) + '(' + string(gluErrorString(Result)) + ')');
   {$ENDIF}
 end;
 
@@ -268,9 +269,6 @@ begin
   glXMakeCurrent(FDisplay, GL_NONE, nil);
   glXDestroyContext(FDisplay, FOGLContext);
   {$ENDIF}
-
-  FUniformsManager.Free();
-  FBufferManager.Free();
 
   Shaders.ForEach(FreeCallback, nil);
   Shaders.Free();
@@ -527,6 +525,15 @@ procedure TCEOpenGL4BufferManager.ApiAddBuffer(Index: Integer);
 begin
   Assert((Index >= 0) and (Index < Count), 'Invalid index');
   glGenBuffers(1, @FBuffers^[Index].Id);
+end;
+
+destructor TCEOpenGL4BufferManager.Destroy();
+var
+  i: Integer;
+begin
+  for i := 0 to Count - 1 do
+    glDeleteBuffers(1, @FBuffers^[i].Id);
+  inherited;
 end;
 
 end.
