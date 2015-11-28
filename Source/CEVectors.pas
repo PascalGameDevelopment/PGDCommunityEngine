@@ -305,7 +305,7 @@ end;
 function RayIntersect(const AP1, ADir, BP1, BDir: TCEVector2f; out Hit: TCEVector2f): TIntersectResult;
 var
   Denominator, NumA, NumB: Single;
-  Ua, Ub: Single;
+  Ua: Single;
 begin
   Denominator := BDir.y * ADir.x - BDir.x * ADir.y;
   NumA := BDir.x * (AP1.y - BP1.y) - BDir.y * (AP1.x - BP1.x);
@@ -319,7 +319,6 @@ begin
   end else begin
     Denominator := 1 / Denominator;
     ua := NumA * Denominator;
-    ub := NumB * Denominator;
     Hit.X := AP1.x + ua * ADir.x;
     Hit.Y := AP1.y + ua * ADir.y;
     Result := irIntersect;

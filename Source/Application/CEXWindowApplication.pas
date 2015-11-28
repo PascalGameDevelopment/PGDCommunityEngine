@@ -60,6 +60,7 @@ type
     procedure Process(); override;
   end;
 
+  // Declare application class to use it without IFDEFs
   TCEApplicationClass = TCEXWindowApplication;
 
 implementation

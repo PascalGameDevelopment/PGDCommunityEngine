@@ -59,4 +59,8 @@
 {$DEFINE FLOAT_IEEE}             // Assume IEEE floating point values representation
 {$DEFINE LOGGING}
 
-{$DEFINE OGLERRORCHECK}          // Check for OpenGL errors
+{.$DEFINE OPENGLES_EMULATION}     // Use GLES 2.0 emulation layer for desktops
+{$IFDEF MOBILE}
+
+{$ENDIF}
+{$DEFINE OPENGL_ERROR_CHECK}          // Check for OpenGL errors

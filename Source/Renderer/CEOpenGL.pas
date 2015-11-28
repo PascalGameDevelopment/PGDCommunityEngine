@@ -32,8 +32,24 @@ unit CEOpenGL;
 interface
 
 uses
-  CEBaseTypes, CEEntity, CEBaseRenderer, CEMesh, CEMaterial,
-  CETemplate, CELog, CEIO, CEDataDecoder;
+  CEBaseTypes, CEEntity, CEBaseApplication, CEBaseRenderer, CEMesh, CEMaterial, CEVectors,
+  {$IFDEF OPENGLES_EMULATION}
+    GLES20Regal,
+  {$ELSE}
+    {$IFDEF MOBILE}
+    gles20,
+    {$ELSE}
+      {$IFDEF WINDOWS}
+      Windows,
+      {$ENDIF}
+      {$IFDEF XWINDOW}
+      xlib, xutil,
+      {$ENDIF}
+      dglOpenGL,
+    {$ENDIF}
+  {$ENDIF}
+
+  CETemplate, CELog, CEIO, CEDataDecoder, CEUniformsManager;
 
 type
   TGLSLIdentKind = (gliAttribute, gliUniform, gliVarying, gliSampler);
@@ -42,7 +58,6 @@ type
   private
     procedure AddIdent(Kind: TCEShaderIdentKind; const Name: TCEShaderSource; const TypeName: TCEShaderSource);
     function Parse(const src: TCEShaderSource): Integer;
-  protected
   public
     VertexShader, FragmentShader, ShaderProgram: Integer;
     Idents: array[TGLSLIdentKind] of PCEShaderIdentList;
@@ -66,10 +81,67 @@ type
   // GLSL shader list
   TGLSLShaderList = _GenVector;
 
+    // Abstract class containing common OpenGL based routines
+  TCEBaseOpenGLRenderer = class(TCEBaseRenderer)
+  private
+  protected
+    {$IFDEF WINDOWS}
+    FOGLContext: HGLRC;                    // OpenGL rendering context
+    FOGLDC: HDC;
+    FRenderWindowHandle: HWND;
+    {$ENDIF}
+    {$IFDEF XWINDOW}
+    FOGLContext: GLXContext;
+    FDisplay: PXDisplay;
+    FRenderWindowHandle: Cardinal;
+    {$ENDIF}
+    PhaseLocation: TGLint;
+
+    Shaders: TGLSLShaderList;
+    CurShader: TCEGLSLShader;
+
+    VertexData: Pointer;                  // TODO: eliminate
+
+    procedure DoInit; override;
+    function DoInitGAPI(App: TCEBaseApplication): Boolean; override;
+    procedure DoFinalizeGAPI(); override;
+    function DoInitGAPIPlatform(App: TCEBaseApplication): Boolean; virtual; abstract;
+    procedure DoFinalizeGAPIPlatform(); virtual; abstract;
+
+    function InitShader(Pass: TCERenderPass): Integer;
+    procedure ApplyRenderPass(Pass: TCERenderPass); override;
+    procedure Clear(Flags: TCEClearFlags; Color: TCEColor; Z: Single; Stencil: Cardinal); override;
+    procedure NextFrame; override;
+  public
+  end;
+
+  TCEOpenGLUniformsManager = class(TCEUniformsManager)
+  public
+    ShaderProgram: Integer;
+    procedure SetInteger(const Name: PAPIChar; Value: Integer); override;
+    procedure SetSingle(const Name: PAPIChar; Value: Single); override;
+    procedure SetSingleVec2(const Name: PAPIChar; const Value: TCEVector2f); override;
+    procedure SetSingleVec3(const Name: PAPIChar; const Value: TCEVector3f); override;
+    procedure SetSingleVec4(const Name: PAPIChar; const Value: TCEVector4f); override;
+  end;
+
+  TCEOpenGLBufferManager = class(TCERenderBufferManager)
+  public
+    destructor Destroy(); override;
+    procedure ApiAddBuffer(Index: Integer); override;
+    property Buffers: PCEDataBufferList read FBuffers;
+  end;
+
+  function PrintShaderInfoLog(Shader: TGLUint; ShaderType: string): Boolean;
+  function ReportGLErrorDebug(const ErrorLabel: string): Cardinal; {$I inline.inc}
+  function ReportGLError(const ErrorLabel: string): Cardinal; {$I inline.inc}
+
+  function GetGLType(Value: TAttributeDataType): GLenum;
+
 implementation
 
 uses
-  SysUtils, CECommon, CEStrUtils, CEResource;
+  SysUtils, CECommon, CEStrUtils, CEResource, CEImageResource, CEOSUtils;
 
 const
   SAMPLER_PREFIX = 'SAMPLER';
@@ -77,6 +149,50 @@ const
 
 {$MESSAGE 'Instantiating TGLSLShaderList'}
 {$I tpl_coll_vector.inc}
+
+function PrintShaderInfoLog(Shader: TGLUint; ShaderType: string): Boolean;
+var
+  len, Success: TGLint;
+  Buffer: PGLchar;
+begin
+  Result := True;
+  glGetShaderiv(Shader, GL_COMPILE_STATUS, @Success);
+  if Success <> GL_TRUE then
+  begin
+    Result := False;
+    glGetShaderiv(Shader, GL_INFO_LOG_LENGTH, @len);
+    if len > 0 then
+    begin
+      GetMem(Buffer, len + 1);
+      glGetShaderInfoLog(Shader, len, {$IFDEF OPENGLES_EMULATION}@{$ENDIF}len, Buffer);
+      CELog.Error(ShaderType + ': ' + string(Buffer));
+      FreeMem(Buffer);
+    end;
+  end;
+end;
+
+// Check and report to log OpenGL error only if debug mode is on
+function ReportGLErrorDebug(const ErrorLabel: string): Cardinal; {$I inline.inc}
+begin
+  Result := GL_NO_ERROR;
+  {$IFDEF CE_DEBUG}{$IFDEF XWINDOW}
+  Result := glGetError();
+  if Result <> GL_NO_ERROR then
+    Error(ErrorLabel + ' Error #: ' + IntToStr(Result) + '(' + string(gluErrorString(Result)) + ') at'#13#10);// + GetStackTraceStr(1));
+  {$ENDIF}{$ENDIF}
+end;
+
+// Check and report to log OpenGL error
+function ReportGLError(const ErrorLabel: string): Cardinal; {$I inline.inc}
+begin
+  {$IFDEF OGLERRORCHECK}
+  Result := glGetError();
+  if Result <> GL_NO_ERROR then
+  Error(ErrorLabel + ' Error #: ' + IntToStr(Result) + '(' + string(gluErrorString(Result)) + ')');
+  {$ELSE}
+  Result := GL_NO_ERROR;
+  {$ENDIF}
+end;
 
 function GetIdentKind(const word: TCEShaderSource): TCEShaderIdentKind;
 begin
@@ -227,6 +343,239 @@ procedure TCEDataDecoderGLSL.Init;
 begin
   SetLength(FLoadingTypes, 1);
   FLoadingTypes[0] := GetDataTypeFromExt('glsl');
+end;
+
+{ TCEBaseOpenGLRenderer }
+
+function CreateShader(ShaderType: TGLenum; Source: PAnsiChar): TGLuint;
+const
+  Title: array[Boolean] of String = ('Fragment', 'Vertex');
+begin
+  Result := glCreateShader(ShaderType);
+  glShaderSource(Result, 1, @Source, nil);
+  glCompileShader(Result);
+  if not PrintShaderInfoLog(Result, Title[ShaderType = GL_VERTEX_SHADER] + ' shader') then
+    Result := 0;
+end;
+
+procedure TCEBaseOpenGLRenderer.DoInit;
+type
+  TLib = PWideChar;
+begin
+  {$IFDEF OPENGLES_EMULATION}
+    {$IFDEF WINDOWS}
+    LoadGLESv2(TLib(GetPathRelativeToFile(ParamStr(0), '../Library/regal/regal32.dll')));
+    {$ELSE}
+    not implemented
+    {$ENDIF}
+  {$ELSE}
+    dglOpenGL.InitOpenGL();
+    dglOpenGL.ReadExtensions();
+  {$ENDIF}
+end;
+
+function TCEBaseOpenGLRenderer.DoInitGAPI(App: TCEBaseApplication): Boolean;
+begin
+  Result := False;
+  Shaders := TGLSLShaderList.Create();
+  if not DoInitGAPIPlatform(App) then Exit;
+  CELog.Log('Graphics API succesfully initialized');
+
+  FUniformsManager := TCEOpenGLUniformsManager.Create();
+  FBufferManager := TCEOpenGLBufferManager.Create();
+
+  GetMem(VertexData, 1000);
+
+  // Init GL settings
+  glClearColor(0, 0, 0, 0);
+  glEnable(GL_TEXTURE_2D);
+  glCullFace(GL_BACK);
+  glEnable(GL_CULL_FACE);
+  glDepthFunc(GL_LEQUAL);
+  glEnable(GL_DEPTH_TEST);
+  glDisable(GL_STENCIL_TEST);
+  Result := True;
+end;
+
+function FreeCallback(const e: TCEGLSLShader; Data: Pointer): Boolean;
+begin
+  if Assigned(e) then e.Free();
+  Result := True;
+end;
+
+procedure TCEBaseOpenGLRenderer.DoFinalizeGAPI();
+begin
+  if Assigned(VertexData) then
+    FreeMem(VertexData);
+
+  DoFinalizeGAPIPlatform();
+
+  Shaders.ForEach(FreeCallback, nil);
+  Shaders.Free();
+  Shaders := nil;
+end;
+
+function TCEBaseOpenGLRenderer.InitShader(Pass: TCERenderPass): Integer;
+var
+  Sh: TCEGLSLShader;
+begin
+  Sh := TCEGLSLShader.Create();
+  Sh.ShaderProgram  := glCreateProgram();
+  Sh.VertexShader   := CreateShader(GL_VERTEX_SHADER,   PAnsiChar(Pass.VertexShader.Text));
+  Sh.FragmentShader := CreateShader(GL_FRAGMENT_SHADER, PAnsiChar(Pass.FragmentShader.Text));
+  if (sh.VertexShader = 0) or (sh.FragmentShader = 0) then
+  begin
+    Sh.Free();
+    Result := ID_NOT_INITIALIZED;
+    Exit;
+  end;
+  glAttachShader(Sh.ShaderProgram, Sh.VertexShader);
+  glAttachShader(Sh.ShaderProgram, Sh.FragmentShader);
+  glLinkProgram(Sh.ShaderProgram);
+  Shaders.Add(Sh);
+  Result := Shaders.Count - 1;
+end;
+
+function InitTexture(Image: TCEImageResource): glUint;
+begin
+  if not Assigned(Image) then Exit;
+  glGenTextures(1, @Result);
+  glBindTexture(GL_TEXTURE_2D, Result);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, Image.ActualLevels);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexImage2D(GL_TEXTURE_2D, 0, 3, Image.Width, Image.Height, 0, GL_RGB, GL_UNSIGNED_BYTE, Image.Data);
+end;
+
+procedure TCEBaseOpenGLRenderer.ApplyRenderPass(Pass: TCERenderPass);
+var
+  TexId, PrId: Integer;
+  Sh: TCEGLSLShader;
+begin
+  PrId := CEMaterial._GetProgramId(Pass);
+  if PrId = ID_NOT_INITIALIZED then
+  begin
+    PrId := InitShader(Pass);
+    CEMaterial._SetProgramId(Pass, PrId);
+  end;
+  if PrId >= 0 then
+  begin
+    Sh := Shaders.Get(PrId);
+    glUseProgram(Sh.ShaderProgram);
+    {PhaseLocation := glGetUniformLocation(Sh.ShaderProgram, 'phase');
+    if PhaseLocation < 0 then begin
+      CELog.Error('Error: Cannot get phase shader uniform location');
+    end;}
+    glUniform1i(glGetUniformLocation(Sh.ShaderProgram, 's_texture0'), 0);
+    CurShader := Sh;
+  end;
+
+  TexId := CEMaterial._GetTextureId(Pass, 0);
+  if TexId = ID_NOT_INITIALIZED then
+  begin
+    TexId := InitTexture(Pass.Texture0);
+    CEMaterial._SetTextureId(Pass, 0, TexId);
+  end;
+  glBindTexture(GL_TEXTURE_2D, TexId);
+  glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glActiveTexture(GL_TEXTURE0);
+  glEnable(GL_TEXTURE_2D);
+
+  if Pass.AlphaBlending then
+  begin
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  end;
+end;
+
+function GetGLType(Value: TAttributeDataType): GLenum;
+begin
+  Result := GL_FLOAT;
+  case Value of
+  adtShortint: Result := GL_BYTE;
+  adtByte: Result := GL_UNSIGNED_BYTE;
+  adtSmallint: Result := GL_SHORT;
+  adtWord: Result := GL_UNSIGNED_SHORT;
+  adtSingle: Result := GL_FLOAT;
+  end;
+end;
+
+procedure TCEBaseOpenGLRenderer.Clear(Flags: TCEClearFlags; Color: TCEColor; Z: Single; Stencil: Cardinal);
+begin
+  if (Flags = []) or not Active then Exit;
+
+  glDepthMask(true);
+  glClearColor(Color.R * ONE_OVER_255, Color.G * ONE_OVER_255, Color.B * ONE_OVER_255, Color.A * ONE_OVER_255);
+  glClearDepth(Z);
+  glClearStencil(Stencil);
+
+  glClear(GL_COLOR_BUFFER_BIT * Ord(cfColor in Flags) or GL_DEPTH_BUFFER_BIT * Ord(cfDepth in Flags) or
+          GL_STENCIL_BITS * Ord(cfStencil in Flags));
+end;
+
+procedure TCEBaseOpenGLRenderer.NextFrame;
+begin
+  if not Active then Exit;
+  glUniform1f(PhaseLocation, (CEOSUtils.getcurrentms() mod 2000)*0.001*pi);
+  {$IFDEF WINDOWS}
+  SwapBuffers(FOGLDC);                  // Display the scene
+  {$ENDIF}
+  {$IFDEF XWINDOW}
+  glXSwapBuffers(FDisplay, FRenderWindowHandle);
+  {$ENDIF}
+end;
+
+{ TCEOpenGLES2UniformsManager }
+
+function GetUniformLocation(ShaderProgram: Integer; const Name: PAPIChar): Integer;
+begin
+  Result := glGetUniformLocation(ShaderProgram, Name);
+  if Result < 0 then
+    CELog.Warning('Can''t find uniform location for name: ' + Name);
+end;
+
+procedure TCEOpenGLUniformsManager.SetInteger(const Name: PAPIChar; Value: Integer);
+begin
+  glUniform1i(GetUniformLocation(ShaderProgram, Name), Value);
+end;
+
+procedure TCEOpenGLUniformsManager.SetSingle(const Name: PAPIChar; Value: Single);
+begin
+  glUniform1f(GetUniformLocation(ShaderProgram, Name), Value);
+end;
+
+procedure TCEOpenGLUniformsManager.SetSingleVec2(const Name: PAPIChar; const Value: TCEVector2f);
+begin
+  glUniform2f(GetUniformLocation(ShaderProgram, Name), Value.x, Value.y);
+end;
+
+procedure TCEOpenGLUniformsManager.SetSingleVec3(const Name: PAPIChar; const Value: TCEVector3f);
+begin
+  glUniform3f(GetUniformLocation(ShaderProgram, Name), Value.x, Value.y, Value.z);
+end;
+
+procedure TCEOpenGLUniformsManager.SetSingleVec4(const Name: PAPIChar; const Value: TCEVector4f);
+begin
+  glUniform4f(GetUniformLocation(ShaderProgram, Name), Value.x, Value.y, Value.z, Value.w);
+end;
+
+{ TCEOpenGLBufferManager }
+
+destructor TCEOpenGLBufferManager.Destroy();
+var
+  i: Integer;
+begin
+  for i := 0 to Count - 1 do
+    glDeleteBuffers(1, @FBuffers^[i].Id);
+  inherited;
+end;
+
+procedure TCEOpenGLBufferManager.ApiAddBuffer(Index: Integer);
+begin
+  Assert((Index >= 0) and (Index < Count), 'Invalid index');
+  glGenBuffers(1, @FBuffers^[Index].Id);
 end;
 
 initialization

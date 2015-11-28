@@ -34,12 +34,18 @@ uses
   CEBaseApplication,
   {$IFDEF WINDOWS}
   CEWindowsApplication,
+
+  {$IFDEF OPENGLES_EMULATION}
+  CEOpenGLES2Renderer,
+  {$ELSE}
+  CEOpenGL4Renderer,
+  {$ENDIF}
+
   {$ELSE}
   CEXWindowApplication,
+  CEOpenGL4Renderer,
   {$ENDIF}
   CEBaseRenderer,
-  //CEOpenGLES2Renderer,
-  CEOpenGL4Renderer,
   CEBaseInput, CEOSMessageInput,
   CEMesh, CECommon, CEOSUtils, CEResource, CEGameEntity, CE2DMesh, CEUniformsManager,
   CEBaseTypes, CEMessage, CEInputMessage, CEVectors, CEImageResource, CEMaterial, CECore;
@@ -131,7 +137,7 @@ begin
     App.Free();
     Exit;
   end;
-  Renderer := TCEOpenGL4Renderer.Create(App);
+  Renderer := TCERendererClass.Create(App);
   Core := TCECore.Create();
   Core.Application := App;
   Core.Renderer := Renderer;

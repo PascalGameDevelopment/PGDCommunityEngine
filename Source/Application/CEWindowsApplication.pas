@@ -59,6 +59,7 @@ type
     procedure Process(); override;
   end;
 
+  // Declare application class to use it without IFDEFs
   TCEApplicationClass = TCEWindowsApplication;
 
   function WMToMessage(Msg: UINT; wParam: WPARAM; lParam: LPARAM): TCEMessage; overload;

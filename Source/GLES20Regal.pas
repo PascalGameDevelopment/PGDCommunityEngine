@@ -65,6 +65,7 @@ uses SysUtils
 
 Type
   Pchar  = PAnsiChar;
+  PGLchar = PAnsiChar;
 
 type
   ptrint = LongInt;
