@@ -395,4 +395,3 @@ finalization
   MessagePool.Free;
   MessagePool := nil;
 end.
-

@@ -156,7 +156,8 @@ begin
   end;
 
   try
-    FApplication.Free;
+    if Assigned(FApplication) then
+      FApplication.Free;
   except
   end;
 

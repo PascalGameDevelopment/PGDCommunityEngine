@@ -216,8 +216,10 @@ Usage - once per unit:
     {$I tpl_hash_funcs.inc}
     function _HashMapHashFunc(const Key: Double): NativeUInt; overload; {$I inline.inc}
     {$I tpl_hash_funcs.inc}
+    {$IFDEF HAS_TYPE_EXTENDED}
     function _HashMapHashFunc(const Key: Extended): NativeUInt; overload; {$I inline.inc}
     {$I tpl_hash_funcs.inc}
+    {$ENDIF}
 
     {$DEFINE Hash_Key_String}
     function _HashMapHashFunc(const Key: ShortString): NativeUInt; overload; {$I inline.inc}

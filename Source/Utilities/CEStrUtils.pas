@@ -43,8 +43,10 @@ function Split(const Str, Delim: string; out Res: TStringArray; EmptyOK: Boolean
 function Split(const Str, Delim: AnsiString; out Res: TAnsiStringArray; EmptyOK: Boolean): Integer; overload;
 // Returns True if Str starts with Prefix
 function StartsWith(const Str: string; const Prefix: string): Boolean;  overload;
+{$IFDEF UNICODE}
 // Returns True if Str starts with Prefix
 function StartsWith(const Str: AnsiString; const Prefix: AnsiString): Boolean;  overload;
+{$ENDIF}
 
 implementation
 
@@ -56,6 +58,7 @@ var i: Integer; s: string;
 begin
   Result := 1;
   s := Str;
+  Res := nil;
   while s <> '' do begin
     i := Pos(Delim, s);
     if i > 0 then begin
@@ -81,6 +84,7 @@ var i: Integer; s: AnsiString;
 begin
   Result := 1;
   s := Str;
+  Res := nil;
   while s <> '' do begin
     i := Pos(Delim, s);
     if i > 0 then begin
@@ -106,9 +110,11 @@ begin
   Result := Copy(Str, STRING_INDEX_BASE, Length(Prefix)) = Prefix;
 end;
 
+{$IFDEF UNICODE}
 function StartsWith(const Str: AnsiString; const Prefix: AnsiString): Boolean;  overload;
 begin
   Result := Copy(Str, STRING_INDEX_BASE, Length(Prefix)) = Prefix;
 end;
+{$ENDIF}
 
 end.

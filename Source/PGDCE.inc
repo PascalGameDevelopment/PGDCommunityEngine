@@ -25,9 +25,13 @@
 {$ENDIF}
 
 {$IFDEF FPC}
-  {$MODE DELPHIUNICODE}
+  {.$MODE DELPHIUNICODE}
+  {$MODE DELPHI}
   {$DEFINE HAS_INLINE}
   {$DEFINE HAS_STRICT}
+  {$IFDEF ANDROID}
+    {$DEFINE MOBILE}
+  {$ENDIF}
   {$IFDEF WIN32}
     {$DEFINE WINDOWS}
   {$ENDIF}
@@ -35,7 +39,9 @@
     {$DEFINE WINDOWS}
   {$ENDIF}
   {$IFDEF UNIX}
-    {$DEFINE XWINDOW}
+    {$IFNDEF MOBILE}
+      {$DEFINE XWINDOW}
+    {$ENDIF}
   {$ENDIF}
 {$ENDIF}
 
@@ -59,8 +65,16 @@
 {$DEFINE FLOAT_IEEE}             // Assume IEEE floating point values representation
 {$DEFINE LOGGING}
 
-{.$DEFINE OPENGLES_EMULATION}     // Use GLES 2.0 emulation layer for desktops
 {$IFDEF MOBILE}
-
+{$ELSE}
+  {$DEFINE HAS_TYPE_EXTENDED}     // Extended floating point type
 {$ENDIF}
+
+{.$DEFINE OPENGLES_EMULATION}     // Use GLES 2.0 emulation layer for desktops
 {$DEFINE OPENGL_ERROR_CHECK}          // Check for OpenGL errors
+{$IFDEF MOBILE}
+  {$DEFINE GLES20}
+{$ENDIF}
+{$IFDEF OPENGLES_EMULATION}
+    {$DEFINE GLES20}
+{$ENDIF}

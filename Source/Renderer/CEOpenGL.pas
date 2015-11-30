@@ -33,22 +33,21 @@ interface
 
 uses
   CEBaseTypes, CEEntity, CEBaseApplication, CEBaseRenderer, CEMesh, CEMaterial, CEVectors,
-  {$IFDEF OPENGLES_EMULATION}
+  {$IFDEF GLES20}
+    {$IFDEF OPENGLES_EMULATION}
     GLES20Regal,
-  {$ELSE}
-    {$IFDEF MOBILE}
-    gles20,
     {$ELSE}
-      {$IFDEF WINDOWS}
-      Windows,
-      {$ENDIF}
-      {$IFDEF XWINDOW}
-      xlib, xutil,
-      {$ENDIF}
-      dglOpenGL,
+    gles20,
     {$ENDIF}
+  {$ELSE}
+    {$IFDEF XWINDOW}
+    xlib, xutil,
+    {$ENDIF}
+    dglOpenGL,
   {$ENDIF}
-
+  {$IFDEF WINDOWS}
+  Windows,
+  {$ENDIF}
   CETemplate, CELog, CEIO, CEDataDecoder, CEUniformsManager;
 
 type
@@ -147,6 +146,11 @@ const
   SAMPLER_PREFIX = 'SAMPLER';
   GROW_STEP = 1;
 
+  {$IF NOT DECLARED(PGLchar)}
+type
+  PGLchar = PAnsiChar;
+  {$IFEND}
+
 {$MESSAGE 'Instantiating TGLSLShaderList'}
 {$I tpl_coll_vector.inc}
 
@@ -164,7 +168,7 @@ begin
     if len > 0 then
     begin
       GetMem(Buffer, len + 1);
-      glGetShaderInfoLog(Shader, len, {$IFDEF OPENGLES_EMULATION}@{$ENDIF}len, Buffer);
+      glGetShaderInfoLog(Shader, len, {$IFDEF GLES20}@{$ENDIF}len, Buffer);
       CELog.Error(ShaderType + ': ' + string(Buffer));
       FreeMem(Buffer);
     end;
@@ -362,11 +366,10 @@ procedure TCEBaseOpenGLRenderer.DoInit;
 type
   TLib = PWideChar;
 begin
-  {$IFDEF OPENGLES_EMULATION}
+  {$IFDEF GLES20}
     {$IFDEF WINDOWS}
     LoadGLESv2(TLib(GetPathRelativeToFile(ParamStr(0), '../Library/regal/regal32.dll')));
     {$ELSE}
-    not implemented
     {$ENDIF}
   {$ELSE}
     dglOpenGL.InitOpenGL();
@@ -425,6 +428,7 @@ begin
   Sh.FragmentShader := CreateShader(GL_FRAGMENT_SHADER, PAnsiChar(Pass.FragmentShader.Text));
   if (sh.VertexShader = 0) or (sh.FragmentShader = 0) then
   begin
+    Warning('Error initializing shader');
     Sh.Free();
     Result := ID_NOT_INITIALIZED;
     Exit;
@@ -434,6 +438,7 @@ begin
   glLinkProgram(Sh.ShaderProgram);
   Shaders.Add(Sh);
   Result := Shaders.Count - 1;
+  Log('Shader successfully initialized');
 end;
 
 function InitTexture(Image: TCEImageResource): glUint;
@@ -441,9 +446,6 @@ begin
   if not Assigned(Image) then Exit;
   glGenTextures(1, @Result);
   glBindTexture(GL_TEXTURE_2D, Result);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, Image.ActualLevels);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexImage2D(GL_TEXTURE_2D, 0, 3, Image.Width, Image.Height, 0, GL_RGB, GL_UNSIGNED_BYTE, Image.Data);
 end;
 
@@ -466,18 +468,23 @@ begin
     if PhaseLocation < 0 then begin
       CELog.Error('Error: Cannot get phase shader uniform location');
     end;}
-    glUniform1i(glGetUniformLocation(Sh.ShaderProgram, 's_texture0'), 0);
+    //glUniform1i(glGetUniformLocation(Sh.ShaderProgram, 's_texture0'), 0);
     CurShader := Sh;
   end;
 
   TexId := CEMaterial._GetTextureId(Pass, 0);
-  if TexId = ID_NOT_INITIALIZED then
-  begin
+  if TexId <> ID_NOT_INITIALIZED then
+    glBindTexture(GL_TEXTURE_2D, TexId)
+  else begin
     TexId := InitTexture(Pass.Texture0);
     CEMaterial._SetTextureId(Pass, 0, TexId);
   end;
-  glBindTexture(GL_TEXTURE_2D, TexId);
+
+  {$IFNDEF GLES20}
   glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
+  if Assigned(Pass.Texture0) then
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, Pass.Texture0.ActualLevels);
+  {$ENDIF}
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glActiveTexture(GL_TEXTURE0);
@@ -506,9 +513,14 @@ procedure TCEBaseOpenGLRenderer.Clear(Flags: TCEClearFlags; Color: TCEColor; Z: 
 begin
   if (Flags = []) or not Active then Exit;
 
-  glDepthMask(true);
-  glClearColor(Color.R * ONE_OVER_255, Color.G * ONE_OVER_255, Color.B * ONE_OVER_255, Color.A * ONE_OVER_255);
+  {$IFDEF GLES20}
+  glDepthMask(GL_TRUE);
+  glClearDepthf(Z);
+  {$ELSE}
+  glDepthMask(True);
   glClearDepth(Z);
+  {$ENDIF}
+  glClearColor(Color.R * ONE_OVER_255, Color.G * ONE_OVER_255, Color.B * ONE_OVER_255, Color.A * ONE_OVER_255);
   glClearStencil(Stencil);
 
   glClear(GL_COLOR_BUFFER_BIT * Ord(cfColor in Flags) or GL_DEPTH_BUFFER_BIT * Ord(cfDepth in Flags) or

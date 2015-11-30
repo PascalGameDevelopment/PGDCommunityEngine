@@ -204,26 +204,29 @@ begin
     glBufferData(GL_ARRAY_BUFFER, Mesh.VerticesCount * Mesh.VertexSize, VertexData, GL_STATIC_DRAW);
   end;
 
-  for i := 0 to Mesh.VertexAttribCount - 1 do
+  if Assigned(CurShader) then
   begin
-    //glBindAttribLocation(CurShader.ShaderProgram, i, Mesh.VertexAttribs^[i].Name);
-    Ind := glGetAttribLocation(CurShader.ShaderProgram, Mesh.VertexAttribs^[i].Name);
-    glEnableVertexAttribArray(Ind);
-    glVertexAttribPointer(Ind, Mesh.VertexAttribs^[i].Size, GetGLType(Mesh.VertexAttribs^[i].DataType), false,
-      Mesh.VertexSize, PtrOffs(nil, i * SizeOf(TCEVector4f)));
-  end;
+    for i := 0 to Mesh.VertexAttribCount - 1 do
+    begin
+      //glBindAttribLocation(CurShader.ShaderProgram, i, Mesh.VertexAttribs^[i].Name);
+      Ind := glGetAttribLocation(CurShader.ShaderProgram, Mesh.VertexAttribs^[i].Name);
+      glEnableVertexAttribArray(Ind);
+      glVertexAttribPointer(Ind, Mesh.VertexAttribs^[i].Size, GetGLType(Mesh.VertexAttribs^[i].DataType), false,
+        Mesh.VertexSize, PtrOffs(nil, i * SizeOf(TCEVector4f)));
+    end;
 
-  TCEOpenGLUniformsManager(FUniformsManager).ShaderProgram := CurShader.ShaderProgram;
-  Mesh.SetUniforms(FUniformsManager);
+    TCEOpenGLUniformsManager(FUniformsManager).ShaderProgram := CurShader.ShaderProgram;
+    Mesh.SetUniforms(FUniformsManager);
 
-  case Mesh.PrimitiveType of
-    ptPointList: glDrawArrays(GL_POINTS, 0, Mesh.PrimitiveCount);
-    ptLineList: glDrawArrays(GL_LINES, 0, Mesh.PrimitiveCount * 2);
-    ptLineStrip: glDrawArrays(GL_LINE_STRIP, 0, Mesh.PrimitiveCount + 1);
-    ptTriangleList: glDrawArrays(GL_TRIANGLES, 0, Mesh.PrimitiveCount * 3);
-    ptTriangleStrip: glDrawArrays(GL_TRIANGLE_STRIP, 0, Mesh.PrimitiveCount + 2);
-    ptTriangleFan: glDrawArrays(GL_TRIANGLE_FAN, 0, Mesh.PrimitiveCount + 2);
-    ptQuads:;
+    case Mesh.PrimitiveType of
+      ptPointList: glDrawArrays(GL_POINTS, 0, Mesh.PrimitiveCount);
+      ptLineList: glDrawArrays(GL_LINES, 0, Mesh.PrimitiveCount * 2);
+      ptLineStrip: glDrawArrays(GL_LINE_STRIP, 0, Mesh.PrimitiveCount + 1);
+      ptTriangleList: glDrawArrays(GL_TRIANGLES, 0, Mesh.PrimitiveCount * 3);
+      ptTriangleStrip: glDrawArrays(GL_TRIANGLE_STRIP, 0, Mesh.PrimitiveCount + 2);
+      ptTriangleFan: glDrawArrays(GL_TRIANGLE_FAN, 0, Mesh.PrimitiveCount + 2);
+      ptQuads:;
+    end;
   end;
 end;
 

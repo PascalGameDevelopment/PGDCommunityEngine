@@ -183,21 +183,24 @@ begin
 end;
 
 constructor TCEResource.CreateFromUrl(const Url: string);
-begin
+
+begin
   Create();
   DataURL := Url;
   LoadExternal(False);
 end;
 
 destructor TCEResource.Destroy;
-begin
+
+begin
   if Assigned(FDataHolder) then
     FreeAndNil(FDataHolder);
   inherited;
 end;
 
 function TCEResource.LoadExternal(NewerOnly: Boolean; const Target: TCELoadTarget = nil; MetadataOnly: Boolean = False): Boolean;
-var
+
+var
   Loader: TCEDataLoader;
   Decoder: TCEDataDecoder;
   Stream: TCEInputStream;
@@ -275,14 +278,17 @@ begin
 end;
 
 { TCETextResource }
-
+
+
 procedure TCETextResource.SetDataHolder(const Value: TTextData);
-begin
+
+begin
   FTextData := Value;
 end;
 
 function TCETextResource.GetText: AnsiString;
-begin
+
+begin
   if Assigned(FTextData) then
     Result := FTextData.Data
   else
@@ -290,28 +296,31 @@ function TCETextResource.GetText: AnsiString;
 end;
 
 procedure TCETextResource.SetText(const Value: AnsiString);
-begin
+
+begin
   FTextData.Data := Value;
 end;
 
 procedure TCETextResource.Init;
-begin
+
+begin
   inherited;
   SetDataHolder(TTextData.Create());
 end;
 
 destructor TCETextResource.Destroy;
-begin
+
+begin
   if Assigned(FTextData) then
     FreeAndNil(FTextData);
   inherited;
 end;
 
 procedure TCETextResource.SetBuffer(Buf: PAnsiChar; Len: Integer);
-begin
+
+begin
   FTextData.Data := '';
   SetString(FTextData.Data, Buf, Len);
 end;
 
 end.
-
