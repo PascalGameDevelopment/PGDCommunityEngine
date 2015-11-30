@@ -25,7 +25,7 @@ This is test for Windows application starter classes
 
 @author(George Bakhtadze (avagames@gmail.com))
 }
-program wintest;
+program demo;
 {$Include PGDCE.inc}
 
 {$APPTYPE CONSOLE}
@@ -147,7 +147,7 @@ begin
 
   Line := TRotatingTriangle.Create(Core.EntityManager);
   LineMesh := TCELineMesh.Create(Core.EntityManager);
-  LineMesh.Softness := 2 / 1024 * 1.5;
+  LineMesh.Softness := 2 / 1024 * 1.5*10;
   LineMesh.Width := 1 / 1024 * 63;
   LineMesh.Count := 6;
   LineMesh.Point[0] := Vec2f(-0.5,  0.3);

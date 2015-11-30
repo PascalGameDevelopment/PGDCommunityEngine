@@ -1,5 +1,5 @@
 set SRC_DIR=../../Source
-set fpcfile=WinTest.dpr
+set fpcfile=demo.dpr
 
 set fpccmd=%FPC_HOME%\bin\i386-win32\fpc.exe -dDEBUG -Sa
 rem set fpccmd=%FPC_HOME%\bin\i386-win32\fpc.exe -dRELESE -O3 -Sa
