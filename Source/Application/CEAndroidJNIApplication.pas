@@ -26,7 +26,7 @@ Android implementation of the application class
 @author(<INSERT YOUR NAME HERE> (<INSERT YOUR EMAIL ADDRESS OR WEBSITE HERE>))
 }
 
-unit CEAndroidApplication;
+unit CEAndroidJNIApplication;
 
 interface
 
@@ -34,7 +34,8 @@ uses
   CEBaseApplication;
 
 type
-  TCEAndroidApplication = class(TCEBaseApplication)
+  // Application implementing interaction with Android platform using custom JNI approach
+  TCEAndroidJNIApplication = class(TCEBaseApplication)
   private
     {Private declarations}
   protected
