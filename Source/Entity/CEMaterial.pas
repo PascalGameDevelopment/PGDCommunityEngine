@@ -44,7 +44,7 @@ type
     // Private to renderer
     TextureId: Integer;
   end;
-  TTextureSetups = array[0..MAX_TEXTURES-1] of TTextureSetup;
+  TTextureSetups = array[0..MAX_TEXTURES - 1] of TTextureSetup;
 
   // Encapsulates render state, texture and shader settings
   TCERenderPass = class(TCEBaseEntity)
@@ -97,12 +97,32 @@ type
     property Technique[Index: Integer]: TCERenderTechnique read GetTechnique write SetTechnique; default;
   end;
 
+  function CreateRenderPass(EntityManager: TCEEntityManager; AlphaBlend: Boolean;
+                            const TextureUrl: string; const VSUrl: string; const PSUrl: string): TCERenderPass;
   function _GetTextureId(Pass: TCERenderPass; Index: Integer): Integer;
   procedure _SetTextureId(Pass: TCERenderPass; Index: Integer; Id: Integer);
   function _GetProgramId(Pass: TCERenderPass): Integer;
   procedure _SetProgramId(Pass: TCERenderPass; Id: Integer);
 
 implementation
+
+function CreateRenderPass(EntityManager: TCEEntityManager; AlphaBlend: Boolean;
+                          const TextureUrl: string; const VSUrl: string; const PSUrl: string): TCERenderPass;
+var
+  Image: TCEImageResource;
+begin
+  Result := TCERenderPass.Create(EntityManager);
+  if TextureUrl <> '' then
+  begin
+    Image := TCEImageResource.CreateFromUrl(TextureUrl);
+    Result.Texture0 := Image;
+  end;
+  if VSUrl <> '' then
+    Result.VertexShader := TCETextResource.CreateFromUrl(VSUrl);
+  if PSUrl <> '' then
+    Result.FragmentShader := TCETextResource.CreateFromUrl(PSUrl);
+  Result.AlphaBlending := AlphaBlend;
+end;
 
 function _GetTextureId(Pass: TCERenderPass; Index: Integer): Integer;
 begin
@@ -137,10 +157,11 @@ begin
 end;
 
 procedure TCERenderPass.DoInit();
-var i: Integer;
+var
+  i: Integer;
 begin
   ProgramId := ID_NOT_INITIALIZED;
-  for i := 0 to MAX_TEXTURES-1 do
+  for i := 0 to MAX_TEXTURES - 1 do
     TextureSetups[i].TextureId := ID_NOT_INITIALIZED;
 end;
 
@@ -203,7 +224,8 @@ begin
 end;
 
 function TCEMaterial.GetTechniqueByLOD(Lod: Single): TCERenderTechnique;
-var i: Integer;
+var
+  i: Integer;
 begin
   Result := nil;
   i := 0;

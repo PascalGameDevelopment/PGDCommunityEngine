@@ -93,24 +93,6 @@ begin
   FVertexSize := SizeOf(TVBRecPos);
 end;
 
-function CreateRenderPass(EntityManager: TCEGameEntityManager; AlphaBlend: Boolean;
-    const TextureUrl: string; const VSUrl: string; const PSUrl: string): TCERenderPass;
-var
-  Image: TCEImageResource;
-begin
-  Result := TCERenderPass.Create(EntityManager);
-  if TextureUrl <> '' then
-  begin
-    Image := TCEImageResource.CreateFromUrl(TextureUrl);
-    Result.Texture0 := Image;
-  end;
-  if VSUrl <> '' then
-    Result.VertexShader := TCETextResource.CreateFromUrl(VSUrl);
-  if PSUrl <> '' then
-    Result.FragmentShader := TCETextResource.CreateFromUrl(PSUrl);
-  Result.AlphaBlending := AlphaBlend;
-end;
-
 procedure TRotatingTriangle.Update(const DeltaTime: Single);
 begin
   //TCERotatingTriangleMesh(Mesh).Angle := TCERotatingTriangleMesh(Mesh).Angle + speed * DeltaTime;
