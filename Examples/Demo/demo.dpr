@@ -179,12 +179,12 @@ begin
     Renderer.ApplyRenderPass(LinePass);
     Renderer.RenderMesh(LineMesh);
 
-    if Core.Input.Pressed[vkNUMPAD6] or (Core.Input.MouseState.Buttons[mbLeft] = baDown) then speed := speed + 4;
-    if Core.Input.Pressed[vkNUMPAD4] or (Core.Input.MouseState.Buttons[mbRight] = baDown) then speed := speed - 4;
+    if Core.Input.Pressed[vkNUMPAD6] or (Core.Input.MouseState.Buttons[mbLeft] = iaDown) then speed := speed + 4;
+    if Core.Input.Pressed[vkNUMPAD4] or (Core.Input.MouseState.Buttons[mbRight] = iaDown) then speed := speed - 4;
     speed := Clamps(speed, -360, 360);
 
     if Core.Input.Pressed[vkALT] and Core.Input.Pressed[vkX] then App.Terminated := True;
-    if Core.Input.MouseState.Buttons[mbLeft] = baDown then
+    if Core.Input.MouseState.Buttons[mbLeft] = iaDown then
     begin
       ClickPoint := Vec2f(Core.Input.MouseState.X / 512 - 1, 1 - Core.Input.MouseState.Y / 512);
       Ind := GetNearestPointIndex(LineMesh.Points, LineMesh.Count, ClickPoint);

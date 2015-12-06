@@ -103,7 +103,7 @@ procedure TCEXWindowApplication.ProcessXEvents();
     end;
   end;
 
-  function GetModifierMsg(AAction: TButtonAction; AKey: TCEVirtualKey; ACode: Integer): TCEMessage;
+  function GetModifierMsg(AAction: TInputAction; AKey: TCEVirtualKey; ACode: Integer): TCEMessage;
   begin
     if (AKey = vkLSHIFT) or (AKey = vkRSHIFT) then
       Result := TKeyboardMsg.Create(AAction, vkSHIFT, ACode);
@@ -143,30 +143,30 @@ begin
       end;
       KeyPress: begin
         KeySym := KeyCodeToSym(XEvent.xkey);
-        CEMsg := TKeyboardMsg.Create(baDown, KeySym, XEvent.xkey.keycode);
-        CEMsgMod := GetModifierMsg(baDown, KeySym, XEvent.xkey.keycode);
+        CEMsg := TKeyboardMsg.Create(iaDown, KeySym, XEvent.xkey.keycode);
+        CEMsgMod := GetModifierMsg(iaDown, KeySym, XEvent.xkey.keycode);
         CELog.Debug(Format('KeyPress: [%d, %d]', [XEvent.xkey.keycode, KeySym]));
       end;
       KeyRelease: begin
         KeySym := KeyCodeToSym(XEvent.xkey);
-        CEMsg := TKeyboardMsg.Create(baUp, KeySym, XEvent.xkey.keycode);
-        CEMsgMod := GetModifierMsg(baUp, KeySym, XEvent.xkey.keycode);
+        CEMsg := TKeyboardMsg.Create(iaUp, KeySym, XEvent.xkey.keycode);
+        CEMsgMod := GetModifierMsg(iaUp, KeySym, XEvent.xkey.keycode);
       end;
       MotionNotify: begin
         CEMsg := TMouseMoveMsg.Create(XEvent.XMotion.X, XEvent.XMotion.Y);
       end;
       ButtonPress: begin
         case XEvent.XButton.Button of
-          1: CEMsg := TMouseButtonMsg.Create(round(XEvent.XMotion.X), round(XEvent.XMotion.Y), baDown, mbLeft);
-          2: CEMsg := TMouseButtonMsg.Create(round(XEvent.XMotion.X), round(XEvent.XMotion.Y), baDown, mbMiddle);
-          3: CEMsg := TMouseButtonMsg.Create(round(XEvent.XMotion.X), round(XEvent.XMotion.Y), baDown, mbRight);
+          1: CEMsg := TMouseButtonMsg.Create(round(XEvent.XMotion.X), round(XEvent.XMotion.Y), iaDown, mbLeft);
+          2: CEMsg := TMouseButtonMsg.Create(round(XEvent.XMotion.X), round(XEvent.XMotion.Y), iaDown, mbMiddle);
+          3: CEMsg := TMouseButtonMsg.Create(round(XEvent.XMotion.X), round(XEvent.XMotion.Y), iaDown, mbRight);
         end;
       end;
       ButtonRelease: begin
         case XEvent.XButton.Button of
-          1: CEMsg := TMouseButtonMsg.Create(round(XEvent.XMotion.X), round(XEvent.XMotion.Y), baUp, mbLeft);
-          2: CEMsg := TMouseButtonMsg.Create(round(XEvent.XMotion.X), round(XEvent.XMotion.Y), baUp, mbMiddle);
-          3: CEMsg := TMouseButtonMsg.Create(round(XEvent.XMotion.X), round(XEvent.XMotion.Y), baUp, mbRight);
+          1: CEMsg := TMouseButtonMsg.Create(round(XEvent.XMotion.X), round(XEvent.XMotion.Y), iaUp, mbLeft);
+          2: CEMsg := TMouseButtonMsg.Create(round(XEvent.XMotion.X), round(XEvent.XMotion.Y), iaUp, mbMiddle);
+          3: CEMsg := TMouseButtonMsg.Create(round(XEvent.XMotion.X), round(XEvent.XMotion.Y), iaUp, mbRight);
         end;
       end;
     end;

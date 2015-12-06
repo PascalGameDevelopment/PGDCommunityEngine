@@ -100,15 +100,15 @@ begin
     end;
     WM_MOVE:    Result := TWindowMoveMsg.Create(lParam and 65535, lParam shr 16);
     WM_CHAR:    Result := TCharInputMsg.Create(Chr(wParam), lParam);
-    WM_KEYUP:   Result := TKeyboardMsg.Create(baUp, wParam, (lParam shr 16) and $FF);
+    WM_KEYUP:   Result := TKeyboardMsg.Create(iaUp, wParam, (lParam shr 16) and $FF);
     WM_KEYDOWN, WM_SYSKEYDOWN: if lParam and CHANGED_MASK = 0 then
-      Result := TKeyboardMsg.Create(baDown, wParam, (lParam shr 16) and $FF);
-    WM_LBUTTONDOWN: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), baDown, mbLeft);
-    WM_MBUTTONDOWN: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), baDown, mbMiddle);
-    WM_RBUTTONDOWN: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), baDown, mbRight);
-    WM_LBUTTONUP: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), baUp, mbLeft);
-    WM_MBUTTONUP: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), baUp, mbMiddle);
-    WM_RBUTTONUP: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), baUp, mbRight);
+      Result := TKeyboardMsg.Create(iaDown, wParam, (lParam shr 16) and $FF);
+    WM_LBUTTONDOWN: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), iaDown, mbLeft);
+    WM_MBUTTONDOWN: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), iaDown, mbMiddle);
+    WM_RBUTTONDOWN: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), iaDown, mbRight);
+    WM_LBUTTONUP: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), iaUp, mbLeft);
+    WM_MBUTTONUP: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), iaUp, mbMiddle);
+    WM_RBUTTONUP: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), iaUp, mbRight);
     WM_MOUSEMOVE: Result := TMouseMoveMsg.Create(GetX(lParam), GetY(lParam));
   end;
   if Assigned(Result) then

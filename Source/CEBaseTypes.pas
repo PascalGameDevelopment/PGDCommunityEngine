@@ -79,8 +79,18 @@ type
 
   // Identifier of a virtual key which may be a key on keyboard, mouse etc
   TCEVirtualKey = Byte;
-  // Button action
-  TButtonAction = (baUp, baDown);
+  // Input action
+  TInputAction = (
+          // Release of button or touch screen
+          iaUp,
+          // Button press or touch
+          iaDown,
+          // Pointer move
+          iaMotion,
+          // Initial touch event follwed by iaDown
+          iaTouchStart,
+          // Touch action cancellation. Pointer ID in following events are not logically the same as in previous events.
+          iaTouchCancel);
   // Mouse buttons
   TMouseButton = (// Left mouse button
                   mbLeft,

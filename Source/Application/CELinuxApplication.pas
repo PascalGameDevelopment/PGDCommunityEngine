@@ -333,16 +333,16 @@ begin
     end;
     ButtonPress: begin
       case Xev.XButton.Button of
-      1: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), baDown, mbLeft);
-      2: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), baDown, mbMiddle);
-      3: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), baDown, mbRight);
+      1: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), iaDown, mbLeft);
+      2: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), iaDown, mbMiddle);
+      3: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), iaDown, mbRight);
       end;
     end;
     ButtonRelease: begin
       case Xev.XButton.Button of
-      1: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), baUp, mbLeft);
-      2: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), baUp, mbMiddle);
-      3: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), baUp, mbRight);
+      1: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), iaUp, mbLeft);
+      2: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), iaUp, mbMiddle);
+      3: GetEvents_Core := TMouseButtonMsg.Create(round(Xev.XMotion.X), round(Xev.XMotion.Y), iaUp, mbRight);
       end;
     end;
   end;

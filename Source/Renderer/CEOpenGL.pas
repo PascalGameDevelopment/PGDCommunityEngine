@@ -472,6 +472,8 @@ begin
     CurShader := Sh;
   end;
 
+//  Verbose('shader done');
+
   TexId := CEMaterial._GetTextureId(Pass, 0);
   if TexId <> ID_NOT_INITIALIZED then
     glBindTexture(GL_TEXTURE_2D, TexId)
@@ -479,6 +481,8 @@ begin
     TexId := InitTexture(Pass.Texture0);
     CEMaterial._SetTextureId(Pass, 0, TexId);
   end;
+
+//  Verbose('texture init done');
 
   {$IFNDEF GLES20}
   glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
@@ -490,11 +494,15 @@ begin
   glActiveTexture(GL_TEXTURE0);
   glEnable(GL_TEXTURE_2D);
 
+//  Verbose('texture done');
+
   if Pass.AlphaBlending then
   begin
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   end;
+
+//  Verbose('blending done');
 end;
 
 function GetGLType(Value: TAttributeDataType): GLenum;

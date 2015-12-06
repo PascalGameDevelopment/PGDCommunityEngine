@@ -65,7 +65,7 @@ type
   // Keyboard state
   TKeyboardState = array[TCEVirtualKey] of Byte;
   // Mouse buttons state
-  TMouseButtons = array[TMouseButton] of TButtonAction;
+  TMouseButtons = array[TMouseButton] of TInputAction;
   // Mouse state data structure. X, Y and Z is mouse position at corresponding axis. Buttons - mouse buttons state
   TMouseState = packed record
     X, Y, Z: Single;

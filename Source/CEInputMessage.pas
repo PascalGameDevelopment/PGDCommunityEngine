@@ -39,39 +39,47 @@ type
   public
   end;
 
-  // Base class for mouse-related messages
-  TMouseMsg = class(TInputMessage)
+  // Base class for motion-related messages
+  TMotionMsg = class(TInputMessage)
   public
-    // coordinates of the mouse pointer in screen coordinate system
+    // coordinates related to event. Depending on source type may be absolute or relative.
     X, Y: Single;
-    // AX, AY - coordinates of the mouse pointer in screen coordinate system
+    // AX, AY - coordinates related to event. Depending on source type may be absolute or relative.
     constructor Create(AX, AY: Single);
   end;
 
   // The message is sent to <b>core handler</b> when the mouse pointer moves
-  TMouseMoveMsg = class(TMouseMsg)
+  TMouseMoveMsg = class(TMotionMsg)
   end;
 
   // Mouse button event
-  TMouseButtonMsg = class(TMouseMsg)
+  TMouseButtonMsg = class(TMotionMsg)
   public
     // Action (only baDown and baUp are expected)
-    Action: TButtonAction;
+    Action: TInputAction;
     // Button in action
     Button: TMouseButton;
-    constructor Create(AX, AY: Single; const AAction: TButtonAction; const AButton: TMouseButton);
+    constructor Create(AX, AY: Single; const AAction: TInputAction; const AButton: TMouseButton);
+  end;
+
+  // Touch event. Inherits from mouse button message for compatibility with touch-unaware applications.
+  TTouchMsg = class(TMouseButtonMsg)
+  public
+    // Pointer (e.g. finger for touch screens) ID. Unique and persistent between
+    PointerId: Integer;
+    constructor Create(AX, AY: Single; const AAction: TInputAction; const AButton: TMouseButton; APointerId: Integer);
   end;
 
   // Keyboard event
   TKeyboardMsg = class(TInputMessage)
   public
     // Action (only baDown and baUp are expected)
-    Action: TButtonAction;
+    Action: TInputAction;
     // Virtual key code
     Key: TCEVirtualKey;
     // Scan code of the key as come from hardware/API
     Code: Integer;
-    constructor Create(AAction: TButtonAction; AKey: TCEVirtualKey; ACode: Integer);
+    constructor Create(AAction: TInputAction; AKey: TCEVirtualKey; ACode: Integer);
   end;
 
   // Message for a character input
@@ -89,7 +97,7 @@ implementation
 
 { TMouseMsg }
 
-constructor TMouseMsg.Create(AX, AY: Single);
+constructor TMotionMsg.Create(AX, AY: Single);
 begin
   X := AX;
   Y := AY;
@@ -97,16 +105,24 @@ end;
 
 { TMouseButtonMsg }
 
-constructor TMouseButtonMsg.Create(AX, AY: Single; const AAction: TButtonAction; const AButton: TMouseButton);
+constructor TMouseButtonMsg.Create(AX, AY: Single; const AAction: TInputAction; const AButton: TMouseButton);
 begin
   inherited Create(AX, AY);
   Action := AAction;
   Button := AButton;
 end;
 
+{ TTouchEvent }
+
+constructor TTouchMsg.Create(AX, AY: Single; const AAction: TInputAction; const AButton: TMouseButton; APointerId: Integer);
+begin
+  inherited Create(AX, AY, AAction, AButton);
+  PointerId := APointerId;
+end;
+
 { TKeyboardMsg }
 
-constructor TKeyboardMsg.Create(AAction: TButtonAction; AKey: TCEVirtualKey; ACode: Integer);
+constructor TKeyboardMsg.Create(AAction: TInputAction; AKey: TCEVirtualKey; ACode: Integer);
 begin
   Action := AAction;
   Key    := AKey;

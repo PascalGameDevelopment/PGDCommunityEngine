@@ -49,6 +49,7 @@ type
   protected
     function DoInitGAPIPlatform(App: TCEBaseApplication): Boolean; override;
     procedure DoFinalizeGAPIPlatform(); override;
+    procedure HandleResize(Msg: TWindowResizeMsg); override;
   public
     procedure RenderMesh(Mesh: TCEMesh); override;
   end;
@@ -101,6 +102,11 @@ begin
   {$ENDIF}
 end;
 
+procedure TCEOpenGLES2Renderer.HandleResize(Msg: TWindowResizeMsg);
+begin
+
+end;
+
 procedure TCEOpenGLES2Renderer.RenderMesh(Mesh: TCEMesh);
 var
   i: Integer;
@@ -116,11 +122,15 @@ begin
   else
     Buffer := @TCEOpenGLBufferManager(FBufferManager).Buffers^[ts^.BufferIndex];
 
+  //Debug('rendering buffer taken');
+
   glBindBuffer(GL_ARRAY_BUFFER, Buffer^.Id);
   if ts^.Status <> dsValid then begin
     Mesh.FillVertexBuffer(VertexData);
     glBufferData(GL_ARRAY_BUFFER, Mesh.VerticesCount * Mesh.VertexSize, VertexData, GL_STATIC_DRAW);
   end;
+
+  //Debug('rendering buffer filled');
 
   if Assigned(CurShader) then
   begin
@@ -132,8 +142,12 @@ begin
         Mesh.VertexSize, PtrOffs(nil, i * SizeOf(TCEVector4f)));
     end;
 
+    //Debug('mesh attributes set');
+
     TCEOpenGLUniformsManager(FUniformsManager).ShaderProgram := CurShader.ShaderProgram;
     Mesh.SetUniforms(FUniformsManager);
+
+    //Debug('uniforms set');
 
     case Mesh.PrimitiveType of
       ptPointList: glDrawArrays(GL_POINTS, 0, Mesh.PrimitiveCount);
@@ -144,6 +158,8 @@ begin
       ptTriangleFan: glDrawArrays(GL_TRIANGLE_FAN, 0, Mesh.PrimitiveCount + 2);
       ptQuads:;
     end;
+
+    //CELog.Verbose('render done');
   end;
 end;
 

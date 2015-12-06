@@ -85,7 +85,7 @@ type
     ClickPoint: TCEVector2f;
     Ind: Integer;
   public
-    constructor Create();
+    constructor Create(Application: TCEBaseApplication);
     destructor Destroy(); override;
 
     procedure Process();
@@ -93,10 +93,16 @@ type
 
 implementation
 
-constructor TDemo.Create();
+uses
+  CEOSMessageInput;
+
+constructor TDemo.Create(Application: TCEBaseApplication);
 begin
+  App := Application;
   Renderer := TCERendererClass.Create(nil);
   Core := TCECore.Create();
+  Core.Input := TCEOSMessageInput.Create();
+  App.MessageHandler := Core.HandleMessage;
 
   PolyMesh := TCEPolygonMesh.Create(Core.EntityManager);
   PolyMesh.Count := 4;
@@ -125,9 +131,7 @@ end;
 procedure TDemo.Process();
 begin
   Renderer.Clear([cfColor, cfDepth], GetColor(40, 130, 130, 0), 1.0, 0);
-  log('applying material');
   Renderer.ApplyRenderPass(PolyPass);
-  log('rendering mesh');
   Renderer.RenderMesh(PolyMesh);
 end;
 

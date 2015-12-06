@@ -40,14 +40,19 @@ type
     procedure HandleKeyboard(Msg: TKeyboardMsg);
     procedure HandleMouseMove(Msg: TMouseMoveMsg);  protected
     procedure HandleMouseButton(Msg: TMouseButtonMsg);
+    procedure HandleTouchEvent(Msg: TTouchMsg);
   public
     procedure HandleMessage(const Msg: TCEMessage); override;
   end;
 
 implementation
 
+uses
+  CELog;
+
 procedure TCEOSMessageInput.HandleKeyboard(Msg: TKeyboardMsg);
 begin
+  CELog.Debug('=== Key');
   FKeyboardState[Msg.Key] := Ord(Msg.Action);
 end;
 
@@ -64,6 +69,13 @@ begin
   FMouseState.Buttons[Msg.Button] := Msg.Action;
 end;
 
+procedure TCEOSMessageInput.HandleTouchEvent(Msg: TTouchMsg);
+begin
+  FMouseState.X := Msg.X;
+  FMouseState.Y := Msg.Y;
+  FMouseState.Buttons[Msg.Button] := Msg.Action;
+end;
+
 procedure TCEOSMessageInput.HandleMessage(const Msg: TCEMessage);
 begin
   if Msg.ClassType = TKeyboardMsg then
@@ -71,7 +83,9 @@ begin
   else if Msg.ClassType = TMouseMoveMsg then
     HandleMouseMove(TMouseMoveMsg(Msg))
   else if Msg.ClassType = TMouseButtonMsg then
-    HandleMouseButton(TMouseButtonMsg(Msg));
+    HandleMouseButton(TMouseButtonMsg(Msg))
+  else if Msg.ClassType = TTouchMsg then
+    HandleTouchEvent(TTouchMsg(Msg));
 end;
 
 end.

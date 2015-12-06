@@ -30,7 +30,8 @@ Android library implementation for integration through JNI
 library pgdce;
 
 uses
-  CELog, CEAndroidLog, CEMessage,
+  CELog, CEAndroidLog,
+  CEBaseTypes, CEMessage, CEInputMessage,
   jni, CEAndroidJNIApplication,
   DemoMain;
 
@@ -57,7 +58,7 @@ procedure OnSurfaceCreated(PEnv: PJNIEnv; Obj: JObject); stdcall; export;
 begin
   CELog.Debug('Surface created');
   App.DoCreateWindow();
-  Demo := TDemo.Create();
+  Demo := TDemo.Create(App);
 end;
 
 procedure OnSurfaceChanged(PEnv: PJNIEnv; Obj: JObject; Width, Height: jint); stdcall; export;
@@ -92,6 +93,52 @@ begin
   CELog.Debug('PGDCE resume');
   SendMsg(TAppActivateMsg.Create);
   App.Active := True;
+end;
+
+const
+  KEY_ACTION_DOWN     = 0;
+  KEY_ACTION_UP       = 1;
+  KEY_ACTION_MULTIPLE = 2;
+
+  TOUCH_ACTION_DOWN         = 0;
+  TOUCH_ACTION_UP           = 1;
+  TOUCH_ACTION_MOVE         = 2;
+  TOUCH_ACTION_CANCEL       = 3;
+  TOUCH_ACTION_OUTSIDE      = 4;
+  TOUCH_ACTION_POINTER_DOWN = 5;
+  TOUCH_ACTION_POINTER_UP   = 6;
+  TOUCH_ACTION_HOVER_MOVE   = 7;
+  TOUCH_ACTION_SCROLL       = 8;
+  TOUCH_ACTION_HOVER_ENTER  = 9;
+  TOUCH_ACTION_HOVER_EXIT   = 10;
+
+function OnKeyEvent(PEnv: PJNIEnv; Obj: JObject; Action, KeyCode, ScanCode: jint): jboolean; stdcall; export;
+var
+  Act: TInputAction;
+begin
+  if Action = KEY_ACTION_DOWN then
+    Act := iaDown
+  else if Action = KEY_ACTION_UP then
+    Act := iaUp
+  else Exit;
+  SendMsg(TKeyboardMsg.Create(Act, KeyCode, ScanCode));
+  Result := 1;
+end;
+
+function OnTouchEvent(PEnv: PJNIEnv; Obj: JObject; Action, PointerId: jint; X, Y: jfloat): jboolean; stdcall; export;
+var
+  Act: TInputAction;
+begin
+  case Action of
+    TOUCH_ACTION_POINTER_DOWN: Act := iaDown;
+    TOUCH_ACTION_POINTER_UP:   Act := iaUp;
+    TOUCH_ACTION_MOVE:         Act := iaMotion;
+    TOUCH_ACTION_DOWN:         Act := iaTouchStart;
+    TOUCH_ACTION_CANCEL:       Act := iaTouchCancel;
+    else Exit;
+  end;
+  SendMsg(TTouchMsg.Create(X, Y, Act, mbLeft, PointerId));
+  Result := 1;
 end;
 
 function JNI_OnLoad(VM: PJavaVM; Obj: JObject): Integer; cdecl; export;
@@ -129,6 +176,8 @@ exports
   SetConfig name JNI_PREFIX + 'setConfig',
   OnPause name JNI_PREFIX + 'onPause',
   OnResume name JNI_PREFIX + 'onResume',
+  OnKeyEvent name JNI_PREFIX + 'onKeyEvent',
+  OnTouchEvent name JNI_PREFIX + 'onTouchEvent',
   JNI_OnLoad,
   JNI_OnUnload;
 
