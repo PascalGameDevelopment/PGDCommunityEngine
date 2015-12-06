@@ -38,6 +38,8 @@ type
   TCELogPrefix = string;
   // Log level class
   TCELogLevel = (llVerbose, llDebug, llInfo, llWarning, llError, llFatalError);
+  // Tag used to filter log messages on subsystem basis
+  TCELogTag = AnsiString;
 
 type
   // Method pointer which formats
@@ -68,25 +70,37 @@ type
     // String formatter delegate. It's recommended for descendant classes to use it.
     property Formatter: TCELogFormatDelegate read FFormatter write FFormatter;
   end;
-
-  // Calls all registered appenders to log the string with default log level
+    
+    // Filters by tag and calls all registered appenders to log the string with source location information
+  procedure Log(const Tag: TCELogTag; const Str: string; const CodeLoc: TCodeLocation; Level: TCELogLevel); overload;
+    // Calls all registered appenders to log the string with default log level
   procedure Log(const Str: string); overload;
-  // Calls all registered appenders to log the string
-  procedure Log(const Str: string; Level: TCELogLevel); overload;
-  // Calls all registered appenders to log the string with source location information
-  procedure Log(const Str: string; const CodeLoc: TCodeLocation; Level: TCELogLevel); overload;
-  // Calls all registered appenders to log the verbose message
-  procedure Verbose(const Str: string);
-  // Calls all registered appenders to log the debug message
-  procedure Debug(const Str: string);
-  // Calls all registered appenders to log the info
-  procedure Info(const Str: string);
-  // Calls all registered appenders to log the warning
-  procedure Warning(const Str: string);
-  // Calls all registered appenders to log the error
-  procedure Error(const Str: string);
-  // Calls all registered appenders to log the fatal error
-  procedure Fatal(const Str: string);
+    // Calls all registered appenders to log the verbose message
+  procedure Verbose(const Str: string); overload;
+    // Calls all registered appenders to log the debug message
+  procedure Debug(const Str: string); overload;
+    // Calls all registered appenders to log the info
+  procedure Info(const Str: string); overload;
+    // Calls all registered appenders to log the warning
+  procedure Warning(const Str: string); overload;
+    // Calls all registered appenders to log the error
+  procedure Error(const Str: string); overload;
+    // Calls all registered appenders to log the fatal error
+  procedure Fatal(const Str: string); overload;
+    // Calls all registered appenders to log the string with default log level
+  procedure Log(const Tag: TCELogTag; const Str: string); overload;
+    // Calls all registered appenders to log the verbose message
+  procedure Verbose(const Tag: TCELogTag; const Str: string); overload;
+    // Calls all registered appenders to log the debug message
+  procedure Debug(const Tag: TCELogTag; const Str: string); overload;
+    // Calls all registered appenders to log the info
+  procedure Info(const Tag: TCELogTag; const Str: string); overload;
+    // Calls all registered appenders to log the warning
+  procedure Warning(const Tag: TCELogTag; const Str: string); overload;
+    // Calls all registered appenders to log the error
+  procedure Error(const Tag: TCELogTag; const Str: string); overload;
+    // Calls all registered appenders to log the fatal error
+  procedure Fatal(const Tag: TCELogTag; const Str: string); overload;
 
   // Prints to log the specified stack trace which can be obtained by some of BaseDebug unit routines
   procedure LogStackTrace(const StackTrace: TBaseStackTrace);
@@ -212,17 +226,7 @@ end;
 
 const EmptyCodeLoc: TCodeLocation = (Address: nil; SourceFilename: ''; UnitName: ''; ProcedureName: ''; LineNumber: -1);
 
-procedure Log(const Str: string);
-begin
-  Log(Str, EmptyCodeLoc, llInfo);
-end;
-
-procedure Log(const Str: string; Level: TCELogLevel);
-begin
-  Log(Str, EmptyCodeLoc, Level);
-end;
-
-procedure Log(const Str: string; const CodeLoc: TCodeLocation; Level: TCELogLevel); overload;
+procedure Log(const Tag: TCELogTag; const Str: string; const CodeLoc: TCodeLocation; Level: TCELogLevel); overload;
 {$IFDEF LOGGING} var i: Integer; Time: TDateTime; SrcLocPtr: PCodeLocation; {$ENDIF}
 begin
   {$IFDEF LOGGING}
@@ -245,34 +249,74 @@ begin
   {$ENDIF}
 end;
 
+procedure Log(const Str: string);
+begin
+  Log('', Str, EmptyCodeLoc, llInfo);
+end;
+
+procedure Log(const Tag: TCELogTag; const Str: string); overload;
+begin
+  Log(Tag, Str, EmptyCodeLoc, llInfo);
+end;
+
 procedure Verbose(const Str: string);
 begin
-  {$IFDEF LOGGING} Log(Str, llVerbose); {$ENDIF}
+  {$IFDEF LOGGING} Log('', Str, EmptyCodeLoc, llVerbose); {$ENDIF}
+end;
+
+procedure Verbose(const Tag: TCELogTag; const Str: string); overload;
+begin
+  {$IFDEF LOGGING} Log(Tag, Str, EmptyCodeLoc, llVerbose); {$ENDIF}
 end;
 
 procedure Debug(const Str: string);
 begin
-  {$IFDEF LOGGING} Log(Str, llDebug); {$ENDIF}
+  {$IFDEF LOGGING} Log('', Str, EmptyCodeLoc, llDebug); {$ENDIF}
+end;
+
+procedure Debug(const Tag: TCELogTag; const Str: string); overload;
+begin
+  {$IFDEF LOGGING} Log(Tag, Str, EmptyCodeLoc, llDebug); {$ENDIF}
 end;
 
 procedure Info(const Str: string);
 begin
-  {$IFDEF LOGGING} Log(Str, llInfo); {$ENDIF}
+  {$IFDEF LOGGING} Log('', Str, EmptyCodeLoc, llInfo); {$ENDIF}
+end;
+
+procedure Info(const Tag: TCELogTag; const Str: string); overload;
+begin
+  {$IFDEF LOGGING} Log(Tag, Str, EmptyCodeLoc, llInfo); {$ENDIF}
 end;
 
 procedure Warning(const Str: string);
 begin
-  {$IFDEF LOGGING} Log(Str, llWarning); {$ENDIF}
+  {$IFDEF LOGGING} Log('', Str, EmptyCodeLoc, llWarning); {$ENDIF}
+end;
+
+procedure Warning(const Tag: TCELogTag; const Str: string); overload;
+begin
+  {$IFDEF LOGGING} Log(Tag, Str, EmptyCodeLoc, llWarning); {$ENDIF}
 end;
 
 procedure Error(const Str: string);
 begin
-  {$IFDEF LOGGING} Log(Str, llError); {$ENDIF}
+  {$IFDEF LOGGING} Log('', Str, EmptyCodeLoc, llError); {$ENDIF}
+end;
+
+procedure Error(const Tag: TCELogTag; const Str: string); overload;
+begin
+  {$IFDEF LOGGING} Log(Tag, Str, EmptyCodeLoc, llError); {$ENDIF}
 end;
 
 procedure Fatal(const Str: string);
 begin
-  {$IFDEF LOGGING} Log(Str, llFatalError); {$ENDIF}
+  {$IFDEF LOGGING} Log('', Str, EmptyCodeLoc, llFatalError); {$ENDIF}
+end;
+
+procedure Fatal(const Tag: TCELogTag; const Str: string); overload;
+begin
+  {$IFDEF LOGGING} Log(Tag, Str, EmptyCodeLoc, llFatalError); {$ENDIF}
 end;
 
 procedure LogStackTrace(const StackTrace: TBaseStackTrace);
@@ -296,7 +340,7 @@ begin
 
   CodeLocation := GetCodeLoc(Filename, '', '', LineNumber, ErrorAddr);
 
-  Log(Message, CodeLocation, AssertLogLevel);
+  Log('', Message, CodeLocation, AssertLogLevel);
 end;
 
 function _Log(Level: TCELogLevel): Boolean; overload;
@@ -324,7 +368,7 @@ procedure AddAppender(Appender: TCEAppender);
 begin
   if not Assigned(Appender) then Exit;
   if IndexOfAppender(Appender) >= 0 then begin
-    Log('Duplicate appender of class "' + Appender.ClassName + '"', llWarning);
+    Warning('CELog', 'Duplicate appender of class "' + Appender.ClassName + '"');
     Exit;
   end;
   Lock();
