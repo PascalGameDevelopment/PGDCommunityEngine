@@ -27,7 +27,7 @@ This is main unit for crossplatform demo application
 }
 
 {$Include PGDCE.inc}
-unit demomain;
+unit DemoMain;
 
 interface
 

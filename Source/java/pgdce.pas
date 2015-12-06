@@ -32,7 +32,7 @@ library pgdce;
 uses
   CELog, CEAndroidLog, CEMessage,
   jni, CEAndroidJNIApplication,
-  demomain;
+  DemoMain;
 
 type
   TCEAndroidJNIApplication = class(TCEAndroidApplication)
