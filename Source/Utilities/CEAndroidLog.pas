@@ -52,9 +52,12 @@ const
 type
   // Log appender which works with Android system logger viewable by Logcat utility
   TCELogcatAppender = class(TCEAppender)
+  private
+    FTag: AnsiString;
   protected
     // Prints the log string to a system console
     procedure AppendLog(const Time: TDateTime; const Str: string; CodeLoc: PCodeLocation; Level: TCELogLevel); override;
+    constructor Create(Level: TCELogLevel; Tag: AnsiString);
   end;
 
   function __android_log_write(prio: longint; tag, text: PAnsiChar): longint; cdecl; external libname name '__android_log_write';
@@ -65,11 +68,17 @@ implementation
 
 procedure TCELogcatAppender.AppendLog(const Time: TDateTime; const Str: string; CodeLoc: PCodeLocation; Level: TCELogLevel);
 begin
-  __android_log_write(AndroidLogLevels[Level], '', PAnsiChar(Formatter(Time, Str, CodeLoc, Level)));
+  __android_log_write(AndroidLogLevels[Level], PAnsiChar(FTag), PAnsiChar(Formatter(Time, Str, CodeLoc, Level)));
+end;
+
+constructor TCELogcatAppender.Create(Level: TCELogLevel; Tag: AnsiString);
+begin
+  inherited Create(Level);
+  FTag := Tag;
 end;
 
 begin
   // Remove default appenders as them not work on Android
   CELog.RemoveDefaultAppenders();
-  TCELogcatAppender.Create(llVerbose);
+  TCELogcatAppender.Create(llVerbose, 'native library');
 end.

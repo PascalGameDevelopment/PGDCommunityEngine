@@ -23,29 +23,56 @@
 
 Android implementation of the application class
 
-@author(<INSERT YOUR NAME HERE> (<INSERT YOUR EMAIL ADDRESS OR WEBSITE HERE>))
+@author(George Bakhtadze (avagames@gmail.com))
 }
 
+{$Include PGDCE.inc}
 unit CEAndroidJNIApplication;
 
 interface
 
 uses
-  CEBaseApplication;
+  CELog, CEBaseApplication;
 
 type
   // Application implementing interaction with Android platform using custom JNI approach
-  TCEAndroidJNIApplication = class(TCEBaseApplication)
+  TCEAndroidApplication = class(TCEBaseApplication)
   private
-    {Private declarations}
   protected
-    {Protected declarations}
+    procedure SetConfig(const ConfigString: PAnsiChar);
+    procedure InitKeyCodes(); override;
+    function DoCreateWindow(): Boolean; override;
+    procedure DoDestroyWindow(); override;
   public
-    {Public declarations}
-  published
-    {Published declarations}
+    procedure Process(); override;
   end;
 
 implementation
+
+uses CEBaseInput;
+
+procedure TCEAndroidApplication.SetConfig(const ConfigString: PAnsiChar);
+begin
+  CELog.Debug('Configuration change: ' + ConfigString);
+end;
+
+procedure TCEAndroidApplication.InitKeyCodes();
+begin
+
+end;
+
+function TCEAndroidApplication.DoCreateWindow(): Boolean;
+begin
+  Result := True;
+end;
+
+procedure TCEAndroidApplication.DoDestroyWindow();
+begin
+end;
+
+procedure TCEAndroidApplication.Process();
+begin
+
+end;
 
 end.
