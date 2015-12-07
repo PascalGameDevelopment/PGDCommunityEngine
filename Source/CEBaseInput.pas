@@ -72,6 +72,16 @@ type
     Buttons: TMouseButtons;
   end;
 
+  // Touch
+  TTouchPointer = record
+    // Pointer is active
+    Active: Boolean;
+    // Pointer coordinates
+    X, Y, Z: Single;
+  end;
+
+  TTouchState = array[0..$FF] of TTouchPointer;
+
   TCEBaseInput = class(TCESubSystem)
   private
     function GetPressed(key: TCEVirtualKey): Boolean;
@@ -81,6 +91,14 @@ type
     FKeyboardState: TKeyboardState;
     // Current mouse state
     FMouseState: TMouseState;
+    // Current touch pointers state
+    FTouchState: TTouchState;
+    // Current touch pointers count
+    FPointerCount: Integer;
+    procedure AddPointer(Id: Integer; X, Y: Single);
+    procedure RemovePointer(Id: Integer);
+    procedure ClearPointers();
+    function GetTouch(Id: Integer): TTouchPointer;
   public
     // State of a virtual key. Non-zero value means that the key is pressed.
     property VirtualKey[key: TCEVirtualKey]: Integer read GetVirtualKey;
@@ -88,7 +106,11 @@ type
     property Pressed[key: TCEVirtualKey]: Boolean read GetPressed;
     // Mouse state
     property MouseState: TMouseState read FMouseState write FMouseState;
-  end;
+    // Current touch pointers state
+    property Pointers[Id: Integer]: TTouchPointer read GetTouch;
+    // Current touch pointers count
+    property PointerCount: Integer read FPointerCount;
+    end;
 
 var
   // Virtual key codes
@@ -142,14 +164,45 @@ implementation
 
 { TCEBaseInput }
 
+function TCEBaseInput.GetPressed(key: TCEVirtualKey): Boolean;
+begin
+  Result := FKeyboardState[key] <> 0;
+end;
+
 function TCEBaseInput.GetVirtualKey(key: TCEVirtualKey): Integer;
 begin
   Result := FKeyboardState[key];
 end;
 
-function TCEBaseInput.GetPressed(key: TCEVirtualKey): Boolean;
+procedure TCEBaseInput.AddPointer(Id: Integer; X, Y: Single);
 begin
-  Result := FKeyboardState[key] <> 0;
+  Inc(FPointerCount, Ord(not FTouchState[Id].Active));
+  FTouchState[Id].Active := False;
+  FTouchState[Id].X := X;
+  FTouchState[Id].Y := Y;
+  FTouchState[Id].Z := 0;
+  FTouchState[Id].Active := True;
+end;
+
+procedure TCEBaseInput.RemovePointer(Id: Integer);
+begin
+  Dec(FPointerCount, Ord(FTouchState[Id].Active));
+  FTouchState[Id].Active := False;
+end;
+
+procedure TCEBaseInput.ClearPointers();
+var
+  i: Integer;
+begin
+  for i := Low(FTouchState) to High(FTouchState) do
+    FTouchState[i].Active := False;
+  FPointerCount := 0;
+end;
+
+function TCEBaseInput.GetTouch(Id: Integer): TTouchPointer;
+begin
+  Assert((Id >= 0) and (Id <= 255), 'Invalid touch pointer id');
+  Result := FTouchState[Id];
 end;
 
 end.

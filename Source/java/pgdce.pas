@@ -57,12 +57,12 @@ end;
 procedure OnSurfaceCreated(PEnv: PJNIEnv; Obj: JObject); stdcall; export;
 begin
   CELog.Debug('Surface created');
-  App.DoCreateWindow();
   Demo := TDemo.Create(App);
 end;
 
 procedure OnSurfaceChanged(PEnv: PJNIEnv; Obj: JObject; Width, Height: jint); stdcall; export;
 begin
+  CELog.Debug('PGDCE resize: ' + IntToStr(Width) + 'x' + IntToStr(Height));
   SendMsg(TWindowResizeMsg.Create(0, 0, Width, Height))
 end;
 
@@ -129,6 +129,7 @@ function OnTouchEvent(PEnv: PJNIEnv; Obj: JObject; Action, PointerId: jint; X, Y
 var
   Act: TInputAction;
 begin
+  //CELog.Debug('Touch: ' + IntToStr(Ord(Action)));
   case Action of
     TOUCH_ACTION_POINTER_DOWN: Act := iaDown;
     TOUCH_ACTION_POINTER_UP:   Act := iaUp;

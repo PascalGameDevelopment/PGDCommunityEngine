@@ -80,5 +80,5 @@ end;
 begin
   // Remove default appenders as them not work on Android
   CELog.RemoveDefaultAppenders();
-  TCELogcatAppender.Create(llVerbose, 'native library');
+  TCELogcatAppender.Create(llVerbose, 'JNI.LIB');
 end.

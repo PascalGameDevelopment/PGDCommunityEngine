@@ -48,7 +48,7 @@ type
 implementation
 
 uses
-  CELog;
+  CELog, CEBaseTypes;
 
 procedure TCEOSMessageInput.HandleKeyboard(Msg: TKeyboardMsg);
 begin
@@ -71,9 +71,17 @@ end;
 
 procedure TCEOSMessageInput.HandleTouchEvent(Msg: TTouchMsg);
 begin
+  case Msg.Action of
+    iaUp: RemovePointer(Msg.PointerId);
+    iaDown, iaMotion: AddPointer(Msg.PointerId, Msg.X, Msg.Y);
+    iaTouchCancel: ClearPointers();
+  end;
   FMouseState.X := Msg.X;
   FMouseState.Y := Msg.Y;
-  FMouseState.Buttons[Msg.Button] := Msg.Action;
+  if Pointers[Msg.PointerId].Active then
+    FMouseState.Buttons[Msg.Button] := iaDown
+  else
+    FMouseState.Buttons[Msg.Button] := iaUp;
 end;
 
 procedure TCEOSMessageInput.HandleMessage(const Msg: TCEMessage);

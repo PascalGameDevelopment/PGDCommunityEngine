@@ -79,15 +79,15 @@ type
     Renderer: TCEBaseRenderer;
     Core: TCECore;
     PolyMesh: TCEPolygonMesh;
-    Mat: TCEMaterial;
     PolyPass: TCERenderPass;
-    Sh: TCETextResource;
     ClickPoint: TCEVector2f;
     Ind: Integer;
+    Ids: array[0..$FF] of Integer;
   public
     constructor Create(Application: TCEBaseApplication);
     destructor Destroy(); override;
 
+    procedure HandleMessage(const Msg: TCEMessage);
     procedure Process();
   end;
 
@@ -101,8 +101,9 @@ begin
   App := Application;
   Renderer := TCERendererClass.Create(nil);
   Core := TCECore.Create();
+  Core.Renderer := Renderer;
   Core.Input := TCEOSMessageInput.Create();
-  App.MessageHandler := Core.HandleMessage;
+  App.MessageHandler := HandleMessage;
 
   PolyMesh := TCEPolygonMesh.Create(Core.EntityManager);
   PolyMesh.Count := 4;
@@ -118,6 +119,8 @@ begin
   PolyPass.VertexShader.Text := VS;
   PolyPass.FragmentShader := TCETextResource.Create();
   PolyPass.FragmentShader.Text := PS;
+
+  FillChar(Ids, SizeOf(Ids), 255);
 end;
 
 destructor TDemo.Destroy();
@@ -128,11 +131,38 @@ begin
   inherited Destroy();
 end;
 
+procedure TDemo.HandleMessage(const Msg: TCEMessage);
+begin
+  Core.HandleMessage(Msg);
+  if Msg.ClassType() = TTouchMsg then
+    if (Renderer.Width > 0) and (Renderer.Height > 0) then
+    begin
+      case TTouchMsg(Msg).Action of
+        iaDown: begin
+          ClickPoint := Vec2f(Core.Input.MouseState.X / Renderer.Width * 2 - 1, 1 - Core.Input.MouseState.Y / Renderer.Height * 2);
+          Ids[TTouchMsg(Msg).PointerId] := GetNearestPointIndex(PolyMesh.Points, PolyMesh.Count, ClickPoint);
+          PolyMesh.Point[Ids[TTouchMsg(Msg).PointerId]] := ClickPoint;
+        end;
+        iaUp: Ids[TTouchMsg(Msg).PointerId] := -1;
+        iaMotion: PolyMesh.Point[Ids[TTouchMsg(Msg).PointerId]] :=
+          Vec2f(Core.Input.MouseState.X / Renderer.Width * 2 - 1, 1 - Core.Input.MouseState.Y / Renderer.Height * 2);
+        else FillChar(Ids, SizeOf(Ids), 255);
+      end;
+      //CELog.Debug('Touch: ' + IntToStr(Ord(Action)) + ', but: ' + IntToStr(Ord(Button)));
+    end;
+end;
+
 procedure TDemo.Process();
 begin
   Renderer.Clear([cfColor, cfDepth], GetColor(40, 130, 130, 0), 1.0, 0);
   Renderer.ApplyRenderPass(PolyPass);
   Renderer.RenderMesh(PolyMesh);
+  if Core.Input.MouseState.Buttons[mbLeft] = iaDown then
+  begin
+    if (Renderer.Width > 0) and (Renderer.Height > 0) then
+    begin
+    end;
+  end;
 end;
 
 end.
