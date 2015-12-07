@@ -216,6 +216,10 @@ var
 
 implementation
 
+{$IFDEF CE_DEBUG}
+uses CELog;
+{$ENDIF}
+
 { TCEMessage }
 
 class function TCEMessage.NewInstance: TObject;
@@ -354,7 +358,12 @@ end;
 function TCEMessagePool.Allocate(Size: Cardinal): Pointer;
 var NewCapacity: Integer;
 begin
-  Assert(CurrentPool^.Size + Size < MessagePoolMaxCapacity, 'Message pool is full');       // Todo: Handle this situation
+  {$IFDEF CE_DEBUG}
+  if CurrentPool^.Size + Size >= MessagePoolMaxCapacity then
+    CELog.Fatal('Message pool is full');
+  {$ENDIF}
+  Assert(CurrentPool^.Size + Size < MessagePoolMaxCapacity, 'Message pool is full');
+  // Todo: Handle this situation
   if CurrentPool^.Size + Size > FCapacity then begin
     NewCapacity := FCapacity + MessagePoolInitialCapacity;
     if NewCapacity > MessagePoolMaxCapacity then NewCapacity := MessagePoolMaxCapacity;

@@ -34,11 +34,21 @@ interface
 uses
   {$IFDEF WINDOWS}
     Windows,
+    {$IFDEF NAMESPACED_UNITS} System.SyncObjs, {$ELSE} SyncObjs, {$ENDIF}
   {$ENDIF}
-  {$IFDEF LINUX}
+  {$IFDEF UNIX}
     unix, cthreads,
   {$ENDIF}
   SysUtils;
+
+  {$IFDEF FPC}
+type
+  TCEMutex = TRTLCriticalSection;
+  {$ENDIF}
+  {$IFDEF DELPHI}
+type
+  TCEMutex = TCriticalSection;
+  {$ENDIF}
 
 // Thread-safe increment of the value
 function AtomicIncrement(var Addend: LongInt): LongInt;
@@ -50,6 +60,12 @@ function AtomicExchange(var Target: LongInt; Source: LongInt): LongInt;
 function AtomicAddExchange(var Target: LongInt; Source: LongInt): LongInt;
 // Exchanges Target with NewValue if Target and Comparand are equal. It returns the old value of Target.
 function AtomicCompareExchange(var Target: LongInt; NewValue: LongInt; Comparand: LongInt): LongInt;
+
+  procedure MutexCreate(out Mutex: TCEMutex);
+  procedure MutexDelete(var Mutex: TCEMutex);
+  procedure MutexEnter(var Mutex: TCEMutex);
+  function MutexTryEnter(var Mutex: TCEMutex): Boolean;
+  procedure MutexLeave(var Mutex: TCEMutex);
 
 implementation
 
@@ -80,6 +96,31 @@ begin
   Result := InterlockedCompareExchange(Target, NewValue, Comparand);
 end;
 
+procedure MutexCreate(out Mutex: TCEMutex);
+begin
+  InitCriticalSection(Mutex);
+end;
+
+procedure MutexDelete(var Mutex: TCEMutex);
+begin
+  DoneCriticalsection(Mutex);
+end;
+
+procedure MutexEnter(var Mutex: TCEMutex);
+begin
+  EnterCriticalsection(Mutex);
+end;
+
+function MutexTryEnter(var Mutex: TCEMutex): Boolean;
+begin
+  Result := TryEnterCriticalsection(Mutex) <> 0;
+end;
+
+procedure MutexLeave(var Mutex: TCEMutex);
+begin
+  LeaveCriticalsection(Mutex);
+end;
+
 {$ELSE}{$IFDEF WINDOWS}
 
 function AtomicIncrement(var Addend: LongInt): LongInt;
@@ -105,6 +146,33 @@ end;
 function AtomicCompareExchange(var Target: LongInt; NewValue: LongInt; Comparand: LongInt): LongInt;
 begin
   Result := Windows.InterlockedCompareExchange(Target, NewValue, Comparand);
+end;
+
+procedure MutexCreate(out Mutex: TCEMutex);
+begin
+  Mutex := TCEMutex.Create();
+end;
+
+procedure MutexDelete(var Mutex: TCEMutex);
+begin
+  if Assigned(Mutex) then
+    Mutex.Free();
+  Mutex := nil;
+end;
+
+procedure MutexEnter(var Mutex: TCEMutex);
+begin
+  Mutex.Enter();
+end;
+
+function MutexTryEnter(var Mutex: TCEMutex): Boolean;
+begin
+  Result := Mutex.TryEnter();
+end;
+
+procedure MutexLeave(var Mutex: TCEMutex);
+begin
+  Mutex.Leave();
 end;
 
 {$ENDIF}{$ENDIF}

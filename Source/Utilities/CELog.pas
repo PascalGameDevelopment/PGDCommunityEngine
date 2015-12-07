@@ -168,10 +168,13 @@ implementation
 
 uses
   {$IFDEF MULTITHREADLOG}
+    CEConcurrent,
+    {$IFDEF UNIX}
+    {$ENDIF}
+    {$IFDEF WINDOWS}{$IFDEF DELPHI}
+      {$IFDEF NAMESPACED_UNITS} Winapi.Windows, {$ELSE} Windows, {$ENDIF}
+    {$ENDIF}{$ENDIF}
   {$ENDIF}
-  {$IFDEF WINDOWS}{$IFDEF DELPHI}
-    {$IFDEF NAMESPACED_UNITS} Winapi.Windows, {$ELSE} Windows, {$ENDIF}
-  {$ENDIF}{$ENDIF}
   SysUtils;
 
 const
@@ -206,21 +209,21 @@ end;
 var
   FAppenders: array of TCEAppender;
   {$IFDEF MULTITHREADLOG}
-    CriticalSection: TCriticalSection;
+    Mutex: TCEMutex;
   {$ENDIF}
 //  LogLevelCount: array[TLogLevel] of Integer;
 
 procedure Lock();
 begin
   {$IFDEF MULTITHREADLOG}
-    CriticalSection.Enter();
+    MutexEnter(Mutex);
   {$ENDIF}
 end;
 
 procedure UnLock();
 begin
   {$IFDEF MULTITHREADLOG}
-    CriticalSection.Leave();
+    MutexLeave(Mutex);
   {$ENDIF}
 end;
 
@@ -372,11 +375,15 @@ begin
     Exit;
   end;
   Lock();
-  SetLength(FAppenders, Length(FAppenders)+1);
-  // Set default formatter
-  if @Appender.Formatter = nil then Appender.Formatter := Appender.GetPreparedStr;
-  FAppenders[High(FAppenders)] := Appender;
-  Unlock();
+  try
+    SetLength(FAppenders, Length(FAppenders)+1);
+    // Set default formatter
+    if @Appender.Formatter = nil then
+      Appender.Formatter := Appender.GetPreparedStr;
+    FAppenders[High(FAppenders)] := Appender;
+  finally
+    Unlock();
+  end;
 end;
 
 procedure RemoveAppender(Appender: TCEAppender);
@@ -386,9 +393,12 @@ begin
   // if found, replace it with last and resize array
   if i >= 0 then begin
     Lock();
-    FAppenders[i] := FAppenders[High(FAppenders)];
-    SetLength(FAppenders, Length(FAppenders)-1);
-    Unlock();
+    try
+      FAppenders[i] := FAppenders[High(FAppenders)];
+      SetLength(FAppenders, Length(FAppenders)-1);
+    finally
+      Unlock();
+    end;
   end;
 end;
 
@@ -435,11 +445,14 @@ procedure DestroyAppenders();
 var i: Integer;
 begin
   Lock();
-  for i := 0 to High(FAppenders) do begin
-    FAppenders[i].Free;
+  try
+    for i := 0 to High(FAppenders) do begin
+      FAppenders[i].Free;
+    end;
+    SetLength(FAppenders, 0);
+  finally
+    Unlock();
   end;
-  SetLength(FAppenders, 0);
-  Unlock();
 end;
 
 { TConsoleAppender }
@@ -493,7 +506,7 @@ end;
 
 initialization
   {$IFDEF MULTITHREADLOG}
-    CriticalSection := TCriticalSection.Create();
+    MutexCreate(Mutex);
   {$ENDIF}
 //  FillChar(LogLevelCount, SizeOf(LogLevelCount), 0);
   AddDefaultAppenders();
@@ -507,7 +520,7 @@ finalization
     + ', debug info: ' + IntToStr(LogLevelCount[lkDebug]) );}
   DestroyAppenders();
   {$IFDEF MULTITHREADLOG}
-    CriticalSection.Free();
+    MutexDelete(Mutex)
   {$ENDIF}
 end.
 

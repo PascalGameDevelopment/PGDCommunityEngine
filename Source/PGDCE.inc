@@ -66,6 +66,7 @@
 {$DEFINE LOGGING}
 
 {$IFDEF MOBILE}
+  {$DEFINE MULTITHREADLOG}
 {$ELSE}
   {$DEFINE HAS_TYPE_EXTENDED}     // Extended floating point type
 {$ENDIF}
