@@ -36,8 +36,10 @@ uses CEBaseTypes;
 const
   // A substring to separate URL type part in a resource URL
   CE_URL_TYPE_SEPARATOR = '://';
-  // File protocol
+  // File protocol (default)
   PROTOCOL_FILE = 'file';
+  // Protocol to query assets which location is platform dependent
+  PROTOCOL_ASSET = 'asset';
 
 type
   { @Abstract(Abstract binary stream) }
@@ -56,11 +58,15 @@ type
 
   { @Abstract(Abstract input binary stream) }
   TCEInputStream = class(TCEStream)
+  protected
+    // Returns stream size or -1 if not applicable/supported
+    function GetSize(): Int64; virtual; abstract;
   public
     // Reads up to Count of bytes from this stream to Buffer, moves current position forward for number of bytes read and returns that number
-    function Read(out Buffer; const Count: Cardinal): Cardinal; virtual; abstract;
+    function Read(var Buffer; const Count: Cardinal): Cardinal; virtual; abstract;
     // Reads Count bytes from this stream to Buffer, moves current position forward for the number of bytes read and returns True if all the Count bytes were successfully read
-    function ReadCheck(out Buffer; const Count: Cardinal): Boolean;
+    function ReadCheck(var Buffer; const Count: Cardinal): Boolean;
+    property Size: Int64 read GetSize;
   end;
 
   { @Abstract(Abstract output binary stream) }
@@ -103,14 +109,16 @@ type
   TCEFileInputStream = class(TCEInputStream)
   private
     FFile: TCEFile;
+  protected
+    function GetSize(): Int64; override;
   public
-    // Creates `a file stream associating it with file with the given file name
+    // Creates a file stream associating it with file with the given file name
     constructor Create(const AFileName: string);
     // Frees FFile
     destructor Destroy(); override;
     // Closes file
     procedure Close; override;
-    function Read(out Buffer; const Count: Cardinal): Cardinal; override;
+    function Read(var Buffer; const Count: Cardinal): Cardinal; override;
   end;
 
   { @Abstract(File output stream)
@@ -302,9 +310,11 @@ function GetResourceInputStream(const URL: string): TCEInputStream;
 var Protocol, FileName: string;
 begin
   Protocol := GetProtocolFromUrl(URL);
-  if (Protocol = '') or (Protocol = PROTOCOL_FILE) then
+  if (Protocol = '') or (Protocol = PROTOCOL_FILE) or (Protocol = PROTOCOL_ASSET) then
   begin
     FileName := GetPathFromURL(URL);
+    if Protocol = PROTOCOL_ASSET then
+      FileName := GetPathRelativeToFile(ParamStr(0), '../Assets/' + FileName);  // TODO: retrieve assets directory from config
     if FileExists(FileName) then
       Result := TCEFileInputStream.Create(FileName)
     else
@@ -323,7 +333,7 @@ end;
 
 { TCEInputStream }
 
-function TCEInputStream.ReadCheck(out Buffer; const Count: Cardinal): Boolean;
+function TCEInputStream.ReadCheck(var Buffer; const Count: Cardinal): Boolean;
 begin
   Result := Read(Buffer, Count) = Count;
 end;
@@ -420,6 +430,11 @@ end;
 
 { TCEFileInputStream }
 
+function TCEFileInputStream.GetSize(): Int64;
+begin
+  Result := FFile.FFileSize;
+end;
+
 constructor TCEFileInputStream.Create(const AFileName: string);
 begin
   FFile := TCEFile.Create(AFileName, fuRead);
@@ -436,7 +451,7 @@ begin
   if Assigned(FFile) then FFile.Close();
 end;
 
-function TCEFileInputStream.Read(out Buffer; const Count: Cardinal): Cardinal;
+function TCEFileInputStream.Read(var Buffer; const Count: Cardinal): Cardinal;
 begin
   Result := FFile.Read(Buffer, Count);
 end;

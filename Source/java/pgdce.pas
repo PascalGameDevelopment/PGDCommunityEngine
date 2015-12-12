@@ -30,7 +30,7 @@ Android library implementation for integration through JNI
 library pgdce;
 
 uses
-  CELog, CEAndroidLog,
+  CELog, CEAndroidLog, CEAndroidAssets,
   CEBaseTypes, CEMessage, CEInputMessage,
   jni, CEAndroidJNIApplication,
   DemoMain;
@@ -52,6 +52,27 @@ procedure SendMsg(const Msg: TCEMessage);
 begin
   if Assigned(App.MessageHandler) then
     App.MessageHandler(Msg);
+end;
+
+procedure Init(PEnv: PJNIEnv; Obj: JObject; AssetManager: jobject); stdcall; export;
+var
+  buf: AnsiString;
+  AssetStream: TCEAndroidAssetInputStream;
+begin
+  CEAndroidAssets.InitAssetManager(PEnv, AssetManager);
+  CELog.Debug('Opening test asset');
+  AssetStream := TCEAndroidAssetInputStream.Create('test.xml');
+  SetLength(buf, AssetStream.Size);
+  CELog.Debug('Reading test asset. Size: ' + IntToStr(AssetStream.Size));
+  try
+    AssetStream.Read(buf, AssetStream.Size);
+    CELog.Debug('Test asset read done');
+    CELog.Debug('Test asset: ' + buf);
+  finally
+    CELog.Debug('Finally block');
+    SetLength(buf, 0);
+    AssetStream.Free();
+  end;
 end;
 
 procedure OnSurfaceCreated(PEnv: PJNIEnv; Obj: JObject); stdcall; export;
@@ -171,6 +192,7 @@ const
 
 exports
   //launch name 'Java_com_pascalgamedevelopment_ce_pgdce_launch';
+  Init name JNI_PREFIX + 'init',
   OnSurfaceCreated name JNI_PREFIX + 'onSurfaceCreated',
   OnSurfaceChanged name JNI_PREFIX + 'onSurfaceChanged',
   DrawFrame name JNI_PREFIX + 'drawFrame',

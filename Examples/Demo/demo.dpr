@@ -150,12 +150,8 @@ begin
   PolyMesh.Softness := 2 / 1024 * 1.5;
   PolyMesh.Color := GetColor(100, 200, 150, 255);
 
-  PolyPass := CreateRenderPass(Core.EntityManager, true, '',
-                              GetPathRelativeToFile(ParamStr(0), '../Assets/vs_poly.glsl'),
-                              GetPathRelativeToFile(ParamStr(0), '../Assets/fs_poly.glsl'));
-  LinePass := CreateRenderPass(Core.EntityManager, true, '',
-                              GetPathRelativeToFile(ParamStr(0), '../Assets/vs_line.glsl'),
-                              GetPathRelativeToFile(ParamStr(0), '../Assets/fs_line.glsl'));
+  PolyPass := CreateRenderPass(Core.EntityManager, true, '', 'asset://vs_poly.glsl', 'asset://fs_poly.glsl');
+  LinePass := CreateRenderPass(Core.EntityManager, true, '', 'asset://vs_line.glsl', 'asset://fs_line.glsl');
   Mat := TCEMaterial.Create(Core.EntityManager);
   Mat.TotalTechniques := 1;
   Mat.Technique[0] := TCERenderTechnique.Create(Core.EntityManager);
@@ -186,7 +182,7 @@ begin
     if Core.Input.Pressed[vkALT] and Core.Input.Pressed[vkX] then App.Terminated := True;
     if Core.Input.MouseState.Buttons[mbLeft] = iaDown then
     begin
-      ClickPoint := Vec2f(Core.Input.MouseState.X / 512 - 1, 1 - Core.Input.MouseState.Y / 512);
+      ClickPoint := Vec2f(Core.Input.MouseState.X / Renderer.Width * 2 - 1, 1 - Core.Input.MouseState.Y / Renderer.Height * 2);
       Ind := GetNearestPointIndex(LineMesh.Points, LineMesh.Count, ClickPoint);
       LineMesh.Point[Ind] := ClickPoint;
     end;

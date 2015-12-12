@@ -46,7 +46,16 @@ type
   // Array of resource type IDs
   TDataTypeList = array of TCEDataTypeID;
 
-  // Abstract class descendants of which should load data from URL with various protocols
+{ Data Loader facility allows to register and query data loaders - descendants of TCEDataLoader  class.
+  A data loader task is to create an input stream of data based on an URL which has the following format:
+	<protocol>://<address>/<path>/<filename>.<ext>
+  All parts except filename are optional.
+  Protocol determines where to URL is pointing to: file on local file system (default), file over http or ftp, data within archive etc.
+  Examples:
+	file://c:/data/image.png - will open file input stream with the file data
+	http://www.site.com/data/mesh.obj - will open HTTP input stream with the file data
+	asset://audio/music.ogg - on mobile platform will open asset input stream with the file data,
+	                          on desktop platform it will be file input stream relative to assets directory. }
   TCEDataLoader = class
   protected
     // List of protocols the loader can load
@@ -75,7 +84,12 @@ type
     function GetResourceModificationTime(const AURL: string): TDateTime; override;
   end;
 
-  // Returns class which can load resources of the specified type or nil if such a class was not registered
+  TCEFileAssetLoader = class(TCELocalFileLoader)
+  protected
+    procedure Init; override;
+  end;
+
+  // Returns last registered class which can load resources of the specified type or nil if no such classes registered
   function GetDataLoader(const Protocol: TCEProtocol): TCEDataLoader;
   // Register a resource loader class. The latter registered carriers will override previously registered ones if those can handle same resource types.
   procedure RegisterDataLoader(DataLoader: TCEDataLoader);
@@ -88,20 +102,22 @@ uses
 type
   _VectorValueType = TCEDataLoader;
   _VectorSearchType = TCEProtocol;
-  {$MESSAGE 'Instantiating TDataLoaders interface'}
-  {$I tpl_coll_vector.inc}
+{$MESSAGE 'Instantiating TDataLoaders interface'}
+    {$I tpl_coll_vector.inc}
   TDataLoaders = _GenVector;
 
-  const _VectorOptions = [];
+const
+  _VectorOptions = [];
 
-  // Search callback. Returns True if the given loader can handle the specified protocol.
-  function _VectorFound(const v: TCEDataLoader; const Protocol: TCEProtocol): Boolean; {$I inline.inc}
-  begin
-     Result := v.CanHandle(Protocol);
-  end;
+    // Search callback. Returns True if the given loader can handle the specified protocol.
+function _VectorFound(const v: TCEDataLoader; const Protocol: TCEProtocol): Boolean;
+    {$I inline.inc}
+begin
+  Result := v.CanHandle(Protocol);
+end;
 
-  {$MESSAGE 'Instantiating TDataLoaders'}
-  {$I tpl_coll_vector.inc}
+{$MESSAGE 'Instantiating TDataLoaders'}
+    {$I tpl_coll_vector.inc}
 
 { Resource linker }
 
@@ -109,7 +125,8 @@ var
   LDataLoaders: TDataLoaders;
 
 function GetDataLoader(const Protocol: TCEProtocol): TCEDataLoader;
-var i: Integer;
+var
+  i: Integer;
 begin
   i := LDataLoaders.FindLast(Protocol);
   if i >= 0 then
@@ -137,7 +154,8 @@ begin
 end;
 
 function TCEDataLoader.CanHandle(Protocol: TCEProtocol): Boolean;
-var i: Integer;
+var
+  i: Integer;
 begin
   i := High(FProtocols);
   while (i >= 0) and (FProtocols[i] <> Protocol) do Dec(i);
@@ -164,7 +182,8 @@ begin
 end;
 
 function TCELocalFileLoader.GetResourceModificationTime(const AURL: string): TDateTime;
-var FileName: string;
+var
+  FileName: string;
 begin
   FileName := GetPathFromURL(AURL);
   if FileExists(FileName) then
@@ -179,11 +198,19 @@ begin
   Result := True;
 end;
 
+{ TCEFileAssetLoader }
+
+procedure TCEFileAssetLoader.Init;
+begin
+  SetLength(FProtocols, 1);
+  FProtocols[0] := 'asset';
+end;
+
 initialization
   LDataLoaders := TDataLoaders.Create();
   RegisterDataLoader(TCELocalFileLoader.Create());
+  RegisterDataLoader(TCEFileAssetLoader.Create());
 finalization
   LDataLoaders.ForEach(FreeCallback, nil);
   LDataLoaders.Free();
 end.
-

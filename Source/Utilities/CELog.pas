@@ -171,10 +171,10 @@ uses
     CEConcurrent,
     {$IFDEF UNIX}
     {$ENDIF}
-    {$IFDEF WINDOWS}{$IFDEF DELPHI}
-      {$IFDEF NAMESPACED_UNITS} Winapi.Windows, {$ELSE} Windows, {$ENDIF}
-    {$ENDIF}{$ENDIF}
   {$ENDIF}
+  {$IFDEF WINDOWS}{$IFDEF DELPHI}
+    {$IFDEF NAMESPACED_UNITS} Winapi.Windows, {$ELSE} Windows, {$ENDIF}
+  {$ENDIF}{$ENDIF}
   SysUtils;
 
 const
