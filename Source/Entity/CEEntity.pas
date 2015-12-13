@@ -221,6 +221,9 @@ uses
 {$MESSAGE 'Instantiating TStringEntityNameMap'}
 {$I tpl_coll_hashmap.inc}
 
+const
+  LOGTAG = 'ce.entity';
+
 { TCEBaseEntityFiler }
 
 constructor TCEBaseEntityFiler.Create(AManager: TCEEntityManager);
@@ -479,7 +482,7 @@ begin
   EntityClass := FManager.GetEntityClass(s);
   if EntityClass = nil then
   begin
-    CELog.Error(ClassName + '.LoadItem: Unknown item class "' + string(s) + '". Substitued by TItem');
+    CELog.Error(LOGTAG, ClassName + '.LoadItem: Unknown item class "' + string(s) + '". Substitued by TItem');
     EntityClass := TCEBaseEntity;  // TPropertyEntity;
   end;
 
@@ -541,7 +544,7 @@ procedure TCEBaseEntityManager.RegisterEntityClass(NewClass: CCEEntity);
 begin
   if GetEntityClass(TCEEntityClassName(NewClass.ClassName)) <> nil then
   begin
-    CELog.Warning(ClassName + '.RegisterEntityClass: Class "' + NewClass.ClassName + '" already registered');
+    CELog.Warning(LOGTAG, ClassName + '.RegisterEntityClass: Class "' + NewClass.ClassName + '" already registered');
     Exit;
   end;
   SetLength(FEntityClasses, Length(FEntityClasses) + 1);

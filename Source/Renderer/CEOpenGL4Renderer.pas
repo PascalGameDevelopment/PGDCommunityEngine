@@ -62,6 +62,9 @@ implementation
 uses
   CECommon, CEImageResource, CELog;
 
+const
+  LOGTAG = 'ce.render';
+
 var
   GLAttributesList: array [0..16] of Integer;
 
@@ -143,7 +146,7 @@ begin
   FDisplay := App.Cfg.GetPointer(CFG_XWINDOW_DISPLAY);
   if FDisplay = nil then
   begin
-    CELog.Error('No open X-Window display');
+    CELog.Error(LOGTAG, 'No open X-Window display');
     Exit;
   end;
   ScreenNum := App.Cfg.GetInt64(CFG_XWINDOW_SCREEN);

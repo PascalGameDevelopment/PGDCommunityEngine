@@ -52,7 +52,6 @@ uses
 
 procedure TCEOSMessageInput.HandleKeyboard(Msg: TKeyboardMsg);
 begin
-  CELog.Debug('=== Key');
   FKeyboardState[Msg.Key] := Ord(Msg.Action);
 end;
 

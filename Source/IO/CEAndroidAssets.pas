@@ -138,6 +138,9 @@ implementation
 uses
   CELog;
 
+const
+  LOGTAG = 'ce.android.assets';
+
 var
   Manager: PAAssetManager;
 
@@ -195,7 +198,7 @@ end;
 
 procedure InitAssetManager(PEnv: PJNIEnv; AssetManager: JObject);
 begin
-  CELog.Debug('Obtaining asset manager');
+  CELog.Debug(LOGTAG, 'Obtaining asset manager');
   Manager := AAssetManager_fromJava(PEnv, AssetManager);
 end;
 

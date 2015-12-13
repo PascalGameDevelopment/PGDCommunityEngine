@@ -154,6 +154,9 @@ type
 {$MESSAGE 'Instantiating TGLSLShaderList'}
 {$I tpl_coll_vector.inc}
 
+const
+  LOGTAG = 'ce.render';
+
 function PrintShaderInfoLog(Shader: TGLUint; ShaderType: string): Boolean;
 var
   len, Success: TGLint;
@@ -382,7 +385,7 @@ begin
   Result := False;
   Shaders := TGLSLShaderList.Create();
   if not DoInitGAPIPlatform(App) then Exit;
-  CELog.Log('Graphics API succesfully initialized');
+  CELog.Log(LOGTAG, 'Graphics API succesfully initialized');
 
   FUniformsManager := TCEOpenGLUniformsManager.Create();
   FBufferManager := TCEOpenGLBufferManager.Create();
@@ -553,7 +556,7 @@ function GetUniformLocation(ShaderProgram: Integer; const Name: PAPIChar): Integ
 begin
   Result := glGetUniformLocation(ShaderProgram, Name);
   if Result < 0 then
-    CELog.Warning('Can''t find uniform location for name: ' + Name);
+    CELog.Warning(LOGTAG, 'Can''t find uniform location for name: ' + Name);
 end;
 
 procedure TCEOpenGLUniformsManager.SetInteger(const Name: PAPIChar; Value: Integer);

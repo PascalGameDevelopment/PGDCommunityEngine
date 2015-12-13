@@ -101,6 +101,9 @@ implementation
 uses
   SysUtils, CELog, CECommon;
 
+const
+  LOGTAG = 'ce.base.app';
+
 { TCEBaseApplication }
 
 constructor TCEBaseApplication.Create;
@@ -115,7 +118,7 @@ end;
 
 destructor TCEBaseApplication.Destroy;
 begin
-  CELog.Log('Application shutdown');
+  CELog.Log(LOGTAG, 'Application shutdown');
   inherited;
   DoDestroyWindow();
   FConfig.Free();
