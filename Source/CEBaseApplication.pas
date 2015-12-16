@@ -33,7 +33,7 @@ unit CEBaseApplication;
 interface
 
 uses
-  CEBaseTypes, CEProperty, CEMessage;
+  CEMessage, CEContext;
 
 const
   // Window handle config parameter name
@@ -46,25 +46,6 @@ const
   INACTIVE_SLEEP_MS = 60;
 
 type
-  // Class to store subsystem's parameters
-  TCEConfig = class
-  private
-    Data: TCEProperties;
-    function GetValue(const Name: TPropertyName): string;
-    procedure SetValue(const Name: TPropertyName; const Value: string);
-  public
-    constructor Create;
-    destructor Destroy(); override;
-    procedure Remove(const Name: TPropertyName);
-    function GetInt64(const Name: TPropertyName): Int64;
-    function GetFloat(const Name: TPropertyName): Single;
-    function GetPointer(const Name: TPropertyName): Pointer;
-    procedure SetInt64(const Name: TPropertyName; Value: Int64);
-    procedure SetFloat(const Name: TPropertyName; Value: Single);
-    procedure SetPointer(const Name: TPropertyName; Value: Pointer);
-    property ValuesStr[const Name: TPropertyName]: string read GetValue write SetValue; default;
-  end;
-
   TCEBaseApplication = class
   private
     FConfig: TCEConfig;
@@ -99,7 +80,7 @@ type
 implementation
 
 uses
-  SysUtils, CELog, CECommon;
+  SysUtils, CELog;
 
 const
   LOGTAG = 'ce.base.app';
@@ -108,11 +89,14 @@ const
 
 constructor TCEBaseApplication.Create;
 begin
+  if not CEContext.AddSingleton(Self, TCEBaseApplication) then
+    LogSingletonExists(TCEBaseApplication);
   InitKeyCodes();
   FConfig := TCEConfig.Create();
   Name := ExtractFileName(ParamStr(0));
   FConfig['App.Name'] := Name;
   FConfig['App.Path'] := ParamStr(0);
+  FConfig['Path.Asset'] := '../Assets';
   Terminated := not DoCreateWindow();
 end;
 
@@ -123,80 +107,6 @@ begin
   DoDestroyWindow();
   FConfig.Free();
   FConfig := nil;
-end;
-
-{ TCEConfig }
-
-function TCEConfig.GetValue(const Name: TPropertyName): string;
-var
-  Value: PCEPropertyValue;
-begin
-  Result := '';
-  Value := Data.Value[Name];
-  if Assigned(Value) then
-    Result := Value^.AsUnicodeString
-end;
-
-procedure TCEConfig.SetValue(const Name: TPropertyName; const Value: string);
-begin
-  Data.AddString(Name, Value);
-end;
-
-constructor TCEConfig.Create;
-begin
-  Data := TCEProperties.Create();
-end;
-
-destructor TCEConfig.Destroy;
-begin
-  Data.Free();
-  Data := nil;
-  inherited;
-end;
-
-procedure TCEConfig.Remove(const Name: TPropertyName);
-begin
-  Writeln('Not implemented');
-end;
-
-function TCEConfig.GetInt64(const Name: TPropertyName): Int64;
-var
-  Value: PCEPropertyValue;
-begin
-  Result := 0;
-  Value := Data.Value[Name];
-  if Assigned(Value) then
-    Result := Value^.AsInt64
-end;
-
-function TCEConfig.GetFloat(const Name: TPropertyName): Single;
-var
-  Value: PCEPropertyValue;
-begin
-  Result := 0.0;
-  Value := Data.Value[Name];
-  if Assigned(Value) then
-    Result := Value^.AsSingle
-end;
-
-function TCEConfig.GetPointer(const Name: TPropertyName): Pointer;
-begin
-  Result := Pointer(GetInt64(Name));
-end;
-
-procedure TCEConfig.SetInt64(const Name: TPropertyName; Value: Int64);
-begin
-  Data.AddInt64(Name, Value);
-end;
-
-procedure TCEConfig.SetPointer(const Name: TPropertyName; Value: Pointer);
-begin
-  Data.AddInt64(Name, PtrToInt(Value));
-end;
-
-procedure TCEConfig.SetFloat(const Name: TPropertyName; Value: Single);
-begin
-  Data.AddSingle(Name, Value);
 end;
 
 end.

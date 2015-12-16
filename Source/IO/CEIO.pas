@@ -157,7 +157,7 @@ type
   // Returns data type ID based on file extension
   function GetDataTypeFromExt(const ext: string): TCEDataTypeID;
   // Returns protocol part of URL
-  function GetProtocolFromUrl(const URL: string): string;
+  function GetProtocolFromUrl(const URL: string): AnsiString;
   // Returns data type ID based on URL (extension part)
   function GetDataTypeIDFromUrl(const URL: string): TCEDataTypeID;
   // Returns path part of URL
@@ -170,7 +170,7 @@ type
 implementation
 
 uses
-  SysUtils, CECommon;
+  SysUtils, CECommon, CEContext;
 
   function ReadShortString(InS: TCEInputStream; out Str: ShortString): Boolean;
   var l: Byte;
@@ -271,12 +271,12 @@ begin
       Result.Bytes[i] := Ord(' ');
 end;
 
-function GetProtocolFromUrl(const URL: string): string;
+function GetProtocolFromUrl(const URL: string): AnsiString;
 var Ind: Integer;
 begin
   Ind := Pos(CE_URL_TYPE_SEPARATOR, URL);
   if Ind >= STRING_INDEX_BASE then
-    Result := Copy(URL, STRING_INDEX_BASE, Ind-1)
+    Result := AnsiString(Copy(URL, STRING_INDEX_BASE, Ind-1))
   else
     Result := '';
 end;
@@ -306,15 +306,28 @@ begin
     Result := 0;
 end;
 
+function JoinPaths(const Path1, Path2: string): string;
+begin
+  Result := IncludeTrailingPathDelimiter(Path1) + ExcludeTrailingPathDelimiter(Path2);
+end;
+
 function GetResourceInputStream(const URL: string): TCEInputStream;
-var Protocol, FileName: string;
+var
+  Protocol: AnsiString;
+  FileName: string;
+  AssetsPath: string;
+  Config: TCEConfig;
 begin
   Protocol := GetProtocolFromUrl(URL);
   if (Protocol = '') or (Protocol = PROTOCOL_FILE) or (Protocol = PROTOCOL_ASSET) then
   begin
     FileName := GetPathFromURL(URL);
     if Protocol = PROTOCOL_ASSET then
-      FileName := GetPathRelativeToFile(ParamStr(0), '../Assets/' + FileName);  // TODO: retrieve assets directory from config
+    begin
+      Config := CEContext.GetSingleton(TCEConfig) as TCEConfig;
+      AssetsPath := Config['Path.Asset'];
+      FileName := GetPathRelativeToFile(ParamStr(0), JoinPaths(AssetsPath, FileName));
+    end;
     if FileExists(FileName) then
       Result := TCEFileInputStream.Create(FileName)
     else

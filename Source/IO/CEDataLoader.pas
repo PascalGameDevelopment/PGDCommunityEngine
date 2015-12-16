@@ -32,13 +32,13 @@ unit CEDataLoader;
 interface
 
 uses
-  CEBaseTypes, CEIO;
+  CEBaseTypes, CEIO, CEStrUtils;
 
 type
   // Protocol
-  TCEProtocol = string;
+  TCEProtocol = AnsiString;
   // Protocol list
-  TProtocolList = array of TCEProtocol;
+  TProtocolList = TAnsiStringArray;
 
   // Variables of this type are data type identifiers i.e. bitmap, .obj model, etc
   TCEDataTypeID = TSignature;
@@ -97,27 +97,29 @@ type
 implementation
 
 uses
-  SysUtils, CECommon, CETemplate;
+  SysUtils, CECommon, CETemplate, CELog;
+
+const
+  LOGTAG = 'ce.io.dataloader';
 
 type
   _VectorValueType = TCEDataLoader;
   _VectorSearchType = TCEProtocol;
-{$MESSAGE 'Instantiating TDataLoaders interface'}
-    {$I tpl_coll_vector.inc}
+  {$MESSAGE 'Instantiating TDataLoaders interface'}
+  {$I tpl_coll_vector.inc}
   TDataLoaders = _GenVector;
 
 const
   _VectorOptions = [];
 
-    // Search callback. Returns True if the given loader can handle the specified protocol.
-function _VectorFound(const v: TCEDataLoader; const Protocol: TCEProtocol): Boolean;
-    {$I inline.inc}
+// Search callback. Returns True if the given loader can handle the specified protocol.
+function _VectorFound(const v: TCEDataLoader; const Protocol: TCEProtocol): Boolean; {$I inline.inc}
 begin
   Result := v.CanHandle(Protocol);
 end;
 
-{$MESSAGE 'Instantiating TDataLoaders'}
-    {$I tpl_coll_vector.inc}
+  {$MESSAGE 'Instantiating TDataLoaders'}
+  {$I tpl_coll_vector.inc}
 
 { Resource linker }
 
@@ -131,8 +133,10 @@ begin
   i := LDataLoaders.FindLast(Protocol);
   if i >= 0 then
     Result := LDataLoaders.Get(i)
-  else
-    Result := nil;  // TODO: log warning
+  else begin
+    Result := nil;
+    CELog.Warning(LOGTAG, 'Data loader not found for ://' + string(Protocol));
+  end;
 end;
 
 procedure RegisterDataLoader(DataLoader: TCEDataLoader);
@@ -150,7 +154,7 @@ end;
 constructor TCEDataLoader.Create;
 begin
   Init();
-  // TODO: log types
+  CELog.Debug(LOGTAG, 'Registering data loader: ://' + string(JoinStrArray(FProtocols, ', ://')));
 end;
 
 function TCEDataLoader.CanHandle(Protocol: TCEProtocol): Boolean;

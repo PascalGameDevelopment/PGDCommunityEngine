@@ -31,7 +31,7 @@ program BaseTest;
 {$APPTYPE CONSOLE}
 
 uses
-  SysUtils, CEBaseTypes, CECommon, Tester;
+  SysUtils, CEBaseTypes, CECommon, CEStrUtils, CELog, Tester;
 
 type
   // Base class for all entity classes tests
@@ -39,6 +39,8 @@ type
   private
   published
     procedure TestFloatEqual();
+    procedure TestJoinStr();
+    procedure TestJoinPath();
   end;
 
 { TBaseTest }
@@ -99,11 +101,36 @@ begin
   Assert(_Check(not FloatEquals(GetSingle(0)-GetSingle(1), GetSingle(0))), '-0 = 0');
 end;
 
+procedure TBaseTest.TestJoinStr();
+var
+  Strs: TAnsiStringArray;
+  i: Integer;
+  Joined: AnsiString;
 begin
-  {$IF Declared(ReportMemoryLeaksOnShutdown)}
-  ReportMemoryLeaksOnShutdown := True;
-  {$IFEND}
-  RegisterSuites([TBaseTest]);
+  SetLength(Strs, 4);
+  for i := 0 to High(Strs) do
+    Strs[i] := 'Str #' + IntToStr(i);
+  Joined := JoinStrArray(Strs, ', ');
+  CELog.Log('Joined: ' + Joined);
+  Assert(_Check(Joined = 'Str #0, Str #1, Str #2, Str #3'), 'String join');
+  Assert(_Check(JoinStrArray(Strs, '') = 'Str #0Str #1Str #2Str #3'), 'String join w/o separator');
+  Strs[0] := '';
+  Assert(_Check(JoinStrArray(Strs, ', ') = 'Str #1, Str #2, Str #3'), 'String join with empty');
+  Strs[2] := '';
+  Assert(_Check(JoinStrArray(Strs, ', ') = 'Str #1, , Str #3'), 'String join with 2 empty');
+  Strs[3] := '';
+  Assert(_Check(JoinStrArray(Strs, ', ') = 'Str #1, , '), 'String join with 3 empty');
+end;
+
+procedure TBaseTest.TestJoinPath();
+begin
+end;
+
+begin
+    {$IF Declared(ReportMemoryLeaksOnShutdown)}
+    ReportMemoryLeaksOnShutdown := True;
+    {$IFEND}
+RegisterSuites([TBaseTest]);
   Tester.RunTests();
   Readln;
 end.
