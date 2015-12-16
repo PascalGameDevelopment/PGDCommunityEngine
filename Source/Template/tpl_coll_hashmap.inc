@@ -36,6 +36,10 @@ Usage - once per unit:
 
 {$IFNDEF _HASHMAPIMPL}     // Interface
 
+{$IFDEF IPASCAL_PARSING}
+type
+{$ENDIF}
+
   {$IF not Declared(__CollectionIndexType)}
     __CollectionIndexType = Integer;
   {$IFEND}
@@ -104,10 +108,14 @@ Usage - once per unit:
     // Returns a forward iterator over map keys collection
     function GetKeyIterator(): _GenHashMapKeyIterator;
 
+    // Sets value, returns True if there was value in the map for the key
+    function PutValue(const Key: _HashMapKeyType; const Value: _HashMapValueType): Boolean; {$I inline.inc}
     // Returns True if the hash map contains the key
     function ContainsKey(const Key: _HashMapKeyType): Boolean; {$I inline.inc}
     // Returns True if the hash map contains the value
     function ContainsValue(const Value: _HashMapValueType): Boolean; {$I inline.inc}
+    // Removes value, returns True if there was value in the map for the key
+    function RemoveValue(const Key: _HashMapKeyType): Boolean; {$I inline.inc}
 
     // Calls a delegate for each value stored in the map
     procedure ForEach(Delegate: _HashMapDelegate; Data: Pointer);
@@ -128,7 +136,7 @@ Usage - once per unit:
     // Grow step of bucket array
     property BucketGrowStep: __CollectionIndexType read FBucketGrowStep write FBucketGrowStep;
     // Number of entries
-    property Count: __CollectionIndexType read FCount write FCount;
+    property Count: __CollectionIndexType read FCount;
     // Keys collection
     //property Keys: _HashMapKeys read FValues;
   end;
@@ -272,10 +280,10 @@ Usage - once per unit:
     end;
   end;
 
-  procedure _GenHashMap.SetValue(const Key: _HashMapKeyType; const Value: _HashMapValueType);
+  function _GenHashMap.PutValue(const Key: _HashMapKeyType; const Value: _HashMapValueType): Boolean;
   var Index, i: __CollectionIndexType;
   begin
-    i := GetIndexInBucket(Key, index);
+    i := GetIndexInBucket(Key, Index);
 
     if i = FValues[Index].Count then begin
       if Length(FValues[Index].Data) <= i then
@@ -283,11 +291,30 @@ Usage - once per unit:
       FValues[Index].Data[i].Key := Key;
       FValues[Index].Count := i+1;
       Inc(FCount);
-    end;
+      Result := False;
+    end else
+      Result := True;
 
     FValues[Index].Data[i].Value := Value;
 
     if LoadFactor > FMaxLoadFactor then SetCapacity(FCapacity * 2);
+  end;
+
+  procedure _GenHashMap.SetValue(const Key: _HashMapKeyType; const Value: _HashMapValueType);
+  begin
+    PutValue(Key, Value);
+  end;
+
+  function _GenHashMap.RemoveValue(const Key: _HashMapKeyType): Boolean;
+  var Index, i: __CollectionIndexType;
+  begin
+    i := GetIndexInBucket(Key, Index);
+    Result := i < FValues[Index].Count;
+    if Result then begin
+      FValues[Index].Data[i] := FValues[Index].Data[FValues[Index].Count - 1];
+      Dec(FValues[Index].Count);
+      Dec(FCount);
+    end;
   end;
 
   procedure _GenHashMap.SetCapacity(ACapacity: __CollectionIndexType);

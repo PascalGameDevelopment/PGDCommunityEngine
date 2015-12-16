@@ -26,12 +26,13 @@
         Result := Trunc(maxint * (Frac(Key * K)));
       end;
     {$ELSE}
-      // Integer or pointer hash key
-      const K = 0.6180339887; // (Sqrt(5) - 1) / 2
+      // 32-bit integer or pointer hash key
       begin
         {$Q-}
         {$R-}
-        Result := Trunc(maxint * (Frac(Integer(Key) * K)));
+        Result := ((Integer(Key) shr 16) xor Integer(Key)) * $45d9f3b;
+        Result := ((Result shr 16) xor Result) * $45d9f3b;
+        Result := ((Result shr 16) xor Result);
       end;
     {$ENDIF}
   {$ENDIF}

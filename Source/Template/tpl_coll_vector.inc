@@ -31,6 +31,10 @@ Usage:
     {$I tpl_coll_vector.inc}
 *)
 
+{$IFDEF IPASCAL_PARSING}
+type
+{$ENDIF}
+
 {$IF Declared(_VectorOptions)}
   {$I tpl_coll_vector_opt.inc}
 {$IFEND}

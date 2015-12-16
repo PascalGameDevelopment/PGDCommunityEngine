@@ -32,7 +32,7 @@ unit CollectionTest;
 interface
 
 uses
-  SysUtils, CETemplate, CECommon, Tester;
+  SysUtils, CECommon, Tester, CETemplate;
 
 type
   _HashMapKeyType = Integer;
@@ -45,6 +45,7 @@ type
   TKeyArray = array of _HashMapKeyType;
 
   _VectorValueType = Integer;
+  _PVectorValueType = PInteger;
   {$MESSAGE 'Instantiating TIntVector interface'}
   {$I tpl_coll_vector.inc}
   TIntVector = _GenVector;
@@ -87,7 +88,7 @@ var
 
 const
   TESTCOUNT = 1024*8*4;//*256;//*1000*10;
-  HashMapElCnt = 500;//1024*8;
+  HashMapElCnt = 1024*8;
   CollElCnt = 1024*8;
 
 { TTestCollections }
@@ -119,21 +120,23 @@ begin
   for i := 0 to HashMapElCnt-1 do
   begin
     t := Random(HashMapElCnt);
-
     if not Map.ContainsKey(t) then Inc(cnt);
-
     Map[t] := IntToStr(t);
     Assert(_Check(Map.ContainsKey(t) and Map.ContainsValue(IntToStr(t))));
   end;
-
   Map.ForEach(ForPair, nil);
 
-  Assert(_Check(Map.Count = cnt));
+  Assert(_Check(Map.Count = cnt), 'Wrong count after put');
+
+  for i := 0 to HashMapElCnt-1 do
+  begin
+    t := Random(HashMapElCnt);
+    if Map.RemoveValue(t) then Dec(cnt);
+  end;
+  Assert(_Check(Map.Count = cnt), 'Wrong count after remove');
 
   Iter := Map.GetKeyIterator();
-
 //  Log('Iterator count: ' + IntToStr(Map.Count));
-
   for i := 0 to Map.Count-1 do
   begin
     Assert(_Check(Iter.HasNext), 'iterator HasNext() failed');
@@ -154,10 +157,10 @@ begin
 end;
 
 { TTestVector }
-test setCount and getPtr
 procedure TTestVector.TestList(Coll: TIntVector);
 var
   i, cnt, t: Integer;
+  ValuePtr: PInteger;
 begin
   cnt := 0;
   Rnd.InitSequence(1, 0);
@@ -166,6 +169,8 @@ begin
     t := Rnd.RndI(CollElCnt);
     Coll.Add(t);
     Inc(cnt);
+    ValuePtr := Coll.GetPtr(i);
+    Assert(_Check(Coll.Get(i) = ValuePtr^), GetName + ': GetPtr failed');
     Assert(_Check(Coll.Contains(t)), GetName + ': Contains failed');
   end;
 
@@ -188,13 +193,13 @@ begin
     Assert(_Check((Coll.Get(t) = CollElCnt+1) and Coll.Contains(CollElCnt+1)),
            GetName + ': Conntains inserted failed');
     Coll.RemoveBy(t);
-    Assert(_Check(not Coll.Contains(CollElCnt+1)), GetName + ': Not conntains removed failed');
+    Assert(_Check(not Coll.Contains(CollElCnt+1)), GetName + ': Not contains removed failed');
   end;
 
   Assert(_Check(Coll.Count = cnt), GetName + ': Count failed');
 
   Coll.Clear;
-  Assert(_Check(Coll.IsEmpty), GetName + ': IsEmpty failed');
+  Assert(_Check(Coll.IsEmpty()), GetName + ': IsEmpty failed');
   Coll.Free;
 end;
 
