@@ -33,7 +33,7 @@ interface
 
 uses
   Windows, Messages,
-  CEBaseTypes, CEMessage, CEBaseApplication;
+  CEMessage, CEBaseApplication;
 
 type
   // Windows message handling callback
@@ -68,7 +68,7 @@ type
 implementation
 
 uses
-  SysUtils, CEInputMessage, CEBaseInput;
+  SysUtils, CEInputMessage, CEBaseTypes, CEBaseInput;
 
 var
   App: TCEWindowsApplication;
@@ -323,6 +323,7 @@ function TCEWindowsApplication.DoCreateWindow(): Boolean;
 var
   WindowStyle: Cardinal;
   ScreenX, ScreenY: Integer;
+  WindowRect: CEBaseTypes.TRect;
 begin
   Result := False;
   WindowStyle := WS_OVERLAPPED or WS_CAPTION or WS_THICKFRAME or WS_MINIMIZEBOX or WS_MAXIMIZEBOX or WS_SIZEBOX or WS_SYSMENU;
@@ -351,8 +352,11 @@ begin
   if ScreenX = 0 then ScreenX := 640;
   if ScreenY = 0 then ScreenY := 480;
 
+  WindowRect := CalcWindowRect(ScreenX, ScreenY);
+
   FWindowHandle := Windows.CreateWindowW(FWindowClass.lpszClassName, PWideChar(FName), WindowStyle,
-                                        (ScreenX - 1024) div 2+300, (ScreenY - 1024) div 2, 1024+4, 1024+28,
+                                        WindowRect.Left, WindowRect.Top,
+                                        WindowRect.Right - WindowRect.Left + 4, WindowRect.Bottom - WindowRect.Top + 28,
                                         0, 0, HInstance, nil);
   if FWindowHandle = 0 then
   begin

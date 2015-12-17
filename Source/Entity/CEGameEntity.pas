@@ -32,7 +32,6 @@ unit CEGameEntity;
 interface
 
 uses
-  CEBaseTypes, CETemplate,
   CEEntity, CEMaterial, CEMesh, CELocation;
 
 type

@@ -35,6 +35,10 @@ interface
 uses
   CEMessage, CEBaseTypes, CEBaseApplication, CEMesh, CEMaterial, CEUniformsManager;
 
+const
+  PROP_RENDERER_WIDTH = AnsiString('renderer.window.width');
+  PROP_RENDERER_HEIGHT = AnsiString('renderer.window.height');
+
 type
   // Render target clear flags
   TCEClearFlag = (cfColor, cfDepth, cfStencil);
@@ -70,7 +74,10 @@ type
     // Handle render context resize
     procedure HandleResize(Msg: TWindowResizeMsg); virtual; abstract;
   public
-    Width, Height: Single;
+    // Current render area width
+    Width,
+    // Current render area height
+    Height: Single;
     constructor Create(App: TCEBaseApplication);
     destructor Destroy(); override;
     // Handle OS messages
@@ -95,6 +102,9 @@ constructor TCEBaseRenderer.Create(App: TCEBaseApplication);
 begin
   DoInit();
   Active := DoInitGAPI(App);
+
+  App.Cfg.SetInt(PROP_RENDERER_WIDTH, Round(Width));
+  App.Cfg.SetInt(PROP_RENDERER_HEIGHT, Round(Height));
 end;
 
 destructor TCEBaseRenderer.Destroy;

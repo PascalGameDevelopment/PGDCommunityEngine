@@ -400,6 +400,7 @@ begin
   glDepthFunc(GL_LEQUAL);
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_STENCIL_TEST);
+
   Result := True;
 end;
 

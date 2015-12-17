@@ -33,7 +33,7 @@ unit CEBaseApplication;
 interface
 
 uses
-  CEMessage, CEContext;
+  CEMessage, CEContext, CEBaseTypes;
 
 const
   // Window handle config parameter name
@@ -60,6 +60,8 @@ type
     function DoCreateWindow(): Boolean; virtual; abstract;
     // Actual window destruction
     procedure DoDestroyWindow(); virtual; abstract;
+    // Calculates window rectangle based on values in config and screen dimensions
+    function CalcWindowRect(ScreenX, ScreenY: Integer): CEBaseTypes.TRect;
   public
     constructor Create();
     destructor Destroy(); override;
@@ -86,6 +88,14 @@ const
   LOGTAG = 'ce.base.app';
 
 { TCEBaseApplication }
+
+function TCEBaseApplication.CalcWindowRect(ScreenX, ScreenY: Integer): CEBaseTypes.TRect;
+begin
+  Result.Left := (ScreenX - 1024) div 2 + 300;
+  Result.Top := (ScreenY - 1024) div 2;
+  Result.Right := Result.Left + 1024;
+  Result.Bottom := Result.Top + 1024;
+end;
 
 constructor TCEBaseApplication.Create;
 begin

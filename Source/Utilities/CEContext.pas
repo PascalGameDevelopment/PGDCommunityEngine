@@ -32,7 +32,7 @@ unit CEContext;
 interface
 
 uses
-  CEBaseTypes, CEProperty;
+  CEProperty;
 
 type
 {$MESSAGE 'Instantiating TClassObjectMap interface'}
@@ -53,9 +53,11 @@ type
     constructor Create;
     destructor Destroy(); override;
     procedure Remove(const Name: TPropertyName);
-    function GetInt64(const Name: TPropertyName): Int64;
-    function GetFloat(const Name: TPropertyName): Single;
-    function GetPointer(const Name: TPropertyName): Pointer;
+    function GetInt(const Name: TPropertyName; const Def: Integer = 0): Integer;
+    function GetInt64(const Name: TPropertyName; const Def: Int64 = 0): Int64;
+    function GetFloat(const Name: TPropertyName; const Def: Single = 0.0): Single;
+    function GetPointer(const Name: TPropertyName; const Def: Pointer = nil): Pointer;
+    procedure SetInt(const Name: TPropertyName; Value: Integer);
     procedure SetInt64(const Name: TPropertyName; Value: Int64);
     procedure SetFloat(const Name: TPropertyName; Value: Single);
     procedure SetPointer(const Name: TPropertyName; Value: Pointer);
@@ -139,29 +141,49 @@ begin
   Writeln('Not implemented');
 end;
 
-function TCEConfig.GetInt64(const Name: TPropertyName): Int64;
+function TCEConfig.GetInt(const Name: TPropertyName; const Def: Integer = 0): Integer;
 var
   Value: PCEPropertyValue;
 begin
-  Result := 0;
+  Result := Def;
+  Value := Data.Value[Name];
+  if Assigned(Value) then
+    Result := Value^.AsInteger
+end;
+
+function TCEConfig.GetInt64(const Name: TPropertyName; const Def: Int64 = 0): Int64;
+var
+  Value: PCEPropertyValue;
+begin
+  Result := Def;
   Value := Data.Value[Name];
   if Assigned(Value) then
     Result := Value^.AsInt64
 end;
 
-function TCEConfig.GetFloat(const Name: TPropertyName): Single;
+function TCEConfig.GetFloat(const Name: TPropertyName; const Def: Single = 0.0): Single;
 var
   Value: PCEPropertyValue;
 begin
-  Result := 0.0;
+  Result := Def;
   Value := Data.Value[Name];
   if Assigned(Value) then
     Result := Value^.AsSingle
 end;
 
-function TCEConfig.GetPointer(const Name: TPropertyName): Pointer;
+function TCEConfig.GetPointer(const Name: TPropertyName; const Def: Pointer = nil): Pointer;
+var
+  Value: PCEPropertyValue;
 begin
-  Result := Pointer(GetInt64(Name));
+  Result := Def;
+  Value := Data.Value[Name];
+  if Assigned(Value) then
+    Result := Pointer(Value^.AsInt64)
+end;
+
+procedure TCEConfig.SetInt(const Name: TPropertyName; Value: Integer);
+begin
+  Data.AddInt(Name, Value);
 end;
 
 procedure TCEConfig.SetInt64(const Name: TPropertyName; Value: Int64);

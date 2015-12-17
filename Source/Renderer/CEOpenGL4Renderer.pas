@@ -60,7 +60,7 @@ type
 implementation
 
 uses
-  CECommon, CEImageResource, CELog;
+  CECommon, CELog, CEBaseRenderer;
 
 const
   LOGTAG = 'ce.render';
@@ -118,11 +118,13 @@ function TCEOpenGL4Renderer.DoInitGAPIPlatform(App: TCEBaseApplication): Boolean
 {$IFDEF WINDOWS}
 var
   Dummy: LongWord;
+  Rect: Windows.TRect;
 {$ENDIF}
 {$IFDEF XWINDOW}
 var
   VisualInfo: PXVisualInfo;
   ScreenNum: Cardinal;
+  Attrs: PXWindowAttributes;
 {$ENDIF}
 begin
   Result := False;
@@ -141,6 +143,9 @@ begin
     Exit;
   end;
   ActivateRenderingContext(FOGLDC, FOGLContext);
+  GetClientRect(FRenderWindowHandle, Rect);
+  Width := Rect.Right - Rect.Left;
+  Height := Rect.Bottom - Rect.Top;
   {$ENDIF}
   {$IFDEF XWINDOW}
   FDisplay := App.Cfg.GetPointer(CFG_XWINDOW_DISPLAY);
@@ -162,6 +167,9 @@ begin
   FOGLContext := GlxCreateContext(FDisplay, VisualInfo, Nil, True);
   glxMakeCurrent(FDisplay, FRenderWindowHandle, FOGLContext);
   XFree(VisualInfo);
+  XGetWindowAttributes(FDisplay, FRenderWindowHandle, Attrs);
+  Width := Attrs^.width;
+  Height := Attrs^.height;
   {$ENDIF}
 
   glDisable(GL_ALPHA_TEST);
