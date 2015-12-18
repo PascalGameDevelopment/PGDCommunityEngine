@@ -135,11 +135,11 @@ begin
   Result.IntProp := 10;
   Result.SingleProp := 11.8;
   Result.AnsiStringProp := 'Ansi string!';
-  Result.StringProp := 'Default стринг!';
+  Result.StringProp := 'Default пїЅпїЅпїЅпїЅпїЅпїЅ!';
   Result.ShortStringProp := 'Short string!';
-  Result.UTF8Str := 'UTF8 стринг!';
-  Result.WStr := 'Wide стринг!';
-  Result.UnicodeStr := 'Unicode стринг!';
+  Result.UTF8Str := 'UTF8 пїЅпїЅпїЅпїЅпїЅпїЅ!';
+  Result.WStr := 'Wide пїЅпїЅпїЅпїЅпїЅпїЅ!';
+  Result.UnicodeStr := 'Unicode пїЅпїЅпїЅпїЅпїЅпїЅ!';
 
   Result.Binary := TDynamicArray.Create();
   SetLength(Result.Binary.Data, Length(TEST_DATA));

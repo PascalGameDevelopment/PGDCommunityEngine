@@ -48,7 +48,7 @@ type
 implementation
 
 uses
-  CELog, CEBaseTypes;
+  CEBaseTypes;
 
 procedure TCEOSMessageInput.HandleKeyboard(Msg: TKeyboardMsg);
 begin

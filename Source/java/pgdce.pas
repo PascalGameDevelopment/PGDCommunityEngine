@@ -30,7 +30,7 @@ Android library implementation for integration through JNI
 library pgdce;
 
 uses
-  CELog, CEAndroidLog, CEAndroidAssets,
+  CELog, CEAndroidAssets,
   CEBaseTypes, CEMessage, CEInputMessage,
   jni, CEAndroidJNIApplication,
   DemoMain;

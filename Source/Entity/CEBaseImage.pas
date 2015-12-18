@@ -93,7 +93,7 @@ type
   function GetBitsPerPixel(PixelFormat: TCEPixelFormat): Integer;
 
   //
-  function GetSuggestedMipLevelsInfo(Width, Height: Integer; const Format: TCEPixelFormat; out Levels: PImageLevels): Integer;
+  function GetSuggestedMipLevelsInfo(Width, Height: Integer; const Format: TCEPixelFormat; const Levels: PImageLevels): Integer;
 
 implementation
 
@@ -117,8 +117,8 @@ begin
   end;
 end;
 
-function GetSuggestedMipLevelsInfo(Width, Height: Integer; const Format: TCEPixelFormat; out Levels: PImageLevels): Integer;
-var MaxDim: Integer;
+function GetSuggestedMipLevelsInfo(Width, Height: Integer; const Format: TCEPixelFormat; const Levels: PImageLevels): Integer;
+var MaxDim: Integer;
 begin
   Levels^[0].Width  := Width;
   Levels^[0].Height := Height;
@@ -140,4 +140,4 @@ begin
 end;
 
 end.
-
+

@@ -32,7 +32,7 @@ unit CEResource;
 interface
 
 uses
-  CEBaseTypes, CEEntity, CEIO, CEProperty, CEDataDecoder;
+  CEEntity, CEProperty, CEDataDecoder;
 
 type
   // Resource format type
@@ -123,7 +123,7 @@ type
 implementation
 
 uses
-  SysUtils, CEDataLoader, CEDataConverter;
+  SysUtils, CEDataLoader, CEDataConverter, CEIO;
 
 procedure _SetResourceFormat(Resource: TCEResource; Format: TCEFormat);
 begin

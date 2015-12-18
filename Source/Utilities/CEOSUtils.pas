@@ -31,15 +31,6 @@ unit CEOSUtils;
 
 interface
 
-{$IFDEF WINDOWS}
-uses
-  Windows;
-{$ENDIF}
-{$IFDEF UNIX}
-uses
-  unix;
-{$ENDIF}
-
 // Obtains mouse cursor position relative to screen and fills X and Y with the position
   procedure GetMouseCursorPos(out X, Y: Integer);
 // Sets mouse cursor position relative to screen
@@ -54,6 +45,15 @@ function GetPerformanceCounter(): Int64;
 function GetPerformanceFrequency(): Int64;
 
 implementation
+
+{$IFDEF WINDOWS}
+uses
+    Windows;
+{$ENDIF}
+{$IFDEF UNIX}
+uses
+  unix;
+{$ENDIF}
 
 var
   PerformanceFrequency: Int64;

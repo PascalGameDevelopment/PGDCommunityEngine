@@ -32,8 +32,6 @@ unit CEVectors;
 
 interface
 
-uses CEMath;
-
 type
   TCEVector2f = packed record
     x, y: single;

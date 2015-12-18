@@ -41,14 +41,14 @@ uses
     {$ENDIF}
   {$ELSE}
     {$IFDEF XWINDOW}
-    xlib, xutil,
+    xlib,
     {$ENDIF}
     dglOpenGL,
   {$ENDIF}
   {$IFDEF WINDOWS}
   Windows,
   {$ENDIF}
-  CETemplate, CELog, CEIO, CEDataDecoder, CEUniformsManager;
+  {!}CETemplate, CEIO, CEDataDecoder, CEUniformsManager;
 
 type
   TGLSLIdentKind = (gliAttribute, gliUniform, gliVarying, gliSampler);
@@ -108,10 +108,10 @@ type
     procedure DoFinalizeGAPIPlatform(); virtual; abstract;
 
     function InitShader(Pass: TCERenderPass): Integer;
+  public
     procedure ApplyRenderPass(Pass: TCERenderPass); override;
     procedure Clear(Flags: TCEClearFlags; Color: TCEColor; Z: Single; Stencil: Cardinal); override;
     procedure NextFrame; override;
-  public
   end;
 
   TCEOpenGLUniformsManager = class(TCEUniformsManager)
@@ -140,7 +140,7 @@ type
 implementation
 
 uses
-  SysUtils, CECommon, CEStrUtils, CEResource, CEImageResource, CEOSUtils;
+  SysUtils, CEStrUtils, CEResource, CEImageResource, CEOSUtils, CELog;
 
 const
   SAMPLER_PREFIX = 'SAMPLER';

@@ -32,10 +32,9 @@ unit CELocation;
 interface
 
 uses
-  CEBaseTypes, CEEntity, CEVectors;
+  CEEntity, CEVectors;
 
 type
-
   // Spatial entity location in 3D world which may be additionally subdivided
   TLocation = record
   case Integer of

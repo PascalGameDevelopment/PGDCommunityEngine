@@ -32,7 +32,7 @@ unit CEMesh;
 interface
 
 uses
-  CEBaseTypes, CEEntity, CEVectors, CEUniformsManager;
+  CEBaseTypes, CEEntity, CEUniformsManager;
 
 type
   // Primitive types
@@ -92,6 +92,9 @@ type
   procedure InitTesselationStatus(Status: PCEDataStatus); {$I inline.inc}
 
 implementation
+
+uses
+  CEVectors;
 
 function GetVB(const Mesh: TCEMesh): PCEDataStatus; {$I inline.inc}
 begin

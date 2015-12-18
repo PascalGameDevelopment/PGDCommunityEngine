@@ -104,7 +104,7 @@ type
 implementation
 
 uses
-  SysUtils, CECommon, CETemplate;
+  {!}CETemplate;
 
 type
   _VectorValueType = TCEImageResampler;

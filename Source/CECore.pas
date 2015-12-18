@@ -40,9 +40,7 @@ uses
   CEBasePhysics,
   CEBaseNetwork,
 
-  CEEntity, CEGameEntity,
-
-  CEOSUtils;
+  CEGameEntity;
 
 type
   TUpdateDelegate = procedure(const DeltaTime: Single) of object;
@@ -85,6 +83,10 @@ type
 
 implementation
 
+uses
+  CEEntity,
+  CEOSUtils;
+
 { TCECore }
 
 procedure TCECore.DoUpdate();
@@ -112,7 +114,7 @@ var
   i: Integer;
 begin
   Items := FEntityManager.GetUpdateList();
-  for i := 0 to Items.Count-1 do
+  for i := 0 to Items.Count - 1 do
     TCEGameEntity(Items[i]).Update(DeltaTime);
 end;
 

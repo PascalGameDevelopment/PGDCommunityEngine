@@ -31,9 +31,6 @@ unit CECommon;
 
 interface
 
-uses
-  CEBaseTypes;
-
   // Returns max of the two arguments
   function MaxI(V1, V2: Integer): Integer; {$I inline.inc}
   // Returns min of the two arguments
@@ -151,7 +148,7 @@ type
 
 implementation
 
-uses SysUtils;
+uses SysUtils, CEBaseTypes;
 
 function MaxI(V1, V2: Integer): Integer; {$I inline.inc}
 begin

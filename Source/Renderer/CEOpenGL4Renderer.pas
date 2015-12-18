@@ -35,14 +35,7 @@ unit CEOpenGL4Renderer;
 interface
 
 uses
-  CEMessage, CEBaseApplication, CEMesh, CEVectors,
-  {$IFDEF WINDOWS}
-  Windows,
-  {$ENDIF}
-  {$IFDEF XWINDOW}
-  xlib, xutil,
-  {$ENDIF}
-  CEOpenGL, dglOpenGL, CEUniformsManager;
+  CEMessage, CEBaseApplication, CEMesh, CEOpenGL;
 
 type
   TCEOpenGL4Renderer = class(TCEBaseOpenGLRenderer)
@@ -60,7 +53,13 @@ type
 implementation
 
 uses
-  CECommon, CELog, CEBaseRenderer;
+  {$IFDEF WINDOWS}
+  Windows,
+  {$ENDIF}
+  {$IFDEF XWINDOW}
+  xlib, xutil,
+  {$ENDIF}
+  CECommon, CELog, CEVectors, dglOpenGL, CEUniformsManager;
 
 const
   LOGTAG = 'ce.render';

@@ -32,7 +32,7 @@ unit CEMaterial;
 interface
 
 uses
-  CEBaseTypes, CEEntity, CEResource, CEImageResource;
+  CEEntity, CEResource, CEImageResource;
 
 const
   MAX_TEXTURES = 32;
@@ -105,6 +105,9 @@ type
   procedure _SetProgramId(Pass: TCERenderPass; Id: Integer);
 
 implementation
+
+uses
+  CEBaseTypes;
 
 function CreateRenderPass(EntityManager: TCEEntityManager; AlphaBlend: Boolean;
                           const TextureUrl: string; const VSUrl: string; const PSUrl: string): TCERenderPass;

@@ -32,7 +32,7 @@ unit CEDataConverter;
 interface
 
 uses
-  CEBaseTypes, CEEntity, CEResource, CEIO;
+  CEResource;
 
 type
   // Variables of this type specifies resource format conversion
@@ -85,7 +85,7 @@ type
 implementation
 
 uses
-  SysUtils, CECommon, CETemplate;
+  {!}CETemplate;
 
 type
   _VectorValueType = TCEDataConverter;

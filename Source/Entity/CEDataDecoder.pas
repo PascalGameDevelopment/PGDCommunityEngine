@@ -32,7 +32,7 @@ unit CEDataDecoder;
 interface
 
 uses
-  CEBaseTypes, CEEntity, CEIO;
+  CEEntity, CEIO;
 
 type
     // Load target. In future it will be a structure to support multiple targets.
@@ -74,7 +74,7 @@ type
 implementation
 
 uses
-  SysUtils, CECommon, CETemplate;
+  SysUtils, CECommon, {!}CETemplate;
 
 type
   _VectorValueType = TCEDataDecoder;

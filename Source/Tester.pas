@@ -56,7 +56,8 @@ unit Tester;
 
 interface
 
-uses CEBaseTypes, CETemplate, SysUtils;
+uses
+  CEBaseTypes, {!}CETemplate, SysUtils;
 
 const
   TEST_METHOD_SIGNATURE = 'Test';
@@ -288,7 +289,8 @@ type
 
 implementation
 
-uses CERttiUtil;
+uses
+  CERttiUtil;
 
 type
   // Exception raised when a test was failed

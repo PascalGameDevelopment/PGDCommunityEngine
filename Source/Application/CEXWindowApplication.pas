@@ -80,7 +80,7 @@ end;
 // To use TKeyboardState type as actual keyboard state we should fit vkXXX constants into byte range
 function EnsureByteRange(Value: Integer): Byte;
 begin
-  Result := Value;
+  Result := Value and $FF;
   if Value and $FF00 > 0 then
     Result := (Value shr 16) and $FF;
   {$IFDEF CE_DEBUG}

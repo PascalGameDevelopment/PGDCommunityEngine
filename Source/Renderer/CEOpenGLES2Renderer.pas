@@ -32,16 +32,7 @@ unit CEOpenGLES2Renderer;
 interface
 
 uses
-  CEMessage, CEBaseApplication, CEMesh, CEVectors,
-  {$IFDEF OPENGLES_EMULATION}
-    GLES20Regal,
-  {$ELSE}
-    gles20,
-  {$ENDIF}
-  {$IFDEF WINDOWS}
-    Windows,
-  {$ENDIF}
-  CEOpenGL, CEUniformsManager;
+  CEMessage, CEBaseApplication, CEMesh, CEOpenGL;
 
 type
   TCEOpenGLES2Renderer = class(TCEBaseOpenGLRenderer)
@@ -60,7 +51,15 @@ type
 implementation
 
 uses
-  CECommon, CELog;
+  {$IFDEF OPENGLES_EMULATION}
+  GLES20Regal,
+  {$ELSE}
+  gles20,
+  {$ENDIF}
+  {$IFDEF WINDOWS}
+  Windows,
+  {$ENDIF}
+  CECommon, {!}CELog, CEVectors, CEUniformsManager;
 
 { TCEOpenGLES2Renderer }
 

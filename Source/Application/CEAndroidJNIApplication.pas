@@ -32,7 +32,7 @@ unit CEAndroidJNIApplication;
 interface
 
 uses
-  CELog, CEBaseApplication;
+  CEBaseApplication;
 
 type
   // Application implementing interaction with Android platform using custom JNI approach
@@ -49,7 +49,8 @@ type
 
 implementation
 
-uses CEBaseInput;
+uses
+  CELog;
 
 procedure TCEAndroidApplication.SetConfig(const ConfigString: PAnsiChar);
 begin

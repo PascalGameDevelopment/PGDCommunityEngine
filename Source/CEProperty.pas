@@ -32,7 +32,7 @@ unit CEProperty;
 interface
 
 uses
-  CEBaseTypes, CETemplate, CERttiUtil, CEIO;
+  CEBaseTypes, {!}CETemplate, CEIO;
 
 type
   // Type for property names
@@ -240,7 +240,7 @@ type
 
 implementation
 
-uses SysUtils, TypInfo;
+uses TypInfo, CERttiUtil;
 
 const
   SIMPLE_PROPERTIES_BEGIN_SIGNATURE: TSignature = (Bytes: (Ord('S'), Ord('P'), Ord('_'), Ord('B')));
@@ -547,7 +547,8 @@ begin
 end;
 
 function TCESimplePropertyFiler.Write(OStream: TCEOutputStream; Properties: TCEProperties): Boolean;
-var
+
+var
   i: Integer;
   Prop: PCEProperty;
   Value: PCEPropertyValue;
@@ -713,19 +714,32 @@ begin
   end;
 end;
 
-{$WARNINGS OFF}
-procedure SetClassPropertiesAndValues(AObj: TObject; Properties: TCEProperties);
-var
-  i: Integer;
-  Prop: TCEProperty;
-  Value: TCEPropertyValue;
-begin
-  for i := 0 to Properties.Count-1 do
-  begin
-    Prop := Properties.PropByIndex[i]^;
-    Value := Properties.GetValueByIndex(i)^;
-    case Prop.TypeId of
-      ptBoolean, ptInteger,
+
+{$WARNINGS OFF}
+
+procedure SetClassPropertiesAndValues(AObj: TObject; Properties: TCEProperties);
+
+var
+
+  i: Integer;
+
+  Prop: TCEProperty;
+
+  Value: TCEPropertyValue;
+
+begin
+
+  for i := 0 to Properties.Count-1 do
+
+  begin
+
+    Prop := Properties.PropByIndex[i]^;
+
+    Value := Properties.GetValueByIndex(i)^;
+
+    case Prop.TypeId of
+
+      ptBoolean, ptInteger,
       ptEnumeration, ptSet: TypInfo.SetOrdProp(AObj, Prop.Name, Value.AsInteger);
       ptInt64: TypInfo.SetInt64Prop(AObj, Prop.Name, Value.AsInt64);
       ptSingle: TypInfo.SetFloatProp(AObj, Prop.Name, Value.AsSingle);
@@ -756,6 +770,7 @@ end;
     end;
   end;
 end;
-{$WARNINGS ON}
+
+{$WARNINGS ON}
 
 end.

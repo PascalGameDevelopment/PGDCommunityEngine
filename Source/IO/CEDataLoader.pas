@@ -97,7 +97,7 @@ type
 implementation
 
 uses
-  SysUtils, CECommon, CETemplate, CELog;
+  SysUtils, {!}CETemplate, CELog;
 
 const
   LOGTAG = 'ce.io.dataloader';

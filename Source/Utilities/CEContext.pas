@@ -40,10 +40,10 @@ type
   _HashMapKeyType = TClass;
   _HashMapValueType = TObject;
     {$I tpl_coll_hashmap.inc}
-    // Maps class to instance
+  // Maps class to instance
   TClassObjectMap = _GenHashMap;
 
-    // Class to store subsystem's parameters
+  // Class to store subsystem's parameters
   TCEConfig = class
   private
     Data: TCEProperties;
@@ -82,12 +82,15 @@ uses
   {$MESSAGE 'Instantiating TClassObjectMap'}
   {$I tpl_coll_hashmap.inc}
 
+const
+  LOGTAG = 'ce.context';
+
 var
   ClassObjectMap: TClassObjectMap;
 
 procedure LogSingletonExists(Cls: TClass);
 begin
-  CELog.Error('ce.context', Cls.ClassName() + ' singleton was already created');
+  CELog.Error(LOGTAG, Cls.ClassName() + ' singleton was already created');
 end;
 
 function GetSingleton(AClass: TClass): TObject;
@@ -138,7 +141,7 @@ end;
 
 procedure TCEConfig.Remove(const Name: TPropertyName);
 begin
-  Writeln('Not implemented');
+  CELog.Info(LOGTAG, 'Not implemented');
 end;
 
 function TCEConfig.GetInt(const Name: TPropertyName; const Def: Integer = 0): Integer;

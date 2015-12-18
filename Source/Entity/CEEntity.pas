@@ -32,7 +32,7 @@ unit CEEntity;
 interface
 
 uses
-  CEBaseTypes, CETemplate, CEProperty, CEIO;
+  CEBaseTypes, {!}CETemplate, CEProperty, CEIO;
 
 const
   // Entity hierarchy delimiter
@@ -213,7 +213,7 @@ type
 implementation
 
 uses
-  CELog, CECommon, CERttiUtil, TypInfo, SysUtils;
+  CELog, CECommon, CERttiUtil, TypInfo;
 
 {$MESSAGE 'Instantiating TEntityList'}
 {$I tpl_coll_vector.inc}
