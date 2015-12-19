@@ -109,8 +109,6 @@ begin
   glLoadIdentity();
   glOrtho(0, Msg.NewWidth, 0, Msg.NewHeight, -1, 1);
   glScalef(1, -1, 1);
-
-  WriteLn('Resize renderer: ', Msg.NewWidth, 'x', Msg.NewHeight);
 end;
 
 function TCEOpenGL4Renderer.DoInitGAPIPlatform(App: TCEBaseApplication): Boolean;
@@ -155,6 +153,7 @@ begin
   end;
   ScreenNum := App.Cfg.GetInt64(CFG_XWINDOW_SCREEN);
   FRenderWindowHandle := App.Cfg.GetInt64(CFG_WINDOW_HANDLE);
+
   GenerateAttributes_DoubleBufferMode();
   VisualInfo := GlxChooseVisual(FDisplay, ScreenNum, @GLAttributesList);
   if VisualInfo = nil then
@@ -162,13 +161,15 @@ begin
     GenerateAttributes_SingleBufferMode();
     VisualInfo := GlxChooseVisual(FDisplay, ScreenNum, @GLAttributesList);
   end;
-
   FOGLContext := GlxCreateContext(FDisplay, VisualInfo, Nil, True);
   glxMakeCurrent(FDisplay, FRenderWindowHandle, FOGLContext);
   XFree(VisualInfo);
+
+  New(Attrs);
   XGetWindowAttributes(FDisplay, FRenderWindowHandle, Attrs);
   Width := Attrs^.width;
   Height := Attrs^.height;
+  Dispose(Attrs);
   {$ENDIF}
 
   glDisable(GL_ALPHA_TEST);
