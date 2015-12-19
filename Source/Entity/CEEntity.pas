@@ -78,6 +78,7 @@ type
     FRoot: TCEBaseEntity;
     procedure SetRoot(ARoot: TCEBaseEntity);
   public
+    destructor Destroy(); override;
     // Returns an entity in hierarchy by its full absolute (starting with "/") name or nil if not found
     function Find(const FullName: TCEEntityName): TCEBaseEntity;
     property Root: TCEBaseEntity read FRoot write SetRoot;
@@ -576,6 +577,13 @@ begin
   FRoot := ARoot;
   if Assigned(FRoot) then
     FRoot.SetManager(Self);
+end;
+
+destructor TCEEntityManager.Destroy();
+begin
+  if Assigned(Root) then
+    Root.Free();
+  inherited Destroy();
 end;
 
 function GetNextIndex(const s: TCEEntityName; PrevI, len: Integer): Integer; {$I inline.inc}

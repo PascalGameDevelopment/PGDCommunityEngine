@@ -97,8 +97,11 @@ type
     property Technique[Index: Integer]: TCERenderTechnique read GetTechnique write SetTechnique; default;
   end;
 
+  // Creates a render pass with the specified settings
   function CreateRenderPass(EntityManager: TCEEntityManager; AlphaBlend: Boolean;
                             const TextureUrl: string; const VSUrl: string; const PSUrl: string): TCERenderPass;
+  // Destroys resources associated with render pass such as texture and shaders
+  procedure DestroyRenderPassResources(Pass: TCERenderPass);
   function _GetTextureId(Pass: TCERenderPass; Index: Integer): Integer;
   procedure _SetTextureId(Pass: TCERenderPass; Index: Integer; Id: Integer);
   function _GetProgramId(Pass: TCERenderPass): Integer;
@@ -125,6 +128,13 @@ begin
   if PSUrl <> '' then
     Result.FragmentShader := TCETextResource.CreateFromUrl(PSUrl);
   Result.AlphaBlending := AlphaBlend;
+end;
+
+procedure DestroyRenderPassResources(Pass: TCERenderPass);
+begin
+  Pass.VertexShader.Free();
+  Pass.FragmentShader.Free();
+  Pass.Texture0.Free();
 end;
 
 function _GetTextureId(Pass: TCERenderPass; Index: Integer): Integer;

@@ -14,7 +14,7 @@
 
   The Initial Developer of the Original Code is documented in the accompanying
   help file PGDCE.chm.  Portions created by these individuals are Copyright (C)
-  2014 of these individuals.
+  2015 of these individuals.
 
 ******************************************************************************)
 
@@ -32,57 +32,30 @@ unit DemoMain;
 interface
 
 uses
-  sysutils,
-  CELog,
   CEBaseApplication,
-  {$IFDEF WINDOWS}
-  CEWindowsApplication,
-    {$IFDEF OPENGLES_EMULATION}
-    CEOpenGLES2Renderer,
-    {$ELSE}
-    CEOpenGL4Renderer,
-    {$ENDIF}
-  {$ELSE}
-    {$IFDEF XWINDOWS}
-    CEXWindowApplication,
-    CEOpenGL4Renderer,
-    {$ENDIF}
-    {$IFDEF MOBILE}
-    CEOpenGLES2Renderer,
-    {$ENDIF}
-  {$ENDIF}
   CEBaseRenderer,
-  CEBaseInput,
-  CEMesh, CECommon, CEOSUtils, CEResource, CEGameEntity, CE2DMesh, CEUniformsManager,
-  CEBaseTypes, CEMessage, CEInputMessage, CEVectors, CEImageResource, CEMaterial, CECore;
-
-const
-  VS: AnsiString = 'attribute vec3 position;'#10 +
-                  ' varying mediump vec3 pos;'#10 +
-                  ' void main() {'#10 +
-                  '   gl_Position = vec4(position.xy, 0.0, 1.0);'#10 +
-                  '   pos = position;'#10 +
-                  ' }'#10;
-
-  PS: AnsiString = 'varying mediump vec3 pos;'#10 +
-                  ' uniform lowp vec4 color;'#10 +
-                  ' uniform sampler2D s_texture0;'#10 +
-                  ' void main() {'#10 +
-                  '   gl_FragColor.rgb = color.rgb;'#10 +
-                  '   gl_FragColor.a = color.a*pos.z;'#10 +
-                  ' }'#10;
+  CEMesh, CE2DMesh, CEGameEntity,
+  CEMessage, CEVectors, CEMaterial, CECore;
 
 type
+  TRotatingTriangle = class(TCEGameEntity)
+  public
+    procedure Update(const DeltaTime: Single); override;
+  end;
+
   TDemo = class(TObject)
   private
     App: TCEBaseApplication;
     Renderer: TCEBaseRenderer;
     Core: TCECore;
     PolyMesh: TCEPolygonMesh;
-    PolyPass: TCERenderPass;
+    LineMesh: TCELineMesh;
+    PolyPass, LinePass: TCERenderPass;
+    Triangle: TRotatingTriangle;
     ClickPoint: TCEVector2f;
     Ind: Integer;
     Ids: array[0..$FF] of Integer;
+    Speed: Single;
   public
     constructor Create(Application: TCEBaseApplication);
     destructor Destroy(); override;
@@ -91,19 +64,51 @@ type
     procedure Process();
   end;
 
+  // Example mesh class
+  TCERotatingTriangleMesh = class(TCEMesh)
+  private
+    FAngle: Single;
+    procedure SetAngle(const Value: Single);
+  public
+    property Angle: Single read FAngle write SetAngle;
+    procedure FillVertexBuffer(Dest: Pointer); override;
+  end;
+
 implementation
 
 uses
-  CEOSMessageInput;
+  {$IFDEF WINDOWS}
+  CEWindowsApplication,
+  {$IFDEF OPENGLES_EMULATION}
+  CEOpenGLES2Renderer,
+  {$ELSE}
+  CEOpenGL4Renderer,
+  {$ENDIF}
+  {$ELSE}
+  {$IFDEF XWINDOW}
+  CEOpenGL4Renderer,
+  {$ENDIF}
+  {$IFDEF MOBILE}
+  CEOpenGLES2Renderer,
+  {$ENDIF}
+  {$ENDIF}
+  CEOSMessageInput,
+  sysutils, CELog,
+  CECommon, CEBaseInput, CEBaseTypes, CEInputMessage, CEUniformsManager;
 
 constructor TDemo.Create(Application: TCEBaseApplication);
 begin
   App := Application;
-  Renderer := TCERendererClass.Create(nil);
+  Renderer := TCERendererClass.Create(App);
+  CELog.Info('Creating core');
   Core := TCECore.Create();
+  Core.Application := App;
   Core.Renderer := Renderer;
+  CELog.Info('Creating input');
   Core.Input := TCEOSMessageInput.Create();
   App.MessageHandler := HandleMessage;
+
+  Triangle := TRotatingTriangle.Create(Core.EntityManager);
 
   PolyMesh := TCEPolygonMesh.Create(Core.EntityManager);
   PolyMesh.Count := 4;
@@ -114,20 +119,41 @@ begin
   PolyMesh.Softness := 2 / 1024 * 1.5;
   PolyMesh.Color := GetColor(100, 200, 150, 255);
 
-  PolyPass := CreateRenderPass(Core.EntityManager, true, '', '', '');
-  PolyPass.VertexShader := TCETextResource.Create();
-  PolyPass.VertexShader.Text := VS;
-  PolyPass.FragmentShader := TCETextResource.Create();
-  PolyPass.FragmentShader.Text := PS;
+  LineMesh := TCELineMesh.Create(Core.EntityManager);
+  LineMesh.Softness := 2 / 1024 * 1.5 * 10;
+  LineMesh.Width := 1 / 1024 * 63;
+  LineMesh.Count := 6;
+  LineMesh.Point[0] := Vec2f(-0.5,  0.3);
+  {LineMesh.Point[2] := Vec2f(0.4,  0.35);
+  LineMesh.Point[1] := Vec2f(0.5,  0.3);}
+  LineMesh.Point[1] := Vec2f( 0.3, -0.5);
+  LineMesh.Point[2] := Vec2f(-0.3, -0.3);
+  LineMesh.Point[3] := Vec2f( 0.4,  0.0);
+  LineMesh.Point[4] := Vec2f( 0.5,  0.3);
+  LineMesh.Point[5] := Vec2f( 0.2,  0.6);
+
+  CELog.Info('Loading materials');
+  PolyPass := CreateRenderPass(Core.EntityManager, true, '', 'asset://vs_poly.glsl', 'asset://fs_poly.glsl');
+  LinePass := CreateRenderPass(Core.EntityManager, true, '', 'asset://vs_line.glsl', 'asset://fs_line.glsl');
+
+  {Mat := TCEMaterial.Create(Core.EntityManager);
+  Mat.TotalTechniques := 1;
+  Mat.Technique[0] := TCERenderTechnique.Create(Core.EntityManager);
+  Mat.Technique[0].TotalPasses := 1;
+  Mat.Technique[0].Pass[0] := PolyPass;
+  Triangle.Material := Mat;
+  Line.Mesh := LineMesh;}
+
+  //Core.OnUpdateDelegate := Mesh.Update;
 
   FillChar(Ids, SizeOf(Ids), 255);
 end;
 
 destructor TDemo.Destroy();
 begin
-  FreeAndNil(Renderer);
-  FreeAndNil(App);
-  CELog.Info('PGDCE library unload');
+  DestroyRenderPassResources(PolyPass);
+  DestroyRenderPassResources(LinePass);
+  FreeAndNil(Core);
   inherited Destroy();
 end;
 
@@ -157,12 +183,52 @@ begin
   Renderer.Clear([cfColor, cfDepth], GetColor(40, 130, 130, 0), 1.0, 0);
   Renderer.ApplyRenderPass(PolyPass);
   Renderer.RenderMesh(PolyMesh);
+
+  if Core.Input.Pressed[vkNUMPAD6] or (Core.Input.MouseState.Buttons[mbLeft] = iaDown) then Speed := Speed + 4;
+  if Core.Input.Pressed[vkNUMPAD4] or (Core.Input.MouseState.Buttons[mbRight] = iaDown) then Speed := Speed - 4;
+  Speed := Clamps(Speed, -360, 360);
+
+  if Core.Input.Pressed[vkALT] and Core.Input.Pressed[vkX] then App.Terminated := True;
   if Core.Input.MouseState.Buttons[mbLeft] = iaDown then
   begin
     if (Renderer.Width > 0) and (Renderer.Height > 0) then
     begin
+      ClickPoint
+        := Vec2f(Core.Input.MouseState.X / Renderer.Width * 2 - 1, 1 - Core.Input.MouseState.Y / Renderer.Height * 2);
+      Ind := GetNearestPointIndex(PolyMesh.Points, PolyMesh.Count, ClickPoint);
+      PolyMesh.Point[Ind] := ClickPoint;
     end;
   end;
+  Core.Process();
+end;
+
+procedure TCERotatingTriangleMesh.SetAngle(const Value: Single);
+begin
+  FAngle := Value;
+  VertexBuffer.Status := dsChanged; // Invalidate buffer
+end;
+
+procedure TCERotatingTriangleMesh.FillVertexBuffer(Dest: Pointer);
+var
+  a: Single;
+  v: ^TVBPos;
+begin
+  inherited;
+  a := Angle * pi / 180;
+  v := Dest;
+  Vec3f(cos(a), sin(a), 0, v^[0].vec);
+  //v^[0].u := 0; v^[0].v := 0;
+  Vec3f(cos(a + 2 * pi / 3), sin(a + 2 * pi / 3), 0, v^[1].vec);
+  //v^[1].u := 1; v^[1].v := 0;
+  Vec3f(cos(a + 4 * pi / 3), sin(a + 4 * pi / 3), 0, v^[2].vec);
+  //v^[2].u := 0.5; v^[2].v := 0.5;
+  FVerticesCount := 3;
+  FVertexSize := SizeOf(TVBRecPos);
+end;
+
+procedure TRotatingTriangle.Update(const DeltaTime: Single);
+begin
+  //TCERotatingTriangleMesh(Mesh).Angle := TCERotatingTriangleMesh(Mesh).Angle + speed * DeltaTime;
 end;
 
 end.
