@@ -30,7 +30,7 @@ Android library implementation for integration through JNI
 library pgdce;
 
 uses
-  CELog, CEAndroidAssets,
+  CELog, {!}CEAndroidLog, CEAndroidAssets,
   CEBaseTypes, CEMessage, CEInputMessage,
   jni, CEAndroidJNIApplication,
   DemoMain;
@@ -54,18 +54,17 @@ begin
     App.MessageHandler(Msg);
 end;
 
-procedure Init(PEnv: PJNIEnv; Obj: JObject; AssetManager: jobject); stdcall; export;
+procedure LoadTestAsset();
 var
   buf: AnsiString;
   AssetStream: TCEAndroidAssetInputStream;
 begin
-  CEAndroidAssets.InitAssetManager(PEnv, AssetManager);
   CELog.Debug('Opening test asset');
-  AssetStream := TCEAndroidAssetInputStream.Create('test.xml');
+  AssetStream := TCEAndroidAssetInputStream.Create('vs_poly.glsl');
   SetLength(buf, AssetStream.Size);
   CELog.Debug('Reading test asset. Size: ' + IntToStr(AssetStream.Size));
   try
-    AssetStream.Read(buf, AssetStream.Size);
+    AssetStream.Read(buf[1], AssetStream.Size);
     CELog.Debug('Test asset read done');
     CELog.Debug('Test asset: ' + buf);
   finally
@@ -73,6 +72,12 @@ begin
     SetLength(buf, 0);
     AssetStream.Free();
   end;
+end;
+
+procedure Init(PEnv: PJNIEnv; Obj: JObject; AssetManager: jobject); stdcall; export;
+begin
+  CEAndroidAssets.InitAssetManager(PEnv, AssetManager);
+  //LoadTestAsset();
 end;
 
 procedure OnSurfaceCreated(PEnv: PJNIEnv; Obj: JObject); stdcall; export;

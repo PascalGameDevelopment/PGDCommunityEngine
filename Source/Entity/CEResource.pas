@@ -123,7 +123,7 @@ type
 implementation
 
 uses
-  SysUtils, CEDataLoader, CEDataConverter, CEIO;
+  SysUtils, CEDataLoader, CEDataConverter, CEIO, CELog;
 
 procedure _SetResourceFormat(Resource: TCEResource; Format: TCEFormat);
 begin
@@ -183,7 +183,6 @@ begin
 end;
 
 constructor TCEResource.CreateFromUrl(const Url: string);
-
 begin
   Create();
   DataURL := Url;
@@ -191,7 +190,6 @@ begin
 end;
 
 destructor TCEResource.Destroy;
-
 begin
   if Assigned(FDataHolder) then
     FreeAndNil(FDataHolder);
@@ -199,7 +197,6 @@ begin
 end;
 
 function TCEResource.LoadExternal(NewerOnly: Boolean; const Target: TCELoadTarget = nil; MetadataOnly: Boolean = False): Boolean;
-
 var
   Loader: TCEDataLoader;
   Decoder: TCEDataDecoder;
@@ -216,7 +213,7 @@ begin
   ResourceModified := Loader.GetResourceModificationTime(FDataURL);
   if NewerOnly and (ResourceModified <= FLastModified) then
   begin
-    //Log(' *** Resource: ' + DateTimeToStr(FLastModified) + ', carrier: ' + DateTimeToStr(CarrierModified), lkDebug);
+    CELog.Debug('Resource is up to date: ' + DateTimeToStr(FLastModified) + ', external: ' + DateTimeToStr(ResourceModified));
     Exit;
   end;
   FLastModified := ResourceModified;

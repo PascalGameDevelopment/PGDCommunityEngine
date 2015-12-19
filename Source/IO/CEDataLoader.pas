@@ -213,7 +213,9 @@ end;
 initialization
   LDataLoaders := TDataLoaders.Create();
   RegisterDataLoader(TCELocalFileLoader.Create());
+  {$IFNDEF MOBILE}
   RegisterDataLoader(TCEFileAssetLoader.Create());
+  {$ENDIF}
 finalization
   LDataLoaders.ForEach(FreeCallback, nil);
   LDataLoaders.Free();

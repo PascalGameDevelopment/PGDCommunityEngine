@@ -59,8 +59,8 @@ type
   TCEShaderIdentList = array[0..$FFFF] of TCEShaderIdent;
   PCEShaderIdentList = ^TCEShaderIdentList;
 
+  // Abstract renderer class
   TCEBaseRenderer = class(TCESubSystem)
-  private
   protected
     FUniformsManager: TCEUniformsManager;
     FBufferManager: TCERenderBufferManager;
@@ -100,6 +100,7 @@ implementation
 
 constructor TCEBaseRenderer.Create(App: TCEBaseApplication);
 begin
+  Assert(Assigned(App), 'Application should be assigned');
   DoInit();
   Active := DoInitGAPI(App);
 

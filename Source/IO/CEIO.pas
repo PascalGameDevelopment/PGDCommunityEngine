@@ -97,7 +97,7 @@ type
     procedure Close;
     destructor Destroy; override;
 
-    function Read(out Buffer; const Count: Cardinal): Cardinal;
+    function Read(var Buffer; const Count: Cardinal): Cardinal;
     function Write(const Buffer; const Count: Cardinal): Cardinal;
 
     // Associated file name
@@ -291,7 +291,7 @@ var Ind: Integer;
 begin
   Ind := Pos(CE_URL_TYPE_SEPARATOR, URL);
   if Ind >= STRING_INDEX_BASE then
-    Result := Copy(URL, Ind + 2, Length(URL))
+    Result := Copy(URL, Ind + 3, Length(URL))
   else
     Result := URL;
 end;
@@ -404,7 +404,7 @@ begin
   inherited;
 end;
 
-function TCEFile.Read(out Buffer; const Count: Cardinal): Cardinal;
+function TCEFile.Read(var Buffer; const Count: Cardinal): Cardinal;
 begin
   BlockRead(F, Buffer, Count, Result);
   if Result > 0 then FPosition := FPosition + Result;

@@ -136,7 +136,7 @@ const
 implementation
 
 uses
-  CELog;
+  CELog, sysutils;
 
 const
   LOGTAG = 'ce.android.assets';
@@ -159,6 +159,11 @@ end;
 constructor TCEAndroidAssetInputStream.Create(const AName: string; Mode: Cardinal); overload;
 begin
   Asset := AAssetManager_open(Manager, PChar(AName), Mode);
+  if not Assigned(Asset) then
+  begin
+    CELog.Error(LOGTAG, 'Error opening asset ' + AName);
+    raise EInOutError.CreateFmt('Error opening asset "%s"',[AName]);
+  end;
 end;
 
 procedure TCEAndroidAssetInputStream.Close;
@@ -171,11 +176,13 @@ function TCEAndroidAssetInputStream.Read(var Buffer; const Count: Cardinal): Car
 var
   Res: Integer;
 begin
-  Res := AAsset_read(Asset, Pointer(Buffer), Count);
+  Res := AAsset_read(Asset, @Buffer, Count);
   if Res >= 0 then
     Result := Res
-  else
+  else begin
     Result := 0;
+    CELog.Error('Error reading from asset stream');
+  end;
 end;
 
 { TCEAndroidAssetLoader }
@@ -203,5 +210,5 @@ begin
 end;
 
 initialization
-  RegisterDataLoader(TCEFileAssetLoader.Create());
+  RegisterDataLoader(TCEAndroidAssetLoader.Create());
 end.
