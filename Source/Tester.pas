@@ -290,7 +290,7 @@ type
 implementation
 
 uses
-  CERttiUtil;
+  CERttiUtil, CELog;
 
 type
   // Exception raised when a test was failed
@@ -357,16 +357,6 @@ var
 {$IFDEF TEMPLATE_HINTS}{$MESSAGE 'Instantiating TStringIntegerHashMap'}{$ENDIF}
   {$I tpl_coll_vector.inc}
 
-procedure Log(const s: string);  // TODO: replace with logger
-begin
-  Writeln(s);
-end;
-
-procedure LogError(const s: string);  // TODO: replace with logger
-begin
-  Writeln('!ERROR!: ' + s);
-end;
-
 { TTestSuite }
 
 function TTestSuite.GetName: string;
@@ -425,7 +415,7 @@ begin
     Result[i].Name       := MNames[i];
     Result[i].LastResult := trNone;
     //Result[i].Command    :=
-    //Log('Found test: ' + MNames[i]);
+    //CELog.Info('Found test: ' + MNames[i]);
   end;
 end;
 
@@ -704,48 +694,48 @@ function TLogTestRunner.DoRun(): Boolean;
 begin
   Result := TestRoot.Run(crcAlways);
 
-  Log('Test result statistics:');
-  Log('  Not run:   ' + IntToStr(Stats[trNone]));
-  Log('  Disabled:  ' + IntToStr(Stats[trDisabled]));
-  Log('  Passed:    ' + IntToStr(Stats[trSuccess]));
-  Log('  Failed:    ' + IntToStr(Stats[trFail]));
-  Log('  Exception: ' + IntToStr(Stats[trException]));
-  Log('  Error:     ' + IntToStr(Stats[trError]));
+  CELog.Info('Test result statistics:');
+  CELog.Info('  Not run:   ' + IntToStr(Stats[trNone]));
+  CELog.Info('  Disabled:  ' + IntToStr(Stats[trDisabled]));
+  CELog.Info('  Passed:    ' + IntToStr(Stats[trSuccess]));
+  CELog.Info('  Failed:    ' + IntToStr(Stats[trFail]));
+  CELog.Info('  Exception: ' + IntToStr(Stats[trException]));
+  CELog.Info('  Error:     ' + IntToStr(Stats[trError]));
 end;
 
 procedure TLogTestRunner.HandleCreateSuite(Suite: TTestSuite);
 begin
-  Log('Created suite instance of class "' + Suite.ClassName + '"');
+  CELog.Info('Created suite instance of class "' + Suite.ClassName + '"');
 end;
 
 procedure TLogTestRunner.HandleDestroySuite(Suite: TTestSuite);
 begin
-  Log('Destroyed suite instance of class "' + Suite.ClassName + '"');
+  CELog.Info('Destroyed suite instance of class "' + Suite.ClassName + '"');
 end;
 
 function TLogTestRunner.HandleTestResult(const ATest: TTest; TestResult: TTestResult): Boolean;
 begin
   Result := not (TestResult in [trFail, trException, trError]);
   case TestResult of
-    trNone: Log('  not run');
-    trDisabled: Log('  disabled');
-    trSuccess: Log('  passed');
-    trFail: Log('  failed' + CodeLocToStr(ATest.FailCodeLoc));
-    trException: Log('  exception');
-    trError: Log('  error');
+    trNone: CELog.Info('  not run');
+    trDisabled: CELog.Info('  disabled');
+    trSuccess: CELog.Info('  passed');
+    trFail: CELog.Warning('  failed' + CodeLocToStr(ATest.FailCodeLoc));
+    trException: CELog.Fatal('  exception');
+    trError: CELog.Error('  error');
   end;
 end;
 
 procedure TLogTestRunner.HandleTestException(const ATest: TTest; E: Exception);
 begin
   if Assigned(E) then
-    LogError('Exception in test "' + String(ATest.Name) + '" with message: ' + E.Message);
+    CELog.Error('Exception in test "' + String(ATest.Name) + '" with message: ' + E.Message);
 end;
 
 function TLogTestRunner.IsTestEnabled(const ATest: TTest): Boolean;
 begin
   Result := True;
-  Log('Test: "' + string(ATest.Name) + '"...');
+  CELog.Info('Test: "' + string(ATest.Name) + '"...');
 end;
 
 initialization
