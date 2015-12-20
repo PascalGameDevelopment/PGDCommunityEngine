@@ -1,4 +1,4 @@
-(******************************************************************************
+﻿(******************************************************************************
 
   Pascal Game Development Community Engine (PGDCE)
 
@@ -265,7 +265,6 @@ begin
   with CreateRefcountedContainer() do
   begin
     Parent := TEntity1.Create();
-    Managed.AddObject(Parent);
     Parent.Int := 1000;
     Parent.Str := 'parent.Str';
     Parent.Name := 'Parent';
@@ -309,7 +308,6 @@ begin
     ins := TCEFileInputStream.Create('entity.pce');
     Managed.AddObject(ins);
     Loaded := Filer2.ReadEntity(ins);
-    Managed.AddObject(Loaded);
 
     Manager2.Root := Loaded;
 
