@@ -220,13 +220,23 @@ implementation
 uses CELog;
 {$ENDIF}
 
+{$IF not Declared(PtrUInt)}
+type
+  {$IF Declared(NativeUInt)}
+  PtrUInt = NativeUInt;
+  {$ELSE}
+  PtrUInt = Cardinal;
+  {$ENDIF}
+  PPtrUInt = ^PtrUInt;
+{$IFEND}
+
 { TCEMessage }
 
 class function TCEMessage.NewInstance: TObject;
 begin
 //  Result := InitInstance(MessagePool.Allocate(InstanceSize));
   Result := TObject(MessagePool.Allocate(InstanceSize));
-  PInteger(Result)^ := Integer(Self);
+  PPtrUInt(Result)^ := PtrUInt(Self);
 end;
 
 procedure TCEMessage.FreeInstance;
@@ -370,7 +380,7 @@ begin
     SetCapacity(NewCapacity);
   end;
 
-  Result := Pointer(Cardinal(CurrentPool^.Store) + CurrentPool^.Size);
+  Result := Pointer(PtrUInt(CurrentPool^.Store) + CurrentPool^.Size);
   Inc(CurrentPool^.Size, Size);
 end;
 

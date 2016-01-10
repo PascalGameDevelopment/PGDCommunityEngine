@@ -30,7 +30,7 @@
       begin
         {$Q-}
         {$R-}
-        Result := ((Integer(Key) shr 16) xor Integer(Key)) * $45d9f3b;
+        Result := ((PtrUInt(Key) shr 16) xor PtrUInt(Key)) * $45d9f3b;
         Result := ((Result shr 16) xor Result) * $45d9f3b;
         Result := ((Result shr 16) xor Result);
       end;

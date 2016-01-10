@@ -31,12 +31,15 @@ unit CECommon;
 
 interface
 
+uses
+  {!}CEBaseTypes;
+
   // Returns max of the two arguments
   function MaxI(V1, V2: Integer): Integer; {$I inline.inc}
   // Returns min of the two arguments
   function MinI(V1, V2: Integer): Integer; {$I inline.inc}
   // Clamp the value to range
-  function ClampI(V, Min, Max: Integer): Integer; {$I inline.inc}
+  function ClampI(V, Min, Max: Integer): Integer; //{$I inline.inc}
   // Returns max of the two arguments. Doesn't take in account NaNs etc.
   function MaxS(V1, V2: Single): Single; {$I inline.inc}
   // Returns min of the two arguments. Doesn't take in account NaNs etc.
@@ -47,7 +50,7 @@ interface
   // Returns base pointer shifted by offset
   function PtrOffs(Base: Pointer; Offset: Integer): Pointer; {$I inline.inc}
   // Returns pointer as a number
-  function PtrToInt(P: Pointer): Cardinal; {$I inline.inc}
+  function PtrToInt(P: Pointer): PtrUInt; {$I inline.inc}
 
   // Returns positions of ch within the given string starting from Start or -1 if not found
   function CharPos(const ch: AnsiChar; const s: AnsiString; const Start: Integer ): Integer;
@@ -148,7 +151,7 @@ type
 
 implementation
 
-uses SysUtils, CEBaseTypes;
+uses SysUtils;
 
 function MaxI(V1, V2: Integer): Integer; {$I inline.inc}
 begin
@@ -160,7 +163,7 @@ begin
   Result := V1 * Ord(V1 <= V2) + V2 * Ord(V1 > V2);
 end;
 
-function ClampI(V, Min, Max: Integer): Integer; {$I inline.inc}
+function ClampI(V, Min, Max: Integer): Integer; //{$I inline.inc}
 begin
   Result := V + Ord(V < Min) * (Min - V) - Ord(V > Max) * (V - Max);
 end;
@@ -186,9 +189,9 @@ begin
   Inc(PByte(Result), Offset);
 end;
 
-function PtrToInt(P: Pointer): Cardinal; {$I inline.inc}
+function PtrToInt(P: Pointer): PtrUInt; {$I inline.inc}
 begin
-  Result := Cardinal(P);
+  Result := PtrUInt(P);
 end;
 
 function CharPos(const ch: AnsiChar; const s: AnsiString; const Start: Integer): Integer;

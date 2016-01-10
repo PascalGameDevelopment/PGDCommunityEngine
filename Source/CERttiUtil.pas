@@ -135,7 +135,7 @@ function GetClassMethodNames(AClass: TClass; ScanParents: Boolean): TRTTINames;
 var
   MethodTable: PMethodNameTable;
 begin
-  MethodTable := PPointer(Integer(Pointer(AClass)) + vmtMethodTable)^;
+  MethodTable := PPointer(PtrOffs(Pointer(AClass), vmtMethodTable))^;
   AddMethods(MethodTable, Result);
 
   AClass := AClass.ClassParent;

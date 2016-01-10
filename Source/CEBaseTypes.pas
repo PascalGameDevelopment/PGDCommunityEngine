@@ -51,6 +51,14 @@ type
   {$IF not Declared(UnicodeString)}
     UnicodeString = WideString;
   {$IFEND}
+  {$IF not Declared(PtrUInt)}
+    {$IF Declared(NativeUInt)}
+    PtrUInt = NativeUInt;
+    {$ELSE}
+    PtrUInt = Cardinal;
+    {$ENDIF}
+    PPtrUInt = ^PtrUInt;
+  {$IFEND}
   {$IFDEF UNICODE_ONLY}
   // Entity name type
   TCEEntityName = UnicodeString;
