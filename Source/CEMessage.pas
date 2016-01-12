@@ -226,7 +226,7 @@ type
   PtrUInt = NativeUInt;
   {$ELSE}
   PtrUInt = Cardinal;
-  {$ENDIF}
+  {$IFEND}
   PPtrUInt = ^PtrUInt;
 {$IFEND}
 

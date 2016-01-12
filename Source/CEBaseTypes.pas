@@ -56,7 +56,7 @@ type
     PtrUInt = NativeUInt;
     {$ELSE}
     PtrUInt = Cardinal;
-    {$ENDIF}
+    {$IFEND}
     PPtrUInt = ^PtrUInt;
   {$IFEND}
   {$IFDEF UNICODE_ONLY}
@@ -207,10 +207,12 @@ type
     Used internally for Assert-based features.
     Thread safe if MULTITHREADASSERT defined. }
   procedure AssertRestore();
+  {$IFDEF FLOAT_IEEE}
   // Returns True if v1 equals to v2 with relative accuracy specified in Units in the Last Place by MAX_ULPS
   function FloatEquals(const v1: Double; const v2: Double): Boolean; overload; {$I inline.inc}
   // Returns True if v1 equals to v2 with relative accuracy specified in Units in the Last Place by MAX_ULPS
   function FloatEquals(v1: Single; v2: Single): Boolean; overload; {$I inline.inc}
+  {$ENDIF}
 
 implementation
 

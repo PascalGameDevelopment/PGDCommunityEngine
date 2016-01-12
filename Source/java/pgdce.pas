@@ -74,7 +74,7 @@ begin
   end;
 end;
 
-procedure Init(PEnv: PJNIEnv; Obj: JObject; AssetManager: jobject); stdcall; export;
+procedure Init(PEnv: PJNIEnv; Obj: JObject; AssetManager: JObject); stdcall; export;
 begin
   CEAndroidAssets.InitAssetManager(PEnv, AssetManager);
   //LoadTestAsset();

@@ -460,7 +460,10 @@ end;
 procedure TCESysConsoleAppender.AppendLog(const Time: TDateTime; const Str: string; CodeLoc: PCodeLocation; Level: TCELogLevel);
 begin
   if IsConsole then
+  begin
     Writeln(Formatter(Time, Str, CodeLoc, Level));
+    Flush(Output);
+  end;
 end;
 
 { TWinDebugAppender }

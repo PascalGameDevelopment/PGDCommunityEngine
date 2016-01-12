@@ -77,7 +77,7 @@ type
 implementation
 
 uses
-  CELog, CECommon;
+  CELog, CECommon, {!}CEBaseTypes;
 
   {$MESSAGE 'Instantiating TClassObjectMap'}
   {$I tpl_coll_hashmap.inc}

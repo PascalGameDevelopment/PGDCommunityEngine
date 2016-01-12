@@ -1,3 +1,4 @@
+#version 130
 varying mediump vec3 pos;
 uniform lowp vec4 color;
 uniform sampler2D s_texture0;

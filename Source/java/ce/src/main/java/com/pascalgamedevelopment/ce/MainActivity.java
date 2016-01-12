@@ -44,6 +44,8 @@ public class MainActivity extends Activity {
 
     private GLSurfaceView glSurfaceView;
     private boolean rendererSet;
+    // Global reference to prevent garbage collection as it's used in native code
+    private AssetManager assetManager;
 
     private boolean isProbablyEmulator() {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1
@@ -85,7 +87,8 @@ public class MainActivity extends Activity {
             return;
         }
 
-        PGDCELib.init(getAssets());
+        assetManager = getAssets();
+        PGDCELib.init(assetManager);
     }
 
     @Override

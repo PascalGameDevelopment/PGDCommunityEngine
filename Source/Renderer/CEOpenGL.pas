@@ -35,7 +35,7 @@ uses
   CEBaseTypes, CEEntity, CEBaseApplication, CEBaseRenderer, CEMesh, CEMaterial, CEVectors,
   {$IFDEF GLES20}
     {$IFDEF OPENGLES_EMULATION}
-    GLES20Regal,
+    GLES20Regal, CECommon,
     {$ELSE}
     gles20,
     {$ENDIF}

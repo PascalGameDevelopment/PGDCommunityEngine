@@ -1,3 +1,4 @@
+#version 130
 varying mediump vec4 pos;     // (x-x1, y-y1, x-x2, y-y2) / len
 varying mediump vec3 dat;     // (x-cx, y-cy, 1/|p2-p1|) / len
 uniform mediump vec2 width;

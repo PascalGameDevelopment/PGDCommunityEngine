@@ -1,3 +1,4 @@
+#version 130
 attribute vec4 position;    // (x, y, x2, y2)
 attribute vec4 data;        // (cx, cy, x1, y1)
 varying mediump vec4 pos;   // (x-x1, y-y1, x-x2, y-y2) / len

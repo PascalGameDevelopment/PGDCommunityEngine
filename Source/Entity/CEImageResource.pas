@@ -56,12 +56,12 @@ type
 
     procedure SetMipPolicy(const Value: TMipPolicy);
     function GetActualLevels: Integer;
-    // Images with generated mipmaps needs less space in storage stream
-    function GetStoredDataSize: Integer; override;
     // Returns information about specified mip level
     function GetLevelInfo(Index: Integer): PImageLevel;
   protected
     procedure Init(); override;
+    // Images with generated mipmaps needs less space in storage stream
+    function GetStoredDataSize: Integer; override;
   public
     destructor Destroy(); override;
     // Creates an empty image with the specified dimensions
@@ -98,7 +98,8 @@ implementation
 uses
   CECommon, CEImageResampler;
 
-{ TCEImageResource }
+
+{ TCEImageResource }
 
 procedure TCEImageResource.SetMipPolicy(const Value: TMipPolicy);
 var
