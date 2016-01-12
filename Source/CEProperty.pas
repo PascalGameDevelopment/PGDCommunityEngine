@@ -657,7 +657,12 @@ begin
               Value^.AsAnsiString := GetAnsiStrProp(AObj, PropInfo);
           end;
         end;
-        {$IF Declared(tkUString)}tkUString, {$IFEND}
+        {$IF Declared(tkUString)}tkUString: begin
+          Value := Result.AddProp(PropInfo^.Name, ptString);
+          if Assigned(AObj) then
+            Value^.AsUnicodeString := UnicodeString(TypInfo.GetUnicodeStrProp(AObj, PropInfo));
+        end;
+        {$IFEND}
         tkString: begin
           if PropInfo^.PropType^.Name = 'ShortString' then
           begin
@@ -668,7 +673,7 @@ begin
             {$IFDEF UNICODE}
               Value := Result.AddProp(PropInfo^.Name, ptString);
               if Assigned(AObj) then
-                Value^.AsUnicodeString := TypInfo.GetStrProp(AObj, PropInfo);
+                Value^.AsUnicodeString := UnicodeString(TypInfo.GetUnicodeStrProp(AObj, PropInfo));
             {$ELSE}
               Value := Result.AddProp(PropInfo^.Name, ptAnsiString);
               if Assigned(AObj) then
@@ -747,7 +752,7 @@ begin
 
       ptShortString: TypInfo.SetStrProp(AObj, Prop.Name, Value.AsShortString);
       ptAnsiString: TypInfo.SetStrProp(AObj, Prop.Name, Value.AsAnsiString);
-      ptString: TypInfo.SetStrProp(AObj, Prop.Name, Value.AsUnicodeString);
+      ptString: TypInfo.SetUnicodeStrProp(AObj, Prop.Name, Value.AsUnicodeString);
 
       ptPointer: ;
       ptObjectLink: begin

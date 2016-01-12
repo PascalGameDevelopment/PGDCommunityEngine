@@ -1,4 +1,4 @@
-п»ї(******************************************************************************
+(******************************************************************************
 
   Pascal Game Development Community Engine (PGDCE)
 
@@ -26,6 +26,7 @@ This is test for template collections
 @author(George Bakhtadze (avagames@gmail.com))
 }
 program EntityTest;
+{$IFDEF FPC}{$codepage CP1251}{$ENDIF}
 {$Include PGDCE.inc}
 
 {$APPTYPE CONSOLE}
@@ -135,11 +136,11 @@ begin
   Result.IntProp := 10;
   Result.SingleProp := 11.8;
   Result.AnsiStringProp := 'Ansi string!';
-  Result.StringProp := 'Default пїЅпїЅпїЅпїЅпїЅпїЅ!';
+  Result.StringProp := 'Default стринг!';
   Result.ShortStringProp := 'Short string!';
-  Result.UTF8Str := 'UTF8 пїЅпїЅпїЅпїЅпїЅпїЅ!';
-  Result.WStr := 'Wide пїЅпїЅпїЅпїЅпїЅпїЅ!';
-  Result.UnicodeStr := 'Unicode пїЅпїЅпїЅпїЅпїЅпїЅ!';
+  Result.UTF8Str := 'UTF8 стринг!';
+  Result.WStr := 'Wide стринг!';
+  Result.UnicodeStr := 'Unicode стринг!';
 
   Result.Binary := TDynamicArray.Create();
   SetLength(Result.Binary.Data, Length(TEST_DATA));
@@ -152,9 +153,9 @@ end;
 
 procedure CheckEqual(e1, e2: TTestEntity; const Lbl: string);
 begin
-  WriteLn('String: ' + e1.StringProp + ' = ' + e2.StringProp);
-  WriteLn('UString: ' + e1.UnicodeStr + ' = ' + e2.UnicodeStr);
-  WriteLn('WString: ' + e1.WStr + ' = ' + e2.WStr);
+  WriteLn('String: ' + UTF8Encode(e1.StringProp) + ' = ' + UTF8Encode(e2.StringProp));
+  WriteLn('UString: ' + UTF8Encode(e1.UnicodeStr) + ' = ' + UTF8Encode(e2.UnicodeStr));
+  WriteLn('WString: ' + UTF8Encode(e1.WStr) + ' = ' + UTF8Encode(e2.WStr));
   WriteLn('UTF8String: ' + e1.UTF8Str + ' = ' + e2.UTF8Str);
 
   Assert(_Check(e1.FIntProp = e2.FIntProp),       Lbl + 'Int fail');
