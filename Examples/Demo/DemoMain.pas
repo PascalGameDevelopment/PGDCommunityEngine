@@ -61,7 +61,7 @@ type
     destructor Destroy(); override;
 
     procedure HandleMessage(const Msg: TCEMessage);
-    procedure Process();
+    function Process(): Boolean;
   end;
 
   // Example mesh class
@@ -178,11 +178,20 @@ begin
     end;
 end;
 
-procedure TDemo.Process();
+function TDemo.Process(): Boolean;
 begin
+  if App.Terminated then begin
+    Result := false;
+    Exit;
+  end;
+  Result := true;
+
   Renderer.Clear([cfColor, cfDepth], GetColor(40, 130, 130, 0), 1.0, 0);
+
   Renderer.ApplyRenderPass(PolyPass);
   Renderer.RenderMesh(PolyMesh);
+  Renderer.ApplyRenderPass(LinePass);
+  Renderer.RenderMesh(LineMesh);
 
   if Core.Input.Pressed[vkNUMPAD6] or (Core.Input.MouseState.Buttons[mbLeft] = iaDown) then Speed := Speed + 4;
   if Core.Input.Pressed[vkNUMPAD4] or (Core.Input.MouseState.Buttons[mbRight] = iaDown) then Speed := Speed - 4;

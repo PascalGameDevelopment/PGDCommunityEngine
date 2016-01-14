@@ -31,7 +31,6 @@ program demo;
 {$APPTYPE CONSOLE}
 
 uses
-  CEBaseApplication,
   {$IFDEF WINDOWS}
     CEWindowsApplication,
     {$IFDEF OPENGLES_EMULATION}
@@ -42,26 +41,24 @@ uses
   {$ELSE}
     CEXWindowApplication,
   {$ENDIF}
-  DemoMain;
+  DemoMain, CELog,
+  sysutils;
 
 var
-  App: TCEBaseApplication;
-  DemoApp: TDemo;
+  DemoObj: TDemo;
 begin
   {$IF Declared(ReportMemoryLeaksOnShutdown)}
   ReportMemoryLeaksOnShutdown := True;
   {$IFEND}
 
-  App := TCEApplicationClass.Create();
-  if App.Terminated then begin
-    App.Free();
-    Exit;
+  try
+    DemoObj := TDemo.Create(TCEApplicationClass.Create());
+    while DemoObj.Process() do;
+    DemoObj.Free();
+  except
+    on E: Exception do begin
+      CELog.Error('Error occured: ' + E.Message);
+    end;
   end;
-  DemoApp := TDemo.Create(App);
 
-  while not App.Terminated do
-  begin
-    DemoApp.Process();
-  end;
-  DemoApp.Free();
 end.
