@@ -424,7 +424,7 @@ begin
 
   if IsConsole then begin
     if Length(FAppenders) = 0 then
-      TCESysConsoleAppender.Create(llVerbose)
+      TCESysConsoleAppender.Create(llDebug)
     else
       TCESysConsoleAppender.Create(llWarning)
   end;

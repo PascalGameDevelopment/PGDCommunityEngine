@@ -132,6 +132,7 @@ end;
 
 procedure DestroyRenderPassResources(Pass: TCERenderPass);
 begin
+  if not Assigned(Pass) then Exit;
   Pass.VertexShader.Free();
   Pass.FragmentShader.Free();
   Pass.Texture0.Free();

@@ -34,12 +34,12 @@ interface
 uses
   {$IFDEF WINDOWS}
     Windows,
-    {$IFDEF NAMESPACED_UNITS} System.SyncObjs, {$ELSE} SyncObjs, {$ENDIF}
+    {$IFDEF NAMESPACED_UNITS} System.SyncObjs, {$ELSE} SyncObjs {$ENDIF}
   {$ENDIF}
   {$IFDEF UNIX}
-    unix, cthreads,
+    {!}cthreads
   {$ENDIF}
-  SysUtils;
+  ;
 
   {$IFDEF FPC}
 type
@@ -50,16 +50,16 @@ type
   TCEMutex = TCriticalSection;
   {$ENDIF}
 
-// Thread-safe increment of the value
-function AtomicIncrement(var Addend: LongInt): LongInt;
-// Thread-safe decrement of the value
-function AtomicDecrement(var Addend: LongInt): LongInt;
-// Store Source in Target and returns the old value of Target in a thread-safe way
-function AtomicExchange(var Target: LongInt; Source: LongInt): LongInt;
-// Thread-safe add and exchange of values
-function AtomicAddExchange(var Target: LongInt; Source: LongInt): LongInt;
-// Exchanges Target with NewValue if Target and Comparand are equal. It returns the old value of Target.
-function AtomicCompareExchange(var Target: LongInt; NewValue: LongInt; Comparand: LongInt): LongInt;
+  // Thread-safe increment of the value
+  function AtomicIncrement(var Addend: LongInt): LongInt;
+  // Thread-safe decrement of the value
+  function AtomicDecrement(var Addend: LongInt): LongInt;
+  // Store Source in Target and returns the old value of Target in a thread-safe way
+  function AtomicExchange(var Target: LongInt; Source: LongInt): LongInt;
+  // Thread-safe add and exchange of values
+  function AtomicAddExchange(var Target: LongInt; Source: LongInt): LongInt;
+  // Exchanges Target with NewValue if Target and Comparand are equal. It returns the old value of Target.
+  function AtomicCompareExchange(var Target: LongInt; NewValue: LongInt; Comparand: LongInt): LongInt;
 
   procedure MutexCreate(out Mutex: TCEMutex);
   procedure MutexDelete(var Mutex: TCEMutex);

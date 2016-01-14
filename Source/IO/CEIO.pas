@@ -164,13 +164,14 @@ type
   function GetPathFromURL(const URL: string): string;
   // Returns modification time of a resource by URL or 0 zero if not found or modification time is unsupported
   function GetResourceModificationTime(const URL: string): TDateTime;
-  // Returns input stream for a resource specified by URL. Currently only local files supported.
+  (* Returns input stream for a resource specified by URL or nil if resource not found.
+     Currently only local files and assets supported. *)
   function GetResourceInputStream(const URL: string): TCEInputStream;
 
 implementation
 
 uses
-  SysUtils, CECommon, CEContext;
+  SysUtils, CECommon, CEContext, CELog;
 
   function ReadShortString(InS: TCEInputStream; out Str: ShortString): Boolean;
   var l: Byte;
@@ -330,8 +331,10 @@ begin
     end;
     if FileExists(FileName) then
       Result := TCEFileInputStream.Create(FileName)
-    else
+    else begin
+      CELog.Warning('Resource not found by URL: ' + URL);
       Result := nil;
+    end;
   end else
     Raise ECEIOError.CreateFmt('Unknown protocol in URL: %s', [Protocol]);
 end;

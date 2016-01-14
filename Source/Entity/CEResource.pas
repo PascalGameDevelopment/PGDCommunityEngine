@@ -205,6 +205,7 @@ var
   Entity: TCEBaseEntity;
 begin
   Result := False;
+  CELog.Verbose('Loading URL: ' + FDataURL);
   if FDataURL = '' then Exit;
   Loader := CEDataLoader.GetDataLoader(CEIO.GetProtocolFromUrl(FDataURL));
   if not Assigned(Loader) then
@@ -221,11 +222,13 @@ begin
   Decoder := CEDataDecoder.GetDataDecoder(GetDataTypeIDFromUrl(FDataURL));
   if not Assigned(Decoder) then
     raise ECEIOError.CreateFmt('No appropriate decoder found for URL %s', [FDataUrl]);
-
+  CELog.Verbose('Decoder class: ' + Decoder.ClassName());
   Stream := nil;
   FState := rsLoading;
   try
+    CELog.Verbose('Loader class: ' + Loader.ClassName());
     Stream := Loader.GetInputStream(FDataURL);
+    CELog.Verbose('Stream class: ' + Stream.ClassName());
     if not Assigned(Stream) then
       raise ECEIOError.CreateFmt('Can''t obtain data stream by URL: ', [FDataURL]);
 
@@ -261,7 +264,7 @@ begin
   Converter := CEDataConverter.GetDataConverter(Conversion);
   if not Assigned(Converter) then
   begin
-    // TODO: log
+    CELog.Error(SysUtils.Format('No converter found to convert data format from %d to %d', [OldFormat, NewFormat]));
     Exit;
   end;
 
@@ -270,21 +273,18 @@ begin
   begin
     Result := True;
   end else begin
-    // TODO: log
+    CELog.Error(SysUtils.Format('Error converting data format from %d to %d', [OldFormat, NewFormat]));
   end;
 end;
 
 { TCETextResource }
 
-
 procedure TCETextResource.SetDataHolder(const Value: TTextData);
-
 begin
   FTextData := Value;
 end;
 
 function TCETextResource.GetText: AnsiString;
-
 begin
   if Assigned(FTextData) then
     Result := FTextData.Data
@@ -293,20 +293,17 @@ begin
 end;
 
 procedure TCETextResource.SetText(const Value: AnsiString);
-
 begin
   FTextData.Data := Value;
 end;
 
 procedure TCETextResource.Init;
-
 begin
   inherited;
   SetDataHolder(TTextData.Create());
 end;
 
 destructor TCETextResource.Destroy;
-
 begin
   if Assigned(FTextData) then
     FreeAndNil(FTextData);
@@ -314,7 +311,6 @@ begin
 end;
 
 procedure TCETextResource.SetBuffer(Buf: PAnsiChar; Len: Integer);
-
 begin
   FTextData.Data := '';
   SetString(FTextData.Data, Buf, Len);

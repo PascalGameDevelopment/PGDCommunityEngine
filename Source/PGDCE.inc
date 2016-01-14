@@ -66,7 +66,7 @@
 {$DEFINE LOGGING}
 
 {$IFDEF MOBILE}
-  {$DEFINE MULTITHREADLOG}
+  {$DEFINE MULTITHREADING}        // Forced to use multithreading on mobile devices as UI thread should be lightweight
 {$ELSE}
   {$DEFINE HAS_TYPE_EXTENDED}     // Extended floating point type
 {$ENDIF}
@@ -78,4 +78,11 @@
 {$ENDIF}
 {$IFDEF OPENGLES_EMULATION}
     {$DEFINE GLES20}
+{$ENDIF}
+
+{.$DEFINE MULTITHREADING}
+
+{$IFDEF MULTITHREADING}
+    {$DEFINE MULTITHREADLOG}
+    {$DEFINE MULTITHREADASSERT}
 {$ENDIF}
