@@ -35,7 +35,7 @@ uses
   CEBaseTypes, CEEntity, CEBaseApplication, CEBaseRenderer, CEMesh, CEMaterial, CEVectors,
   {$IFDEF GLES20}
     {$IFDEF OPENGLES_EMULATION}
-    GLES20Regal, CECommon,
+    GLES20Regal,
     {$ELSE}
     gles20,
     {$ENDIF}
@@ -48,7 +48,7 @@ uses
   {$IFDEF WINDOWS}
   Windows,
   {$ENDIF}
-  {!}CETemplate, CEIO, CEDataDecoder, CEUniformsManager;
+  {!}CETemplate, CEIO, CEDataDecoder, CEUniformsManager, CECommon;
 
 type
   TGLSLIdentKind = (gliAttribute, gliUniform, gliVarying, gliSampler);
@@ -80,7 +80,7 @@ type
   // GLSL shader list
   TGLSLShaderList = _GenVector;
 
-    // Abstract class containing common OpenGL based routines
+  // Abstract class containing common OpenGL based routines
   TCEBaseOpenGLRenderer = class(TCEBaseRenderer)
   private
   protected
@@ -110,6 +110,7 @@ type
     function InitShader(Pass: TCERenderPass): Integer;
   public
     procedure ApplyRenderPass(Pass: TCERenderPass); override;
+    procedure RenderMesh(Mesh: TCEMesh); override;
     procedure Clear(Flags: TCEClearFlags; Color: TCEColor; Z: Single; Stencil: Cardinal); override;
     procedure NextFrame; override;
   end;
@@ -509,15 +510,62 @@ begin
 //  Verbose('blending done');
 end;
 
+procedure TCEBaseOpenGLRenderer.RenderMesh(Mesh: TCEMesh);
+var
+  i, Ind: Integer;
+  ts: PCEDataStatus;
+  Buffer: PCEDataBuffer;
+begin
+  Assert(Assigned(Mesh));
+  if not Active then Exit;
+  ts := CEMesh.GetVB(Mesh);
+
+  if ts^.BufferIndex = DATA_NOT_ALLOCATED then
+    ts^.BufferIndex := FBufferManager.GetOrCreate(Mesh.VertexSize, ts, Buffer)
+  else
+    Buffer := @TCEOpenGLBufferManager(FBufferManager).Buffers^[ts^.BufferIndex];
+
+  glBindBuffer(GL_ARRAY_BUFFER, Buffer^.Id);
+  if ts^.Status <> dsValid then begin
+    Mesh.FillVertexBuffer(VertexData);
+    glBufferData(GL_ARRAY_BUFFER, Mesh.VerticesCount * Mesh.VertexSize, VertexData, GL_STATIC_DRAW);
+  end;
+
+  if Assigned(CurShader) then
+  begin
+    for i := 0 to Mesh.VertexAttribCount - 1 do
+    begin
+      Ind := glGetAttribLocation(CurShader.ShaderProgram, Mesh.VertexAttribs^[i].Name);
+      glEnableVertexAttribArray(i);
+      glVertexAttribPointer(i, Mesh.VertexAttribs^[i].Size, GetGLType(Mesh.VertexAttribs^[i].DataType),
+        {$IFDEF GLES}GL_FALSE{$ELSE}false{$ENDIF},
+        Mesh.VertexSize, PtrOffs(nil, i * SizeOf(TCEVector4f)));
+    end;
+
+    TCEOpenGLUniformsManager(FUniformsManager).ShaderProgram := CurShader.ShaderProgram;
+    Mesh.SetUniforms(FUniformsManager);
+
+    case Mesh.PrimitiveType of
+      ptPointList: glDrawArrays(GL_POINTS, 0, Mesh.PrimitiveCount);
+      ptLineList: glDrawArrays(GL_LINES, 0, Mesh.PrimitiveCount * 2);
+      ptLineStrip: glDrawArrays(GL_LINE_STRIP, 0, Mesh.PrimitiveCount + 1);
+      ptTriangleList: glDrawArrays(GL_TRIANGLES, 0, Mesh.PrimitiveCount * 3);
+      ptTriangleStrip: glDrawArrays(GL_TRIANGLE_STRIP, 0, Mesh.PrimitiveCount + 2);
+      ptTriangleFan: glDrawArrays(GL_TRIANGLE_FAN, 0, Mesh.PrimitiveCount + 2);
+      ptQuads:;
+    end;
+  end;
+end;
+
 function GetGLType(Value: TAttributeDataType): GLenum;
 begin
   Result := GL_FLOAT;
   case Value of
-  adtShortint: Result := GL_BYTE;
-  adtByte: Result := GL_UNSIGNED_BYTE;
-  adtSmallint: Result := GL_SHORT;
-  adtWord: Result := GL_UNSIGNED_SHORT;
-  adtSingle: Result := GL_FLOAT;
+    adtShortint: Result := GL_BYTE;
+    adtByte: Result := GL_UNSIGNED_BYTE;
+    adtSmallint: Result := GL_SHORT;
+    adtWord: Result := GL_UNSIGNED_SHORT;
+    adtSingle: Result := GL_FLOAT;
   end;
 end;
 

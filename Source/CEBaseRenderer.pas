@@ -96,11 +96,15 @@ type
 
 implementation
 
+uses
+  CELog;
+
 { TCEBaseRenderer }
 
 constructor TCEBaseRenderer.Create(App: TCEBaseApplication);
 begin
   Assert(Assigned(App), 'Application should be assigned');
+  CELog.Info('Renderer class: ' + ClassName());
   DoInit();
   Active := DoInitGAPI(App);
 

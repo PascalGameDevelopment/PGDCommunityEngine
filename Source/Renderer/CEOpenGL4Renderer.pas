@@ -35,7 +35,7 @@ unit CEOpenGL4Renderer;
 interface
 
 uses
-  CEMessage, CEBaseApplication, CEMesh, CEOpenGL;
+  CEMessage, CEBaseApplication, CEOpenGL;
 
 type
   TCEOpenGL4Renderer = class(TCEBaseOpenGLRenderer)
@@ -44,7 +44,6 @@ type
     function DoInitGAPIPlatform(App: TCEBaseApplication): Boolean; override;
     procedure DoFinalizeGAPIPlatform(); override;
   public
-    procedure RenderMesh(Mesh: TCEMesh); override;
   end;
 
   // Declare renderer class to use it without IFDEFs
@@ -54,12 +53,12 @@ implementation
 
 uses
   {$IFDEF WINDOWS}
-  Windows,
+    Windows,
   {$ENDIF}
   {$IFDEF XWINDOW}
   xlib, xutil,
   {$ENDIF}
-  CECommon, CELog, CEVectors, dglOpenGL, CEUniformsManager;
+  {!}CELog, dglOpenGL;
 
 const
   LOGTAG = 'ce.render';
@@ -192,53 +191,6 @@ begin
   glXMakeCurrent(FDisplay, GL_NONE, nil);
   glXDestroyContext(FDisplay, FOGLContext);
   {$ENDIF}
-end;
-
-procedure TCEOpenGL4Renderer.RenderMesh(Mesh: TCEMesh);
-var
-  i, Ind: Integer;
-  ts: PCEDataStatus;
-  Buffer: PCEDataBuffer;
-begin
-  Assert(Assigned(Mesh));
-  if not Active then Exit;
-  ts := CEMesh.GetVB(Mesh);
-
-  if ts^.BufferIndex = DATA_NOT_ALLOCATED then
-    ts^.BufferIndex := FBufferManager.GetOrCreate(Mesh.VertexSize, ts, Buffer)
-  else
-    Buffer := @TCEOpenGLBufferManager(FBufferManager).Buffers^[ts^.BufferIndex];
-
-  glBindBuffer(GL_ARRAY_BUFFER, Buffer^.Id);
-  if ts^.Status <> dsValid then begin
-    Mesh.FillVertexBuffer(VertexData);
-    glBufferData(GL_ARRAY_BUFFER, Mesh.VerticesCount * Mesh.VertexSize, VertexData, GL_STATIC_DRAW);
-  end;
-
-  if Assigned(CurShader) then
-  begin
-    for i := 0 to Mesh.VertexAttribCount - 1 do
-    begin
-      //glBindAttribLocation(CurShader.ShaderProgram, i, Mesh.VertexAttribs^[i].Name);
-      Ind := glGetAttribLocation(CurShader.ShaderProgram, Mesh.VertexAttribs^[i].Name);
-      glEnableVertexAttribArray(Ind);
-      glVertexAttribPointer(Ind, Mesh.VertexAttribs^[i].Size, GetGLType(Mesh.VertexAttribs^[i].DataType), false,
-        Mesh.VertexSize, PtrOffs(nil, i * SizeOf(TCEVector4f)));
-    end;
-
-    TCEOpenGLUniformsManager(FUniformsManager).ShaderProgram := CurShader.ShaderProgram;
-    Mesh.SetUniforms(FUniformsManager);
-
-    case Mesh.PrimitiveType of
-      ptPointList: glDrawArrays(GL_POINTS, 0, Mesh.PrimitiveCount);
-      ptLineList: glDrawArrays(GL_LINES, 0, Mesh.PrimitiveCount * 2);
-      ptLineStrip: glDrawArrays(GL_LINE_STRIP, 0, Mesh.PrimitiveCount + 1);
-      ptTriangleList: glDrawArrays(GL_TRIANGLES, 0, Mesh.PrimitiveCount * 3);
-      ptTriangleStrip: glDrawArrays(GL_TRIANGLE_STRIP, 0, Mesh.PrimitiveCount + 2);
-      ptTriangleFan: glDrawArrays(GL_TRIANGLE_FAN, 0, Mesh.PrimitiveCount + 2);
-      ptQuads:;
-    end;
-  end;
 end;
 
 end.
