@@ -137,10 +137,6 @@ begin
         Active := False;
         CEMsg := TAppDeactivateMsg.Create();
       end;
-      Expose: if XEvent.xexpose.count = 0 then
-      begin
-        CEMsg := GetResizeMsg(XEvent.xexpose.width, XEvent.xexpose.height);
-      end;
       ConfigureNotify: begin
         CEMsg := GetResizeMsg(XEvent.xconfigure.width, XEvent.xconfigure.height);
       end;
