@@ -48,7 +48,7 @@ uses
   {$IFDEF WINDOWS}
   Windows,
   {$ENDIF}
-  {!}CETemplate, CEIO, CEDataDecoder, CEUniformsManager, CECommon;
+  {!}CETemplate, CEIO, CEDataDecoder, CEUniformsManager;
 
 type
   TGLSLIdentKind = (gliAttribute, gliUniform, gliVarying, gliSampler);
@@ -99,7 +99,7 @@ type
     Shaders: TGLSLShaderList;
     CurShader: TCEGLSLShader;
 
-    VertexData: Pointer;                  // TODO: eliminate
+    TmpData: Pointer;                  // TODO: eliminate
 
     procedure DoInit; override;
     function DoInitGAPI(App: TCEBaseApplication): Boolean; override;
@@ -132,7 +132,7 @@ type
     property Buffers: PCEDataBufferList read FBuffers;
   end;
 
-  function PrintShaderInfoLog(Shader: TGLUint; ShaderType: string): Boolean;
+  function PrintShaderInfoLog(Shader: TGLUint; const ShaderType: string): Boolean;
   function ReportGLErrorDebug(const ErrorLabel: string): Cardinal; {$I inline.inc}
   function ReportGLError(const ErrorLabel: string): Cardinal; {$I inline.inc}
 
@@ -141,9 +141,10 @@ type
 implementation
 
 uses
-  SysUtils, CEStrUtils, CEResource, CEImageResource, CEOSUtils, CELog;
+  SysUtils, CEStrUtils, CEResource, CEImageResource, CEOSUtils, CELog, CECommon;
 
 const
+  DATA_BUFFER_SIZE = 65536;
   SAMPLER_PREFIX = 'SAMPLER';
   GROW_STEP = 1;
 
@@ -158,7 +159,7 @@ type
 const
   LOGTAG = 'ce.render';
 
-function PrintShaderInfoLog(Shader: TGLUint; ShaderType: string): Boolean;
+function PrintShaderInfoLog(Shader: TGLUint; const ShaderType: string): Boolean;
 var
   len, Success: TGLint;
   Buffer: PGLchar;
@@ -183,20 +184,20 @@ end;
 function ReportGLErrorDebug(const ErrorLabel: string): Cardinal; {$I inline.inc}
 begin
   Result := GL_NO_ERROR;
-  {$IFDEF CE_DEBUG}{$IFDEF XWINDOW}
+  {$IFDEF CE_DEBUG}{$IFDEF OPENGL_ERROR_CHECK}
   Result := glGetError();
   if Result <> GL_NO_ERROR then
-    Error(ErrorLabel + ' Error #: ' + IntToStr(Result) + '(' + string(gluErrorString(Result)) + ') at'#13#10);// + GetStackTraceStr(1));
+    CELog.Error(ErrorLabel + ' Error #: ' + IntToStr(Result) + '(' + string(gluErrorString(Result)) + ') at');//#13#10) + GetStackTraceStr(1));
   {$ENDIF}{$ENDIF}
 end;
 
 // Check and report to log OpenGL error
 function ReportGLError(const ErrorLabel: string): Cardinal; {$I inline.inc}
 begin
-  {$IFDEF OGLERRORCHECK}
+  {$IFDEF OPENGL_ERROR_CHECK}
   Result := glGetError();
   if Result <> GL_NO_ERROR then
-  Error(ErrorLabel + ' Error #: ' + IntToStr(Result) + '(' + string(gluErrorString(Result)) + ')');
+    CELog.Error(ErrorLabel + ' Error #: ' + IntToStr(Result) + '(' + string(gluErrorString(Result)) + ')');
   {$ELSE}
   Result := GL_NO_ERROR;
   {$ENDIF}
@@ -391,7 +392,7 @@ begin
   FUniformsManager := TCEOpenGLUniformsManager.Create();
   FBufferManager := TCEOpenGLBufferManager.Create();
 
-  GetMem(VertexData, 1000);
+  GetMem(TmpData, 1000);
 
   // Init GL settings
   glClearColor(0, 0, 0, 0);
@@ -413,8 +414,8 @@ end;
 
 procedure TCEBaseOpenGLRenderer.DoFinalizeGAPI();
 begin
-  if Assigned(VertexData) then
-    FreeMem(VertexData);
+  if Assigned(TmpData) then
+    FreeMem(TmpData);
 
   DoFinalizeGAPIPlatform();
 
@@ -477,8 +478,6 @@ begin
     CurShader := Sh;
   end;
 
-//  Verbose('shader done');
-
   TexId := CEMaterial._GetTextureId(Pass, 0);
   if TexId <> ID_NOT_INITIALIZED then
     glBindTexture(GL_TEXTURE_2D, TexId)
@@ -486,8 +485,6 @@ begin
     TexId := InitTexture(Pass.Texture0);
     CEMaterial._SetTextureId(Pass, 0, TexId);
   end;
-
-//  Verbose('texture init done');
 
   {$IFNDEF GLES20}
   glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
@@ -499,47 +496,50 @@ begin
   glActiveTexture(GL_TEXTURE0);
   glEnable(GL_TEXTURE_2D);
 
-//  Verbose('texture done');
-
   if Pass.AlphaBlending then
   begin
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   end;
 
-//  Verbose('blending done');
+  ReportGLErrorDebug('Pass');
 end;
 
 procedure TCEBaseOpenGLRenderer.RenderMesh(Mesh: TCEMesh);
 var
   i, Ind: Integer;
-  ts: PCEDataStatus;
+  VertexData: PCEMeshData;
   Buffer: PCEDataBuffer;
 begin
   Assert(Assigned(Mesh));
   if not Active then Exit;
-  ts := CEMesh.GetVB(Mesh);
+  VertexData := CEMesh.GetBuffer(Mesh, dbtVertex1);
 
-  if ts^.BufferIndex = DATA_NOT_ALLOCATED then
-    ts^.BufferIndex := FBufferManager.GetOrCreate(Mesh.VertexSize, ts, Buffer)
-  else
-    Buffer := @TCEOpenGLBufferManager(FBufferManager).Buffers^[ts^.BufferIndex];
+  if VertexData^.Status.BufferIndex = DATA_NOT_ALLOCATED then
+  begin
+    FBufferManager.GetOrCreate(Mesh.VerticesCount, VertexData^.Size, VertexData^.Status, Buffer);
+  end else
+    Buffer := @TCEOpenGLBufferManager(FBufferManager).Buffers^[VertexData^.Status.BufferIndex];
 
   glBindBuffer(GL_ARRAY_BUFFER, Buffer^.Id);
-  if ts^.Status <> dsValid then begin
-    Mesh.FillVertexBuffer(VertexData);
-    glBufferData(GL_ARRAY_BUFFER, Mesh.VerticesCount * Mesh.VertexSize, VertexData, GL_STATIC_DRAW);
+  ReportGLError('Bind');
+  if VertexData^.Status.Status <> dsValid then begin
+    Mesh.FillVertexBuffer(dbtVertex1, TmpData);
+    Assert(Mesh.VerticesCount >= Mesh.PrimitiveCount, 'Inconsistent mesh state');
+//    glBufferData(GL_ARRAY_BUFFER, Mesh.VerticesCount * VertexData^.Size, TmpData, GL_STATIC_DRAW);
+    glBufferSubData(GL_ARRAY_BUFFER, VertexData^.Status.Offset, Mesh.VerticesCount * VertexData^.Size, TmpData);
+    ReportGLError('SubData');
   end;
 
   if Assigned(CurShader) then
   begin
-    for i := 0 to Mesh.VertexAttribCount - 1 do
+    for i := 0 to VertexData^.VertexAttribsCount - 1 do
     begin
-      Ind := glGetAttribLocation(CurShader.ShaderProgram, Mesh.VertexAttribs^[i].Name);
+      Ind := glGetAttribLocation(CurShader.ShaderProgram, VertexData^.VertexAttribs^[i].Name);
       glEnableVertexAttribArray(i);
-      glVertexAttribPointer(i, Mesh.VertexAttribs^[i].Size, GetGLType(Mesh.VertexAttribs^[i].DataType),
-        {$IFDEF GLES}GL_FALSE{$ELSE}false{$ENDIF},
-        Mesh.VertexSize, PtrOffs(nil, i * SizeOf(TCEVector4f)));
+      glVertexAttribPointer(i, VertexData^.VertexAttribs^[i].Size, GetGLType(VertexData^.VertexAttribs^[i].DataType),
+        {$IFDEF GLES20}GL_FALSE{$ELSE}false{$ENDIF},
+        VertexData^.Size, PtrOffs(nil, i * SizeOf(TCEVector4f)));
     end;
 
     TCEOpenGLUniformsManager(FUniformsManager).ShaderProgram := CurShader.ShaderProgram;
@@ -648,6 +648,8 @@ procedure TCEOpenGLBufferManager.ApiAddBuffer(Index: Integer);
 begin
   Assert((Index >= 0) and (Index < Count), 'Invalid index');
   glGenBuffers(1, @FBuffers^[Index].Id);
+  glBindBuffer(GL_ARRAY_BUFFER, FBuffers^[Index].Id);
+  glBufferData(GL_ARRAY_BUFFER, DATA_BUFFER_SIZE, nil, GL_STATIC_DRAW);
 end;
 
 initialization

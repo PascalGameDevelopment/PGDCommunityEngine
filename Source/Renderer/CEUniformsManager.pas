@@ -88,7 +88,7 @@ type
   TCERenderBufferManager = class(TObject)
   private
     function IndexOf(ElementSize: Integer; const DataType: TCEDataType): Integer;
-    function AddBuffer(ElementSize: Integer; Status: PCEDataStatus): Integer;
+    function AddBuffer(ElementSize: Integer; const Status: TCEDataStatus): Integer;
   protected
     FBuffers: PCEDataBufferList;
     Count: Integer;
@@ -96,7 +96,7 @@ type
     property Buffers: PCEDataBufferList read FBuffers;
   public
     destructor Destroy(); override;
-    function GetOrCreate(ElementSize: Integer; Status: PCEDataStatus; out Res: PCEDataBuffer): Integer;
+    procedure GetOrCreate(ElementsCount, ElementsSize: Integer; var Status: TCEDataStatus; out Res: PCEDataBuffer);
   end;
 
 implementation
@@ -109,14 +109,14 @@ begin
     Dec(Result);
 end;
 
-function TCERenderBufferManager.AddBuffer(ElementSize: Integer; Status: PCEDataStatus): Integer;
+function TCERenderBufferManager.AddBuffer(ElementSize: Integer; const Status: TCEDataStatus): Integer;
 begin
   Result := Count;
   ReallocMem(FBuffers, (Count + 1) * SizeOf(TCEDataBuffer));
   FBuffers^[Count].Id := DATA_NOT_ALLOCATED;
   FBuffers^[Count].Position := 0;
   FBuffers^[Count].ElementSize := ElementSize;
-  FBuffers^[Count].DataType := Status^.DataType;
+  FBuffers^[Count].DataType := Status.DataType;
   Inc(Count);
   ApiAddBuffer(Count-1);
 end;
@@ -127,14 +127,16 @@ begin
   inherited;
 end;
 
-function TCERenderBufferManager.GetOrCreate(ElementSize: Integer; Status: PCEDataStatus; out Res: PCEDataBuffer): Integer;
+procedure TCERenderBufferManager.GetOrCreate(ElementsCount, ElementsSize: Integer; var Status: TCEDataStatus; out Res: PCEDataBuffer);
 begin
-  Result := IndexOf(ElementSize, Status^.DataType);
-  if Result = -1 then
-    Result := AddBuffer(ElementSize, Status);
-  Status^.Status := dsSizeChanged;
-  Status^.BufferIndex := Result;
-  Res := @FBuffers^[Result];
+  Assert(ElementsSize * ElementsCount > 0, 'Invalid element size');
+  Status.BufferIndex := IndexOf(ElementsSize, Status.DataType);
+  if Status.BufferIndex = -1 then
+    Status.BufferIndex := AddBuffer(ElementsSize, Status);
+  Status.Offset := FBuffers^[Status.BufferIndex].Position;
+  Inc(FBuffers^[Status.BufferIndex].Position, ElementsCount * ElementsSize);
+  Status.Status := dsSizeChanged;
+  Res := @FBuffers^[Status.BufferIndex];
 end;
 
 end.

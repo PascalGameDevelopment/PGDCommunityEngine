@@ -40,6 +40,8 @@ type
 
   // Vertex attribute data types
   TAttributeDataType = (adtShortint, adtByte, adtSmallint, adtWord, adtSingle);
+  // Data buffer types
+  TDataBufferType = (dbtIndex, dbtVertex1, dbtVertex2, dbtVertex3);
   // Vertex attribute data information
   TAttributeData = record
     DataType: TAttributeDataType;
@@ -49,66 +51,69 @@ type
   TAttributeDataArray = array[0..$FFFF] of TAttributeData;
   PAttributeDataArray = ^TAttributeDataArray;
 
+  TCEMeshData = record
+    Status: TCEDataStatus;
+    // Size of each element (vertex size or index size)
+    Size: Integer;
+    VertexAttribsCount: Integer;
+    VertexAttribs: PAttributeDataArray;
+  end;
+  PCEMeshData = ^TCEMeshData;
+
   {
   Encapsulates vertex data needed to render a visible entity
   }
   TCEMesh = class(TCEBaseEntity)
+    procedure SetVertexAttribsCount(Buffer: TDataBufferType; Count: Integer);
   protected
-    VertexBuffer, IndexBuffer: TCEDataStatus;
+    FBuffer: array[TDataBufferType] of TCEMeshData;
     FVerticesCount: Integer;
-    FVertexSize: Integer;
     FPrimitiveType: TPrimitiveType;
     FPrimitiveCount: Integer;                            // TODO: remove?
-    FVertexAttribsCount: Integer;
-    FVertexAttribs: PAttributeDataArray;
-    procedure SetVertexAttribsCount(Count: Integer);
+    // Set data element size for the given buffer
+    procedure SetDataSize(Buffer: TDataBufferType; Size: Integer);
+    // Set vertex attribute data for the given buffer
+    procedure SetVertexAttrib(Buffer: TDataBufferType; Index: Integer; DataType: TAttributeDataType; DataSize: Integer; DataName: PAPIChar);
+    procedure InvalidateData(Buffer: TDataBufferType; SizeNotChanged: Boolean);
+    // Called by InvalidateData() and should be overridden by classes which change data layout in buffer such as max vertices count change
+    procedure ApplyParameters(); virtual;
   public
     destructor Destroy; override;
     procedure DoInit(); override;
     // Fill vertex buffer
-    procedure FillVertexBuffer(Dest: Pointer); virtual;
+    procedure FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer); virtual;
     // Fill index buffer
-    procedure FillIndexBuffer(Dest: Pointer); virtual;
+    procedure FillIndexBuffer(Buffer: TDataBufferType; Dest: Pointer); virtual;
     // Called by renderer when uniforms for the mesh need to be set
     procedure SetUniforms(Manager: TCEUniformsManager); virtual;
-    // Number of vertices in mesh
+    { Number of vertices to allocate buffer space for.
+      Should be either set before any rendering and not changed later or should be updated in ApplyParameters().
+      Actual number of vertices generated in FillVertexBuffer() may be less without reallocating buffer. }
     property VerticesCount: Integer read FVerticesCount;
-    // Size of each vertex in bytes
-    property VertexSize: Integer read FVertexSize;
     // Primitive type
     property PrimitiveType: TPrimitiveType read FPrimitiveType;
-    // Number of primitives (points, lines, triangles etc depending on PrimitiveType) in mesh
+    { Number of primitives (points, lines, triangles etc depending on PrimitiveType) in mesh to render.
+      This value can be calculated while filling buffer and may correspond to less than VerticesCount amount of vertices. }
     property PrimitiveCount: Integer read FPrimitiveCount;
-    // Number of vertex attributes
-    property VertexAttribCount: Integer read FVertexAttribsCount;
-    // Vertex attributes info
-    property VertexAttribs: PAttributeDataArray read FVertexAttribs;
   end;
 
   // Used by renderer
-  function GetVB(const Mesh: TCEMesh): PCEDataStatus; {$I inline.inc}
-  // Used by renderer
-  function GetIB(const Mesh: TCEMesh): PCEDataStatus; {$I inline.inc}
-  procedure InitTesselationStatus(Status: PCEDataStatus); {$I inline.inc}
+  function GetBuffer(const Mesh: TCEMesh; Buffer: TDataBufferType): PCEMeshData; {$I inline.inc}
+  procedure InitTesselationStatus(var Status: TCEDataStatus); {$I inline.inc}
 
 implementation
 
 uses
   CEVectors;
 
-function GetVB(const Mesh: TCEMesh): PCEDataStatus; {$I inline.inc}
+function GetBuffer(const Mesh: TCEMesh; Buffer: TDataBufferType): PCEMeshData; {$I inline.inc}
 begin
-  Result := @Mesh.VertexBuffer;
+  Result := @Mesh.FBuffer[Buffer];
 end;
 
-function GetIB(const Mesh: TCEMesh): PCEDataStatus; {$I inline.inc}
+procedure InitTesselationStatus(var Status: TCEDataStatus); {$I inline.inc}
 begin
-  Result := @Mesh.IndexBuffer;
-end;
-
-procedure InitTesselationStatus(Status: PCEDataStatus); {$I inline.inc}
-begin
-  Status.BufferIndex := -1;
+  Status.BufferIndex := DATA_NOT_ALLOCATED;
   Status.Offset := 0;
   Status.Status := dsSizeChanged;
   Status.DataType := dtStatic;
@@ -116,36 +121,72 @@ end;
 
 { TCEMesh }
 
-procedure TCEMesh.SetVertexAttribsCount(Count: Integer);
+procedure TCEMesh.SetVertexAttribsCount(Buffer: TDataBufferType; Count: Integer);
 begin
-  FVertexAttribsCount := Count;
-  ReallocMem(FVertexAttribs, FVertexAttribsCount * SizeOf(TAttributeData));
+  FBuffer[Buffer].VertexAttribsCount := Count;
+  ReallocMem(FBuffer[Buffer].VertexAttribs, FBuffer[Buffer].VertexAttribsCount * SizeOf(TAttributeData));
+end;
+
+procedure TCEMesh.SetDataSize(Buffer: TDataBufferType; Size: Integer);
+begin
+  FBuffer[Buffer].Size := Size;
+end;
+
+procedure TCEMesh.SetVertexAttrib(Buffer: TDataBufferType; Index: Integer; DataType: TAttributeDataType; DataSize: Integer; DataName: PAPIChar);
+begin
+  Assert(Index < FBuffer[Buffer].VertexAttribsCount, 'Attribute index out of bounds');
+  FBuffer[Buffer].VertexAttribs^[Index].DataType := DataType;
+  FBuffer[Buffer].VertexAttribs^[Index].Size := DataSize;
+  FBuffer[Buffer].VertexAttribs^[Index].Name := DataName;
+end;
+
+procedure TCEMesh.InvalidateData(Buffer: TDataBufferType; SizeNotChanged: Boolean);
+begin
+  if SizeNotChanged then
+    FBuffer[Buffer].Status.Status := dsChanged
+  else begin
+    FBuffer[Buffer].Status.Status := dsSizeChanged;
+    ApplyParameters();
+  end;
+end;
+
+procedure TCEMesh.ApplyParameters();
+begin
+  // do nothing
 end;
 
 destructor TCEMesh.Destroy;
+var
+  buf: TDataBufferType;
 begin
-  FreeMem(FVertexAttribs, FVertexAttribsCount * SizeOf(TAttributeData));
+  for buf := Low(TDataBufferType) to High(TDataBufferType) do
+    FreeMem(FBuffer[buf].VertexAttribs, FBuffer[buf].VertexAttribsCount * SizeOf(TAttributeData));
   inherited;
 end;
 
 procedure TCEMesh.DoInit();
+var
+  buf: TDataBufferType;
 begin
   FVerticesCount := 1;
-  FVertexSize := SizeOf(TCEVector3f);
   FPrimitiveType := ptTriangleList;
   FPrimitiveCount := 1;
-  InitTesselationStatus(@VertexBuffer);
-  InitTesselationStatus(@IndexBuffer);
+  for buf := Low(TDataBufferType) to High(TDataBufferType) do
+  begin
+    FBuffer[buf].Size := 0;
+    SetVertexAttribsCount(buf, 0);
+    InitTesselationStatus(FBuffer[buf].Status);
+  end;
 end;
 
-procedure TCEMesh.FillVertexBuffer(Dest: Pointer);
+procedure TCEMesh.FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer);
 begin
-  VertexBuffer.Status := dsValid;
+  FBuffer[Buffer].Status.Status := dsValid;
 end;
 
-procedure TCEMesh.FillIndexBuffer(Dest: Pointer);
+procedure TCEMesh.FillIndexBuffer(Buffer: TDataBufferType; Dest: Pointer);
 begin
-  IndexBuffer.Status := dsValid;
+  FBuffer[Buffer].Status.Status := dsValid;
 end;
 
 procedure TCEMesh.SetUniforms(Manager: TCEUniformsManager);

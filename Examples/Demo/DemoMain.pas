@@ -71,7 +71,7 @@ type
     procedure SetAngle(const Value: Single);
   public
     property Angle: Single read FAngle write SetAngle;
-    procedure FillVertexBuffer(Dest: Pointer); override;
+    procedure FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer); override;
   end;
 
 implementation
@@ -214,10 +214,10 @@ end;
 procedure TCERotatingTriangleMesh.SetAngle(const Value: Single);
 begin
   FAngle := Value;
-  VertexBuffer.Status := dsChanged; // Invalidate buffer
+  InvalidateData(dbtVertex1, true);
 end;
 
-procedure TCERotatingTriangleMesh.FillVertexBuffer(Dest: Pointer);
+procedure TCERotatingTriangleMesh.FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer);
 var
   a: Single;
   v: ^TVBPos;
@@ -232,7 +232,7 @@ begin
   Vec3f(cos(a + 4 * pi / 3), sin(a + 4 * pi / 3), 0, v^[2].vec);
   //v^[2].u := 0.5; v^[2].v := 0.5;
   FVerticesCount := 3;
-  FVertexSize := SizeOf(TVBRecPos);
+  SetDataSize(dbtVertex1, SizeOf(TVBRecPos));
 end;
 
 procedure TRotatingTriangle.Update(const DeltaTime: Single);

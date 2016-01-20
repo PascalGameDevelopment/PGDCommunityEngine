@@ -39,7 +39,7 @@ type
   TCECircleMesh = class(TCEMesh)
   private
   public
-    procedure FillVertexBuffer(Dest: Pointer); override;
+    procedure FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer); override;
   end;
 
   // Abstract base class for multipoint meshes such as lines or polygons
@@ -67,9 +67,11 @@ type
     FWidth, FThreshold: Single;
     procedure SetWidth(Value: Single);
     procedure SetSoftness(Value: Single);
+  protected
+    procedure ApplyParameters(); override;
   public
     procedure DoInit(); override;
-    procedure FillVertexBuffer(Dest: Pointer); override;
+    procedure FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer); override;
     procedure SetUniforms(Manager: TCEUniformsManager); override;
     // Line width
     property Width: Single read FWidth write SetWidth;
@@ -84,13 +86,15 @@ type
     FColor: TCEColor;
     procedure SetSoftness(Value: Single);
     procedure SetColor(const Value: TCEColor);
+  protected
+    procedure ApplyParameters(); override;
   public
     procedure DoInit(); override;
-    procedure FillVertexBuffer(Dest: Pointer); override;
+    procedure FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer); override;
     procedure SetUniforms(Manager: TCEUniformsManager); override;
-    // Antialiasing softness. 0 - no antialiasing.
+        // Antialiasing softness. 0 - no antialiasing.
     property Softness: Single read FThreshold write SetSoftness;
-    // Fill color
+        // Fill color
     property Color: TCEColor read FColor write SetColor;
   end;
 
@@ -116,7 +120,7 @@ type
 
   TCVRes = (rIntersect, rCoDir, rInvDir, rSharp);
 
-procedure TCECircleMesh.FillVertexBuffer(Dest: Pointer);
+procedure TCECircleMesh.FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer);
 const
   SEGMENTS = 16;
   RADIUS = 0.5;
@@ -132,7 +136,7 @@ begin
   end;
   FVerticesCount := SEGMENTS * 3;
   FPrimitiveCount := SEGMENTS;
-  FVertexSize := SizeOf(TVBRecPos);
+  SetDataSize(dbtVertex1, SizeOf(TVBRecPos));
 end;
 
 { TCENPointMesh }
@@ -142,6 +146,8 @@ begin
   if FCount = Value then Exit;
   FCount := Value;
   ReallocMem(FPoints, FCount * SizeOf(TCEVector2f));
+  InvalidateData(dbtIndex, false);
+  InvalidateData(dbtVertex1, false);
 end;
 
 function TCENPointMesh.GetPoint(Index: Integer): TCEVector2f;
@@ -167,29 +173,31 @@ end;
 procedure TCELineMesh.SetWidth(Value: Single);
 begin
   FWidth := Value;
-  VertexBuffer.Status := dsChanged;
+  InvalidateData(dbtVertex1, true);
 end;
 
 procedure TCELineMesh.SetSoftness(Value: Single);
 begin
   FThreshold := Value;
-  VertexBuffer.Status := dsChanged;
+  InvalidateData(dbtVertex1, true);
+end;
+
+procedure TCELineMesh.ApplyParameters();
+begin
+  FVerticesCount := 4 + Count * 8;
 end;
 
 procedure TCELineMesh.DoInit();
 begin
   inherited;
-  SetVertexAttribsCount(2);
-  VertexAttribs^[0].DataType := adtSingle;
-  VertexAttribs^[0].Size := 4;
-  VertexAttribs^[0].Name := 'position';
-  VertexAttribs^[1].DataType := adtSingle;
-  VertexAttribs^[1].Size := 4;
-  VertexAttribs^[1].Name := 'data';
+  SetVertexAttribsCount(dbtVertex1, 2);
+  SetVertexAttrib(dbtVertex1, 0, adtSingle, 4, 'position');
+  SetVertexAttrib(dbtVertex1, 1, adtSingle, 4, 'data');
   FPrimitiveType := ptTriangleStrip;
   FWidth := 2/1024;
   FThreshold := 0;
   Count := 0;
+  SetDataSize(dbtVertex1, SizeOf(TLineVertex));
 end;
 
 procedure CalcDir(const P1, P2: TCEVector2f; w: Single; out Dir: TCEVector2f; out Dist: Single);
@@ -230,7 +238,7 @@ begin
   end;
 end;
 
-procedure TCELineMesh.FillVertexBuffer(Dest: Pointer);
+procedure TCELineMesh.FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer);
 const
   //CUT_ANGLE = 15/180*pi;
   COS_CUT_ANGLE = 0.96592582628906831;
@@ -275,7 +283,6 @@ begin
     PutVertexPair(P0, P1, P3, P4, Dir1, Dest);
   PutVertexPair(P1, P2, P4, P3, Dir2, Dest);
 
-  Inc(FVerticesCount, 4);
   Inc(FPrimitiveCount, 4);
   Dir1 := Dir2;
 end;
@@ -287,7 +294,6 @@ var
   sa: single;
 
 begin
-  FVerticesCount := 0;
   FPrimitiveCount := 0;
   if Count < 2 then Exit;
 
@@ -300,7 +306,6 @@ begin
   Tmp2 := Vec2f(-Dir1.y, Dir1.x);
   VectorSub(Tmp1, FPoints^[0], Dir1);
   PutVertexPair(FPoints^[0], FPoints^[1], VectorAdd(Tmp1, Tmp2), VectorSub(Tmp1, Tmp2), Dir1, v);
-  FVerticesCount := 2;
 
   i := 0;
   while i < Count - 2 do
@@ -332,10 +337,8 @@ begin
   Tmp2 := Vec2f(-Dir2.y, Dir2.x);
   PutVertexPair(FPoints^[i], FPoints^[i+1], VectorAdd(Tmp1, Tmp2), VectorSub(Tmp1, Tmp2), Dir2, v);
 
-  Inc(FVerticesCount, 2);
   Inc(FPrimitiveCount, 2);
-  FVertexSize := SizeOf(TLineVertex);
-  VertexBuffer.Status := dsChanged;
+  InvalidateData(dbtVertex1, true);
 end;
 
 procedure TCELineMesh.SetUniforms(Manager: TCEUniformsManager);
@@ -350,32 +353,33 @@ end;
 
 procedure TCEPolygonMesh.SetSoftness(Value: Single);
 begin
-  if (FThreshold <> 0) and (Value = 0) or (FThreshold = 0) and (Value <> 0) then
-    VertexBuffer.Status := dsSizeChanged
-  else
-    VertexBuffer.Status := dsChanged;
+  InvalidateData(dbtVertex1, (FThreshold <> 0) = (Value <> 0));
   FThreshold := Value;
 end;
 
 procedure TCEPolygonMesh.SetColor(const Value: TCEColor);
 begin
   FColor := Value;
-  VertexBuffer.Status := dsChanged;
+  InvalidateData(dbtVertex1, true);
+end;
+
+procedure TCEPolygonMesh.ApplyParameters();
+begin
+  FVerticesCount := Count * 3 * (1 + 2 * Ord(FThreshold > 0));
 end;
 
 procedure TCEPolygonMesh.DoInit();
 begin
   inherited;
-  SetVertexAttribsCount(1);
-  VertexAttribs^[0].DataType := adtSingle;
-  VertexAttribs^[0].Size := 3;
-  VertexAttribs^[0].Name := 'position';
+  SetVertexAttribsCount(dbtVertex1, 1);
+  SetVertexAttrib(dbtVertex1, 0, adtSingle, 3, 'position');
   FPrimitiveType := ptTriangleList;
   FThreshold := 2;
   FColor := GetColor(255, 255, 255, 255);
+  SetDataSize(dbtVertex1, SizeOf(TVBRecPos));
 end;
 
-procedure TCEPolygonMesh.FillVertexBuffer(Dest: Pointer);
+procedure TCEPolygonMesh.FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer);
 
 function Sharpness(dx, dy: Single): Single;
 const
@@ -389,7 +393,6 @@ var
   Center, D01, D12, N01, N12, P1, P2, P3, P4: TCEVector2f;
   i, i1, i2: Integer;
 begin
-  FVerticesCount := 0;
   FPrimitiveCount := 0;
   if Count < 3 then Exit;
 
@@ -443,10 +446,8 @@ begin
     i1 := i1 + 1 - Count * Ord(i1 = Count-1);
     i2 := i2 + 1 - Count * Ord(i2 = Count-1);
   end;
-  FVerticesCount := Count * 3 * (1 + 2*Ord(FThreshold > 0));
   FPrimitiveCount := Count * (1 + 2*Ord(FThreshold > 0));
-  FVertexSize := SizeOf(v^[0]);
-  VertexBuffer.Status := dsChanged;
+  InvalidateData(dbtVertex1, true);
 end;
 
 procedure TCEPolygonMesh.SetUniforms(Manager: TCEUniformsManager);

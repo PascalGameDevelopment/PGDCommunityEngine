@@ -33,13 +33,8 @@ interface
 
 uses
   CEBaseApplication,
-  CEMessage,
-  CEInputMessage,
-  CEBaseTypes,
-
   X,
-  XLib,
-  XUtil;
+  XLib;
 
 type
   TCEXWindowApplication = class(TCEBaseApplication)
@@ -66,7 +61,8 @@ type
 implementation
 
 uses
-  sysutils, CELog, CEBaseInput, keysym;
+  sysutils, CELog, CEBaseInput, keysym,
+  XUtil, CEBaseTypes, CEInputMessage, CEMessage;
 
 const
   LOGTAG = 'ce.xwindow.app';

@@ -72,7 +72,9 @@
 {$ENDIF}
 
 {.$DEFINE OPENGLES_EMULATION}     // Use GLES 2.0 emulation layer for desktops
-{$DEFINE OPENGL_ERROR_CHECK}          // Check for OpenGL errors
+{$IFNDEF OPENGLES_EMULATION}
+  {$DEFINE OPENGL_ERROR_CHECK}          // Check for OpenGL errors
+{$ENDIF}
 {$IFDEF MOBILE}
   {$DEFINE GLES20}
 {$ENDIF}
