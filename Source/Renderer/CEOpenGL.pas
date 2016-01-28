@@ -41,7 +41,7 @@ uses
     {$ENDIF}
   {$ELSE}
     {$IFDEF XWINDOW}
-    xlib,
+   xlib,
     {$ENDIF}
     dglOpenGL,
   {$ENDIF}
@@ -94,12 +94,9 @@ type
     FDisplay: PXDisplay;
     FRenderWindowHandle: Cardinal;
     {$ENDIF}
-    PhaseLocation: TGLint;
 
     Shaders: TGLSLShaderList;
     CurShader: TCEGLSLShader;
-
-    TmpData: Pointer;                  // TODO: eliminate
 
     procedure DoInit; override;
     function DoInitGAPI(App: TCEBaseApplication): Boolean; override;
@@ -126,10 +123,17 @@ type
   end;
 
   TCEOpenGLBufferManager = class(TCERenderBufferManager)
-  public
-    destructor Destroy(); override;
+  private
+    TmpData: Pointer;
+  protected
     procedure ApiAddBuffer(Index: Integer); override;
+    function ApiMapBuffer(const Status: TCEDataStatus; ElementsCount: Integer; Discard: Boolean): Pointer; override;
+    procedure ApiUnmapBuffer(const Status: TCEDataStatus; ElementsCount: Integer; Data: Pointer); override;
+
     property Buffers: PCEDataBufferList read FBuffers;
+  public
+    constructor Create();
+    destructor Destroy(); override;
   end;
 
   function PrintShaderInfoLog(Shader: TGLUint; const ShaderType: string): Boolean;
@@ -141,10 +145,9 @@ type
 implementation
 
 uses
-  SysUtils, CEStrUtils, CEResource, CEImageResource, CEOSUtils, CELog, CECommon;
+  SysUtils, CEStrUtils, CEResource, CEImageResource, CELog, CECommon;
 
 const
-  DATA_BUFFER_SIZE = 65536;
   SAMPLER_PREFIX = 'SAMPLER';
   GROW_STEP = 1;
 
@@ -239,7 +242,7 @@ begin
   begin
     Inc(Capacities[glKind], GROW_STEP);
     ReallocMem(Idents[glKind], Capacities[glKind] * SizeOf(TCEShaderIdent));
-    Initialize(Idents[glKind]^[Capacities[glKind] - GROW_STEP], Capacities[glKind]);
+    Initialize(Idents[glKind]^[Capacities[glKind] - GROW_STEP], GROW_STEP);
   end;
   Idents[glKind]^[Counts[glKind]].Kind    := Kind;
   Idents[glKind]^[Counts[glKind]].TypeStr := TypeName;
@@ -256,26 +259,26 @@ begin
   Kind := ikINVALID;
   Result := 0;
   LineCount := Split(src, ';', Lines, False);
-  for i := 0 to LineCount-1 do
+  for i := 0 to LineCount - 1 do
   begin
     wc := Split(Lines[i], ' ', Words, False);
     j := 0;
-    while j < wc-2 do
+    while j < wc - 2 do
     begin
       Kind := GetIdentKind(UpperCase(Trim(Words[j])));
       if Kind <> ikINVALID then
         Break;
       Inc(j);
     end;
-    if j < wc-2 then
+    if j < wc - 2 then
     begin
-      if isPrecision(UpperCase(Trim(Words[j+1]))) then
+      if isPrecision(UpperCase(Trim(Words[j + 1]))) then
       begin
         Inc(j);
       end;
-      if j < wc-2 then
+      if j < wc - 2 then
       begin
-        AddIdent(Kind, Trim(Words[j+2]), Trim(Words[j+1]));
+        AddIdent(Kind, Trim(Words[j + 2]), Trim(Words[j + 1]));
         Inc(Result);
       end;
     end;
@@ -318,11 +321,11 @@ end;
 { TCEDataDecoderGLSL }
 
 function TCEDataDecoderGLSL.DoDecode(Stream: TCEInputStream; var Entity: TCEBaseEntity; const Target: TCELoadTarget;
-  MetadataOnly: Boolean): Boolean;
+    MetadataOnly: Boolean): Boolean;
 const
   BufSize = 1024;
 var
-  Buf: array[0..BufSize-1] of AnsiChar;
+  Buf: array[0..BufSize - 1] of AnsiChar;
   Len: Integer;
   Res: TCETextResource;
   Str: UnicodeString;
@@ -392,8 +395,6 @@ begin
   FUniformsManager := TCEOpenGLUniformsManager.Create();
   FBufferManager := TCEOpenGLBufferManager.Create();
 
-  GetMem(TmpData, 1000);
-
   // Init GL settings
   glClearColor(0, 0, 0, 0);
   glEnable(GL_TEXTURE_2D);
@@ -414,9 +415,6 @@ end;
 
 procedure TCEBaseOpenGLRenderer.DoFinalizeGAPI();
 begin
-  if Assigned(TmpData) then
-    FreeMem(TmpData);
-
   DoFinalizeGAPIPlatform();
 
   Shaders.ForEach(FreeCallback, nil);
@@ -509,26 +507,18 @@ procedure TCEBaseOpenGLRenderer.RenderMesh(Mesh: TCEMesh);
 var
   i, Ind: Integer;
   VertexData: PCEMeshData;
-  Buffer: PCEDataBuffer;
+  Data: Pointer;
 begin
   Assert(Assigned(Mesh));
   if not Active then Exit;
   VertexData := CEMesh.GetBuffer(Mesh, dbtVertex1);
 
-  if VertexData^.Status.BufferIndex = DATA_NOT_ALLOCATED then
-  begin
-    FBufferManager.GetOrCreate(Mesh.VerticesCount, VertexData^.Size, VertexData^.Status, Buffer);
-  end else
-    Buffer := @TCEOpenGLBufferManager(FBufferManager).Buffers^[VertexData^.Status.BufferIndex];
-
-  glBindBuffer(GL_ARRAY_BUFFER, Buffer^.Id);
-  ReportGLError('Bind');
+  Data := FBufferManager.MapBuffer(Mesh.VerticesCount, VertexData^.Size, VertexData^.Status);
+  Mesh.FillVertexBuffer(dbtVertex1, Data);
+  FBufferManager.UnMapBuffer(VertexData^.Status, Mesh.VerticesCount, Data);
+  Assert(Mesh.VerticesCount >= Mesh.PrimitiveCount, 'Inconsistent mesh state');
   if VertexData^.Status.Status <> dsValid then begin
-    Mesh.FillVertexBuffer(dbtVertex1, TmpData);
-    Assert(Mesh.VerticesCount >= Mesh.PrimitiveCount, 'Inconsistent mesh state');
 //    glBufferData(GL_ARRAY_BUFFER, Mesh.VerticesCount * VertexData^.Size, TmpData, GL_STATIC_DRAW);
-    glBufferSubData(GL_ARRAY_BUFFER, VertexData^.Status.Offset, Mesh.VerticesCount * VertexData^.Size, TmpData);
-    ReportGLError('SubData');
   end;
 
   if Assigned(CurShader) then
@@ -538,20 +528,20 @@ begin
       Ind := glGetAttribLocation(CurShader.ShaderProgram, VertexData^.VertexAttribs^[i].Name);
       glEnableVertexAttribArray(i);
       glVertexAttribPointer(i, VertexData^.VertexAttribs^[i].Size, GetGLType(VertexData^.VertexAttribs^[i].DataType),
-        {$IFDEF GLES20}GL_FALSE{$ELSE}false{$ENDIF},
-        VertexData^.Size, PtrOffs(nil, i * SizeOf(TCEVector4f)));
+                            {$IFDEF GLES20}GL_FALSE{$ELSE}false{$ENDIF},
+                            VertexData^.Size, PtrOffs(nil, i * SizeOf(TCEVector4f)));
     end;
 
     TCEOpenGLUniformsManager(FUniformsManager).ShaderProgram := CurShader.ShaderProgram;
     Mesh.SetUniforms(FUniformsManager);
 
     case Mesh.PrimitiveType of
-      ptPointList: glDrawArrays(GL_POINTS, 0, Mesh.PrimitiveCount);
-      ptLineList: glDrawArrays(GL_LINES, 0, Mesh.PrimitiveCount * 2);
-      ptLineStrip: glDrawArrays(GL_LINE_STRIP, 0, Mesh.PrimitiveCount + 1);
-      ptTriangleList: glDrawArrays(GL_TRIANGLES, 0, Mesh.PrimitiveCount * 3);
-      ptTriangleStrip: glDrawArrays(GL_TRIANGLE_STRIP, 0, Mesh.PrimitiveCount + 2);
-      ptTriangleFan: glDrawArrays(GL_TRIANGLE_FAN, 0, Mesh.PrimitiveCount + 2);
+      ptPointList: glDrawArrays(GL_POINTS, VertexData^.Status.Offset, Mesh.PrimitiveCount);
+      ptLineList: glDrawArrays(GL_LINES, VertexData^.Status.Offset, Mesh.PrimitiveCount * 2);
+      ptLineStrip: glDrawArrays(GL_LINE_STRIP, VertexData^.Status.Offset, Mesh.PrimitiveCount + 1);
+      ptTriangleList: glDrawArrays(GL_TRIANGLES, VertexData^.Status.Offset, Mesh.PrimitiveCount * 3);
+      ptTriangleStrip: glDrawArrays(GL_TRIANGLE_STRIP, VertexData^.Status.Offset, Mesh.PrimitiveCount + 2);
+      ptTriangleFan: glDrawArrays(GL_TRIANGLE_FAN, VertexData^.Status.Offset, Mesh.PrimitiveCount + 2);
       ptQuads:;
     end;
   end;
@@ -590,7 +580,6 @@ end;
 procedure TCEBaseOpenGLRenderer.NextFrame;
 begin
   if not Active then Exit;
-  glUniform1f(PhaseLocation, (CEOSUtils.getcurrentms() mod 2000)*0.001*pi);
   {$IFDEF WINDOWS}
   SwapBuffers(FOGLDC);                  // Display the scene
   {$ENDIF}
@@ -635,21 +624,45 @@ end;
 
 { TCEOpenGLBufferManager }
 
+procedure TCEOpenGLBufferManager.ApiAddBuffer(Index: Integer);
+begin
+  Assert((Index >= 0) and (Index < Count), 'Invalid index');
+  glGenBuffers(1, @FBuffers^[Index].Id);
+  glBindBuffer(GL_ARRAY_BUFFER, FBuffers^[Index].Id);
+  glBufferData(GL_ARRAY_BUFFER, DATA_BUFFER_SIZE_DYNAMIC * FBuffers^[Index].ElementSize, nil, GL_STATIC_DRAW);
+end;
+
+function TCEOpenGLBufferManager.ApiMapBuffer(const Status: TCEDataStatus; ElementsCount: Integer; Discard: Boolean): Pointer;
+begin
+  glBindBuffer(GL_ARRAY_BUFFER, FBuffers^[Status.BufferIndex].Id);
+  if Discard then
+  begin
+    glBufferData(GL_ARRAY_BUFFER, FBuffers^[Status.BufferIndex].Size * FBuffers^[Status.BufferIndex].ElementSize, nil, GL_STATIC_DRAW);
+    CELog.Debug('Discarding buffer #' + IntToStr(Status.BufferIndex));
+  end;
+  Result := TmpData;
+end;
+
+procedure TCEOpenGLBufferManager.ApiUnmapBuffer(const Status: TCEDataStatus; ElementsCount: Integer; Data: Pointer);
+begin
+  glBufferSubData(GL_ARRAY_BUFFER, Status.Offset * FBuffers^[Status.BufferIndex].ElementSize, ElementsCount * FBuffers^[Status.BufferIndex].ElementSize, Data);
+  ReportGLError('SubData');
+end;
+
+constructor TCEOpenGLBufferManager.Create();
+begin
+  GetMem(TmpData, DATA_BUFFER_SIZE_DYNAMIC);
+end;
+
 destructor TCEOpenGLBufferManager.Destroy();
 var
   i: Integer;
 begin
   for i := 0 to Count - 1 do
     glDeleteBuffers(1, @FBuffers^[i].Id);
+  if Assigned(TmpData) then
+    FreeMem(TmpData);
   inherited;
-end;
-
-procedure TCEOpenGLBufferManager.ApiAddBuffer(Index: Integer);
-begin
-  Assert((Index >= 0) and (Index < Count), 'Invalid index');
-  glGenBuffers(1, @FBuffers^[Index].Id);
-  glBindBuffer(GL_ARRAY_BUFFER, FBuffers^[Index].Id);
-  glBufferData(GL_ARRAY_BUFFER, DATA_BUFFER_SIZE, nil, GL_STATIC_DRAW);
 end;
 
 initialization

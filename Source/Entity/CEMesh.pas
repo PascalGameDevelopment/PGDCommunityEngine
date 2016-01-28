@@ -71,6 +71,7 @@ type
     FPrimitiveType: TPrimitiveType;
     FPrimitiveCount: Integer;                            // TODO: remove?
     // Set data element size for the given buffer
+    procedure DoInit(); override;
     procedure SetDataSize(Buffer: TDataBufferType; Size: Integer);
     // Set vertex attribute data for the given buffer
     procedure SetVertexAttrib(Buffer: TDataBufferType; Index: Integer; DataType: TAttributeDataType; DataSize: Integer; DataName: PAPIChar);
@@ -79,7 +80,6 @@ type
     procedure ApplyParameters(); virtual;
   public
     destructor Destroy; override;
-    procedure DoInit(); override;
     // Fill vertex buffer
     procedure FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer); virtual;
     // Fill index buffer
@@ -116,7 +116,7 @@ begin
   Status.BufferIndex := DATA_NOT_ALLOCATED;
   Status.Offset := 0;
   Status.Status := dsSizeChanged;
-  Status.DataType := dtStatic;
+  Status.DataType := dtStreaming;//dtStatic;
 end;
 
 { TCEMesh }
