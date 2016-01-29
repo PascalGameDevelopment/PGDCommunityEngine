@@ -50,7 +50,8 @@ type
     Core: TCECore;
     PolyMesh: TCEPolygonMesh;
     LineMesh: TCELineMesh;
-    PolyPass, LinePass: TCERenderPass;
+    SpriteMesh1, SpriteMesh2: TCESpriteMesh;
+    PolyPass, LinePass, SpritePass, MonsterSpritePass: TCERenderPass;
     Triangle: TRotatingTriangle;
     ClickPoint: TCEVector2f;
     Ind: Integer;
@@ -94,7 +95,7 @@ uses
   {$ENDIF}
   CEOSMessageInput,
   sysutils, CELog,
-  CECommon, CEBaseInput, CEBaseTypes, CEInputMessage, CEUniformsManager;
+  CECommon, CEBaseInput, CEBaseTypes, CEInputMessage;
 
 constructor TDemo.Create(Application: TCEBaseApplication);
 begin
@@ -108,7 +109,7 @@ begin
   Core.Input := TCEOSMessageInput.Create();
   App.MessageHandler := HandleMessage;
 
-  Triangle := TRotatingTriangle.Create(Core.EntityManager);
+  //Triangle := TRotatingTriangle.Create(Core.EntityManager);
 
   PolyMesh := TCEPolygonMesh.Create(Core.EntityManager);
   PolyMesh.Count := 4;
@@ -132,9 +133,19 @@ begin
   LineMesh.Point[4] := Vec2f( 0.5,  0.3);
   LineMesh.Point[5] := Vec2f( 0.2,  0.6);
 
+  SpriteMesh1 := TCESpriteMesh.Create(Core.EntityManager);
+  SpriteMesh1.X := -0.5;
+  SpriteMesh1.SetTextureParameters(7, 7);
+  SpriteMesh2 := TCESpriteMesh.Create(Core.EntityManager);
+  SpriteMesh2.X := 0.5;
+  SpriteMesh2.Width := 0.5;
+  SpriteMesh2.Height := 0.5;
+
   CELog.Info('Loading materials');
   PolyPass := CreateRenderPass(Core.EntityManager, true, '', 'asset://vs_poly.glsl', 'asset://fs_poly.glsl');
   LinePass := CreateRenderPass(Core.EntityManager, true, '', 'asset://vs_line.glsl', 'asset://fs_line.glsl');
+  SpritePass := CreateRenderPass(Core.EntityManager, true, 'asset://sprites.bmp', 'asset://vs_sprite.glsl', 'asset://fs_sprite.glsl');
+  MonsterSpritePass := CreateRenderPass(Core.EntityManager, true, 'asset://monster.bmp', 'asset://vs_sprite.glsl', 'asset://fs_sprite.glsl');
 
   {Mat := TCEMaterial.Create(Core.EntityManager);
   Mat.TotalTechniques := 1;
@@ -153,6 +164,8 @@ destructor TDemo.Destroy();
 begin
   DestroyRenderPassResources(PolyPass);
   DestroyRenderPassResources(LinePass);
+  DestroyRenderPassResources(SpritePass);
+  DestroyRenderPassResources(MonsterSpritePass);
   FreeAndNil(Core);
   inherited Destroy();
 end;
@@ -192,6 +205,10 @@ begin
   Renderer.RenderMesh(PolyMesh);
   Renderer.ApplyRenderPass(LinePass);
   Renderer.RenderMesh(LineMesh);
+  Renderer.ApplyRenderPass(SpritePass);
+  Renderer.RenderMesh(SpriteMesh1);
+  Renderer.ApplyRenderPass(MonsterSpritePass);
+  Renderer.RenderMesh(SpriteMesh2);
 
   if Core.Input.Pressed[vkNUMPAD6] or (Core.Input.MouseState.Buttons[mbLeft] = iaDown) then Speed := Speed + 4;
   if Core.Input.Pressed[vkNUMPAD4] or (Core.Input.MouseState.Buttons[mbRight] = iaDown) then Speed := Speed - 4;
@@ -206,6 +223,7 @@ begin
         := Vec2f(Core.Input.MouseState.X / Renderer.Width * 2 - 1, 1 - Core.Input.MouseState.Y / Renderer.Height * 2);
       Ind := GetNearestPointIndex(PolyMesh.Points, PolyMesh.Count, ClickPoint);
       PolyMesh.Point[Ind] := ClickPoint;
+      SpriteMesh1.Frame := SpriteMesh1.Frame + 1;
     end;
   end;
   Core.Process();

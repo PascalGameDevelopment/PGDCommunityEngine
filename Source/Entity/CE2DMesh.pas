@@ -35,6 +35,25 @@ uses
   CEBaseTypes, CEMesh, CEVectors, CEUniformsManager;
 
 type
+  // Sprite mesh class
+  TCESpriteMesh = class(TCEMesh)
+  private
+    FFrame: Integer;
+    FFramesPerTextureCol, FFramesPerTextureRow: Integer;
+    FX, FY: Single;
+    FWidth, FHeight: Single;
+  protected
+    procedure DoInit(); override;
+  public
+    procedure SetTextureParameters(FramesPerTextureCol, FramesPerTextureRow: Integer);
+    procedure FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer); override;
+    property Frame: Integer read FFrame write FFrame;
+    property X: Single read Fx write Fx;
+    property Y: Single read Fy write Fy;
+    property Width: Single read FWidth write FWidth;
+    property Height: Single read FHeight write FHeight;
+  end;
+
   // Circle mesh class
   TCECircleMesh = class(TCEMesh)
   private
@@ -68,9 +87,9 @@ type
     procedure SetWidth(Value: Single);
     procedure SetSoftness(Value: Single);
   protected
+    procedure DoInit(); override;
     procedure ApplyParameters(); override;
   public
-    procedure DoInit(); override;
     procedure FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer); override;
     procedure SetUniforms(Manager: TCEUniformsManager); override;
     // Line width
@@ -87,9 +106,9 @@ type
     procedure SetSoftness(Value: Single);
     procedure SetColor(const Value: TCEColor);
   protected
+    procedure DoInit(); override;
     procedure ApplyParameters(); override;
   public
-    procedure DoInit(); override;
     procedure FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer); override;
     procedure SetUniforms(Manager: TCEUniformsManager); override;
         // Antialiasing softness. 0 - no antialiasing.
@@ -117,6 +136,12 @@ type
   end;
   PLineVertex = ^TLineVertex;
   TLineVertexBuffer = array[0..$FFFF] of TLineVertex;
+
+  TSpriteVertex = packed record
+    xyuv: TCEVector4f;
+  end;
+  PSpriteVertex = ^TSpriteVertex;
+  TSpriteVertexBuffer = array[0..$FFFF] of TSpriteVertex;
 
   TCVRes = (rIntersect, rCoDir, rInvDir, rSharp);
 
@@ -194,7 +219,7 @@ begin
   SetVertexAttrib(dbtVertex1, 0, adtSingle, 4, 'position');
   SetVertexAttrib(dbtVertex1, 1, adtSingle, 4, 'data');
   FPrimitiveType := ptTriangleStrip;
-  FWidth := 2/1024;
+  FWidth := 2 / 1024;
   FThreshold := 0;
   Count := 0;
   SetDataSize(dbtVertex1, SizeOf(TLineVertex));
@@ -223,7 +248,7 @@ begin
     Dist := Sqrt(V.x * V.x + V.y * V.y);
     if Dist > Width then
     begin
-      Res := VectorAdd(P2, VectorScale(V, Width / Dist * (Ord(V.x*D1.x+V.y*D1.y > 0)*2-1)));
+      Res := VectorAdd(P2, VectorScale(V, Width / Dist * (Ord(V.x * D1.x + V.y * D1.y > 0) * 2 - 1)));
       Result := rSharp;
     end else
       Result := rIntersect;
@@ -248,7 +273,8 @@ var
   Dir1, Dir2: TCEVector2f;
 
 procedure PutVertexPair(const A, B, P1, P2, Dir: TCEVector2f; var Dest: PLineVertex);
-var d: Single;
+var
+  d: Single;
 begin
   d := ((P1.x - B.x) * Dir.x + (P1.y - B.y) * Dir.y) * oow * oow;
   Vec4f(P1.x, P1.y, B.x, B.y, Dest^.vec);
@@ -272,7 +298,7 @@ begin
   // d = 2*w/sin(a/2)*cos(a/2)
 
   CalcVertex(VectorSub(P0, Norm1), Dir1, VectorSub(P1, Norm2), Dir2, FWidth * CTG_CUT_ANGLE_2, P3);// <> rIntersect then
-    VectorAdd(P4, P1, VectorSub(P1, P3));
+  VectorAdd(P4, P1, VectorSub(P1, P3));
   //else
   //if ind = 0 then
 //    VectorAdd(P4, P1, Norm1);
@@ -321,21 +347,21 @@ begin
       if Dist < COS_CUT_ANGLE then
         CalcSegment(FPoints^[i + 0], FPoints^[i + 1], FPoints^[i + 2], 0, v)
       else begin}
-        if SignedAreaX2(Tmp1, Tmp2) > 0 then
-          sa := -1 else sa := 1;
-        Tmp2 := Vec2f(-(-Tmp1.y - Tmp2.y) * 0.5 * w * 0.001 * sa, (-Tmp1.x - Tmp2.x) * 0.5 * w * 0.001 * sa);
-        VectorSub(Tmp1, FPoints^[i + 1], Tmp2);
-        VectorAdd(Tmp2, FPoints^[i + 1], Tmp2);
-        CalcSegment(FPoints^[i + 0], Tmp1, Tmp2, Ord(sa > 0)*0, v);
-        CalcSegment(Tmp1, Tmp2, FPoints^[i + 2], Ord(sa > 0)*2, v);
+      if SignedAreaX2(Tmp1, Tmp2) > 0 then
+        sa := -1 else sa := 1;
+      Tmp2 := Vec2f(-(-Tmp1.y - Tmp2.y) * 0.5 * w * 0.001 * sa, (-Tmp1.x - Tmp2.x) * 0.5 * w * 0.001 * sa);
+      VectorSub(Tmp1, FPoints^[i + 1], Tmp2);
+      VectorAdd(Tmp2, FPoints^[i + 1], Tmp2);
+      CalcSegment(FPoints^[i + 0], Tmp1, Tmp2, Ord(sa > 0) * 0, v);
+      CalcSegment(Tmp1, Tmp2, FPoints^[i + 2], Ord(sa > 0) * 2, v);
       //end;
     end;
     Inc(i);
   end;
   CalcDir(FPoints^[i], FPoints^[i + 1], w, Dir2, dist);
-  VectorAdd(Tmp1, FPoints^[i+1], Dir2);
+  VectorAdd(Tmp1, FPoints^[i + 1], Dir2);
   Tmp2 := Vec2f(-Dir2.y, Dir2.x);
-  PutVertexPair(FPoints^[i], FPoints^[i+1], VectorAdd(Tmp1, Tmp2), VectorSub(Tmp1, Tmp2), Dir2, v);
+  PutVertexPair(FPoints^[i], FPoints^[i + 1], VectorAdd(Tmp1, Tmp2), VectorSub(Tmp1, Tmp2), Dir2, v);
 
   Inc(FPrimitiveCount, 2);
   InvalidateData(dbtVertex1, true);
@@ -385,7 +411,7 @@ function Sharpness(dx, dy: Single): Single;
 const
   EPSILON = 0.002;
 begin
-  Result := 1-Ord((abs(dx) < EPSILON) or (abs(dy) < EPSILON) or (abs(abs(dx) - abs(dy)) < EPSILON))*0.7;
+  Result := 1 - Ord((abs(dx) < EPSILON) or (abs(dy) < EPSILON) or (abs(abs(dx) - abs(dy)) < EPSILON)) * 0.7;
 end;
 
 var
@@ -404,12 +430,13 @@ begin
     VectorAdd(Center, FPoints^[i], Center);
   VectorScale(Center, Center, 1 / Count);
 
-  VectorSub(D12, FPoints^[Count-1], FPoints^[0]);
+  VectorSub(D12, FPoints^[Count - 1], FPoints^[0]);
   VectorSub(D01, FPoints^[0],  FPoints^[1]);
   VectorScale(N01, Vec2f(D01.y, -D01.x), FThreshold / VectorMagnitude(D01) * 0.5 * Sharpness(D01.x, D01.y));
 
-  CalcVertex(VectorSub(FPoints^[Count-1], VectorScale(Vec2f(D12.y, -D12.x), FThreshold / VectorMagnitude(D12) * 0.5 * Sharpness(D12.x, D12.y))),
-             D12, VectorSub(FPoints^[0],  N01), D01, FThreshold*4, P1);
+  CalcVertex(VectorSub(FPoints^[Count - 1], VectorScale(Vec2f(D12.y, -D12.x),
+                       FThreshold / VectorMagnitude(D12) * 0.5 * Sharpness(D12.x, D12.y))),
+             D12, VectorSub(FPoints^[0],  N01), D01, FThreshold * 4, P1);
   VectorAdd(P3, FPoints^[0],  VectorSub(FPoints^[0],  P1));
 
   i1 := 1;
@@ -419,7 +446,7 @@ begin
     VectorSub(D12, FPoints^[i1], FPoints^[i2]);
     VectorNormalize(N12, Vec2f(D12.y, -D12.x), FThreshold * 0.5 * Sharpness(D12.x, D12.y));
 
-    CalcVertex(VectorSub(FPoints^[i], N01), D01, VectorSub(FPoints^[i1], N12), D12, FThreshold*4, P2);
+    CalcVertex(VectorSub(FPoints^[i], N01), D01, VectorSub(FPoints^[i1], N12), D12, FThreshold * 4, P2);
     VectorAdd(P4, FPoints^[i1], VectorSub(FPoints^[i1], P2));
 
     Vec3f(Center.x, Center.y, 1, v^[0].vec);
@@ -443,16 +470,62 @@ begin
     N01 := N12;
     P1 := P2;
     P3 := P4;
-    i1 := i1 + 1 - Count * Ord(i1 = Count-1);
-    i2 := i2 + 1 - Count * Ord(i2 = Count-1);
+    i1 := i1 + 1 - Count * Ord(i1 = Count - 1);
+    i2 := i2 + 1 - Count * Ord(i2 = Count - 1);
   end;
-  FPrimitiveCount := Count * (1 + 2*Ord(FThreshold > 0));
+  FPrimitiveCount := Count * (1 + 2 * Ord(FThreshold > 0));
   InvalidateData(dbtVertex1, true);
 end;
 
 procedure TCEPolygonMesh.SetUniforms(Manager: TCEUniformsManager);
 begin
   Manager.SetSingleVec4('color', Vec4f(Color.R * ONE_OVER_255, Color.G * ONE_OVER_255, Color.B * ONE_OVER_255, Color.A * ONE_OVER_255));
+end;
+
+{ TCESpriteMesh }
+
+procedure TCESpriteMesh.DoInit();
+begin
+  inherited;
+  SetVertexAttribsCount(dbtVertex1, 1);
+  SetVertexAttrib(dbtVertex1, 0, adtSingle, 4, 'xyuv');
+  SetDataSize(dbtVertex1, SizeOf(TSpriteVertex));
+  FPrimitiveType := ptTriangleList;
+  FPrimitiveCount := 2;
+  FVerticesCount := 6;
+  Width := 0.1;
+  Height := 0.1;
+  SetTextureParameters(1, 1);
+  Frame := 0;
+end;
+
+procedure TCESpriteMesh.SetTextureParameters(FramesPerTextureCol, FramesPerTextureRow: Integer);
+begin
+  Assert((FramesPerTextureRow > 0) and (FramesPerTextureCol > 0), ClassName() + ': Invalid parameters');
+  FFramesPerTextureRow := FramesPerTextureRow;
+  FFramesPerTextureCol := FramesPerTextureCol;
+  InvalidateData(dbtVertex1, true);
+end;
+
+procedure TCESpriteMesh.FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer);
+var
+  vb: ^TSpriteVertexBuffer;
+  w, h, u, v, uw, vh: Single;
+begin
+  vb := Dest;
+  w := width * 0.5;
+  h := height * 0.5;
+  uw := 1 / FFramesPerTextureRow;
+  vh := 1 / FFramesPerTextureCol;
+  u := (Frame mod FFramesPerTextureRow) * uw;
+  v := (Frame div FFramesPerTextureRow) * vh;
+  Vec4f(x - w, y + h, u, v, vb^[0].xyuv);
+  Vec4f(x - w, y - h, u, v + vh, vb^[1].xyuv);
+  Vec4f(x + w, y - h, u + uw, v + vh, vb^[2].xyuv);
+  Vec4f(x - w, y + h, u, v, vb^[3].xyuv);
+  Vec4f(x + w, y - h, u + uw, v + vh, vb^[4].xyuv);
+  Vec4f(x + w, y + h, u + uw, v, vb^[5].xyuv);
+  InvalidateData(dbtVertex1, true);
 end;
 
 end.
