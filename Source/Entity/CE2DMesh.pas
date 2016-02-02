@@ -10,7 +10,7 @@
   either express or implied.  See the license for the specific language governing
   rights and limitations under the license.
 
-  The Original Code is CEMesh.pas
+  The Original Code is CE2DMesh.pas
 
   The Initial Developer of the Original Code is documented in the accompanying
   help file PGDCE.chm.  Portions created by these individuals are Copyright (C)
@@ -21,7 +21,7 @@
 {
 @abstract(PGDCE mesh entity unit)
 
-The unit contains mesh entity class
+The unit contains various 2D mesh classes
 
 @author(George Bakhtadze (avagames@gmail.com))
 }
@@ -98,7 +98,7 @@ type
     property Softness: Single read FThreshold write SetSoftness;
   end;
 
-    // 2D antialiased polygon mesh class
+  // 2D antialiased polygon mesh class
   TCEPolygonMesh = class(TCENPointMesh)
   private
     FThreshold: Single;
@@ -209,7 +209,7 @@ end;
 
 procedure TCELineMesh.ApplyParameters();
 begin
-  FVerticesCount := 4 + Count * 8;
+  FVerticesCount := 4 + MaxI(0, Count - 2) * 8;
 end;
 
 procedure TCELineMesh.DoInit();
@@ -245,7 +245,7 @@ begin
   if (RayIntersect(P1, D1, P2, D2, Res) = irIntersect) then
   begin
     V := VectorSub(Res, P2);
-    Dist := Sqrt(V.x * V.x + V.y * V.y);
+    Dist := Sqrt(V.x * V.x + V.y * V.y);                        //TODO
     if Dist > Width then
     begin
       Res := VectorAdd(P2, VectorScale(V, Width / Dist * (Ord(V.x * D1.x + V.y * D1.y > 0) * 2 - 1)));
@@ -264,10 +264,6 @@ begin
 end;
 
 procedure TCELineMesh.FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer);
-const
-  //CUT_ANGLE = 15/180*pi;
-  COS_CUT_ANGLE = 0.96592582628906831;
-  CTG_CUT_ANGLE_2 = 2 * 7.5957541127251513;  //2 * Cos(CUT_ANGLE/2)/Sin(CUT_ANGLE/2)
 var
   w, oow, dist: Single;
   Dir1, Dir2: TCEVector2f;
@@ -288,28 +284,63 @@ end;
 
 procedure CalcSegment(const P0, P1, P2: TCEVector2f; ind: Integer; var Dest: PLineVertex);
 var
-  P3, P4, Norm1, Norm2: TCEVector2f;
+  Tmp1, Tmp2: TCEVector2f;
+  P3, P4, P5, Norm1, Norm2: TCEVector2f;
+  res: TCVRes;
+  D, Sign: Single;
+  MinD: Single;
 begin
   CalcDir(P1, P2, w, Dir2, dist);
   Norm1 := Vec2f(-Dir1.y, Dir1.x);
   Norm2 := Vec2f(-Dir2.y, Dir2.x);
-
-  // 2*w = h * sin(a/2)
-  // d = 2*w/sin(a/2)*cos(a/2)
-
-  CalcVertex(VectorSub(P0, Norm1), Dir1, VectorSub(P1, Norm2), Dir2, FWidth * CTG_CUT_ANGLE_2, P3);// <> rIntersect then
-  VectorAdd(P4, P1, VectorSub(P1, P3));
-  //else
-  //if ind = 0 then
-//    VectorAdd(P4, P1, Norm1);
-
-  if ind = 0 then
-    PutVertexPair(P0, P1, P4, P3, Dir1, Dest)
-  else
-    PutVertexPair(P0, P1, P3, P4, Dir1, Dest);
-  PutVertexPair(P1, P2, P4, P3, Dir2, Dest);
-
-  Inc(FPrimitiveCount, 4);
+  res := CalcVertex(VectorSub(P0, Norm1), Dir1, VectorSub(P1, Norm2), Dir2, w*1000000, P3);
+  Sign := 2 * Ord(SignedAreaX2(Dir1, Dir2) < 0) - 1;
+  VectorSub(Tmp1, P1, P3);
+  MinD := MinS(VectorMagnitudeSq(VectorSub(P0, P1)), VectorMagnitudeSq(VectorSub(P2, P1)));
+  D := Sqrt(Tmp1.x * Tmp1.x + Tmp1.y * Tmp1.y);
+  if (res <> rIntersect) or (MinD < w * w * 4) or (D > Sqrt(MinD) + w) then  // Almost 0
+  begin
+    VectorAdd(Tmp1, P1, Dir1);
+    VectorSub(Tmp2, P1, Dir2);
+    PutVertexPair(P0, P1, VectorAdd(Tmp1, Norm1), VectorSub(Tmp1, Norm1), Dir1, Dest);
+    Vec4f(Tmp1.x - Norm1.x, Tmp1.y - Norm1.y, 0, 0, Dest^.vec);
+    Inc(Dest);
+    Vec4f(Tmp2.x + Norm2.x, Tmp2.y + Norm2.y, 0, 0, Dest^.vec);
+    Inc(Dest);
+    PutVertexPair(P1, P2, VectorAdd(Tmp2, Norm2), VectorSub(Tmp2, Norm2), Dir2, Dest);
+    Inc(FPrimitiveCount, 6);
+  end else begin
+    if D < w * 5 then
+    begin
+      VectorAdd(P4, P1, Tmp1);
+      PutVertexPair(P0, P1, P4, P3, Dir1, Dest);
+      PutVertexPair(P1, P2, P4, P3, Dir2, Dest);
+      Inc(FPrimitiveCount, 4);
+    end else begin
+      if Sign < 0 then
+      begin
+        VectorAdd(P3, P1, Tmp1);
+        VectorSub(Tmp1, P1, P3);
+      end;
+      Tmp2 := Vec2f(Tmp1.y / D * w, -Tmp1.x / D * w);           // Lim dir
+      VectorAdd(Tmp1, P1, VectorScale(Tmp1, w * 5 / D));        // Shift to outer
+      RayIntersect(Vec2f(P0.X + Sign * Norm1.X,P0.Y + Sign * Norm1.Y), Dir1, Tmp1, Tmp2, P4);
+      RayIntersect(Vec2f(P1.X + Sign * Norm2.X,P1.Y + Sign * Norm2.Y), Dir2, Tmp1, Tmp2, P5);
+      if Sign < 0 then
+      begin
+        PutVertexPair(P0, P1, P3, P4, Dir1, Dest);
+        PutVertexPair(P0, P1, P3, P5, Dir1, Dest);
+        PutVertexPair(P1, P2, P3, P4, Dir2, Dest);
+        PutVertexPair(P1, P2, P3, P5, Dir2, Dest);
+      end else begin
+        PutVertexPair(P0, P1, P4, P3, Dir1, Dest);
+        PutVertexPair(P0, P1, P5, P3, Dir1, Dest);
+        PutVertexPair(P1, P2, P4, P3, Dir2, Dest);
+        PutVertexPair(P1, P2, P5, P3, Dir2, Dest);
+      end;
+      Inc(FPrimitiveCount, 8);
+    end;
+  end;
   Dir1 := Dir2;
 end;
 
@@ -317,14 +348,13 @@ var
   i: Integer;
   v: PLineVertex;
   Tmp1, Tmp2: TCEVector2f;
-  sa: single;
 
 begin
   FPrimitiveCount := 0;
   if Count < 2 then Exit;
 
   v := Dest;
-  w := FWidth + FThreshold;// + 0.03;
+  w := FWidth + FThreshold;
   oow := 1 / w;
 
   // First two points
@@ -336,26 +366,7 @@ begin
   i := 0;
   while i < Count - 2 do
   begin
-    VectorSub(Tmp1, FPoints^[i + 0], FPoints^[i + 1]);
-    VectorSub(Tmp2, FPoints^[i + 2], FPoints^[i + 1]);
-    if VectorDot(Tmp1, Tmp2) < 0 then
-      CalcSegment(FPoints^[i + 0], FPoints^[i + 1], FPoints^[i + 2], 0, v)
-    else begin
-      VectorNormalize(Tmp1, Tmp1);
-      VectorNormalize(Tmp2, Tmp2);
-{      Dist := VectorDot(Tmp1, Tmp2);       //TODO:optimize
-      if Dist < COS_CUT_ANGLE then
-        CalcSegment(FPoints^[i + 0], FPoints^[i + 1], FPoints^[i + 2], 0, v)
-      else begin}
-      if SignedAreaX2(Tmp1, Tmp2) > 0 then
-        sa := -1 else sa := 1;
-      Tmp2 := Vec2f(-(-Tmp1.y - Tmp2.y) * 0.5 * w * 0.001 * sa, (-Tmp1.x - Tmp2.x) * 0.5 * w * 0.001 * sa);
-      VectorSub(Tmp1, FPoints^[i + 1], Tmp2);
-      VectorAdd(Tmp2, FPoints^[i + 1], Tmp2);
-      CalcSegment(FPoints^[i + 0], Tmp1, Tmp2, Ord(sa > 0) * 0, v);
-      CalcSegment(Tmp1, Tmp2, FPoints^[i + 2], Ord(sa > 0) * 2, v);
-      //end;
-    end;
+    CalcSegment(FPoints^[i + 0], FPoints^[i + 1], FPoints^[i + 2], 0, v);
     Inc(i);
   end;
   CalcDir(FPoints^[i], FPoints^[i + 1], w, Dir2, dist);

@@ -35,7 +35,7 @@ uses
   CEEntity, CEResource, CEImageResource;
 
 const
-  MAX_TEXTURES = 32;
+  MAX_TEXTURES_PER_MATERIAL = 32;
   // Special value indicating that the ID is not initialized
   ID_NOT_INITIALIZED = -1;
 
@@ -44,7 +44,7 @@ type
     // Private to renderer
     TextureId: Integer;
   end;
-  TTextureSetups = array[0..MAX_TEXTURES - 1] of TTextureSetup;
+  TTextureSetups = array[0..MAX_TEXTURES_PER_MATERIAL - 1] of TTextureSetup;
 
   // Encapsulates render state, texture and shader settings
   TCERenderPass = class(TCEBaseEntity)
@@ -175,7 +175,7 @@ var
   i: Integer;
 begin
   ProgramId := ID_NOT_INITIALIZED;
-  for i := 0 to MAX_TEXTURES - 1 do
+  for i := 0 to MAX_TEXTURES_PER_MATERIAL - 1 do
     TextureSetups[i].TextureId := ID_NOT_INITIALIZED;
 end;
 
