@@ -111,9 +111,9 @@ type
   public
     procedure FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer); override;
     procedure SetUniforms(Manager: TCEUniformsManager); override;
-        // Antialiasing softness. 0 - no antialiasing.
+    // Antialiasing softness. 0 - no antialiasing.
     property Softness: Single read FThreshold write SetSoftness;
-        // Fill color
+    // Fill color
     property Color: TCEColor read FColor write SetColor;
   end;
 
@@ -225,14 +225,16 @@ begin
   SetDataSize(dbtVertex1, SizeOf(TLineVertex));
 end;
 
-procedure CalcDir(const P1, P2: TCEVector2f; w: Single; out Dir: TCEVector2f; out Dist: Single);
+procedure CalcDir(const P1, P2: TCEVector2f; w: Single; out Dir: TCEVector2f);
 var
-  Zero: Integer;
+  Dist: Single;
 begin
   Dir := VectorSub(P2, P1);
-  Dist := Sqrt(sqr(Dir.X) + sqr(Dir.Y));
-  Zero := Ord(Dist = 0);
-  Dist := w * (1 - Zero) / (Dist + Zero);
+  Dist := Sqr(Dir.X) + Sqr(Dir.Y);
+  if Dist > 0 then
+    Dist := w * InvSqrt(Dist)
+  else
+    Dist := 0;
   Dir.X := Dist * Dir.X;
   Dir.Y := Dist * Dir.Y;
 end;
@@ -245,10 +247,10 @@ begin
   if (RayIntersect(P1, D1, P2, D2, Res) = irIntersect) then
   begin
     V := VectorSub(Res, P2);
-    Dist := Sqrt(V.x * V.x + V.y * V.y);                        //TODO
-    if Dist > Width then
+    Dist := V.x * V.x + V.y * V.y;                        //TODO
+    if Dist > Sqr(Width) then
     begin
-      Res := VectorAdd(P2, VectorScale(V, Width / Dist * (Ord(V.x * D1.x + V.y * D1.y > 0) * 2 - 1)));
+      Res := VectorAdd(P2, VectorScale(V, Width * InvSqrt(Dist) * (Ord(V.x * D1.x + V.y * D1.y > 0) * 2 - 1)));
       Result := rSharp;
     end else
       Result := rIntersect;
@@ -265,7 +267,7 @@ end;
 
 procedure TCELineMesh.FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer);
 var
-  w, oow, dist: Single;
+  w, oow: Single;
   Dir1, Dir2: TCEVector2f;
 
 procedure PutVertexPair(const A, B, P1, P2, Dir: TCEVector2f; var Dest: PLineVertex);
@@ -282,23 +284,32 @@ begin
   Inc(Dest);
 end;
 
+procedure CalcPoints(const P0, P1, Dir1, Dir2, OffsVec, LimDir: TCEVector2f; out OP0, OP1: TCEVector2f);
+begin
+  RayIntersect(P0, Dir1, OffsVec, LimDir, OP0);
+  RayIntersect(P1, Dir2, OffsVec, LimDir, OP1);
+end;
+
 procedure CalcSegment(const P0, P1, P2: TCEVector2f; ind: Integer; var Dest: PLineVertex);
+const
+  LIMIT = 5;
 var
   Tmp1, Tmp2: TCEVector2f;
   P3, P4, P5, Norm1, Norm2: TCEVector2f;
   res: TCVRes;
   D, Sign: Single;
   MinD: Single;
+
 begin
-  CalcDir(P1, P2, w, Dir2, dist);
+  CalcDir(P1, P2, w, Dir2);
   Norm1 := Vec2f(-Dir1.y, Dir1.x);
   Norm2 := Vec2f(-Dir2.y, Dir2.x);
-  res := CalcVertex(VectorSub(P0, Norm1), Dir1, VectorSub(P1, Norm2), Dir2, w*1000000, P3);
+  res := CalcVertex(VectorSub(P0, Norm1), Dir1, VectorSub(P1, Norm2), Dir2, w * 1000000, P3);
   Sign := 2 * Ord(SignedAreaX2(Dir1, Dir2) < 0) - 1;
   VectorSub(Tmp1, P1, P3);
   MinD := MinS(VectorMagnitudeSq(VectorSub(P0, P1)), VectorMagnitudeSq(VectorSub(P2, P1)));
-  D := Sqrt(Tmp1.x * Tmp1.x + Tmp1.y * Tmp1.y);
-  if (res <> rIntersect) or (MinD < w * w * 4) or (D > Sqrt(MinD) + w) then  // Almost 0
+  D := Tmp1.x * Tmp1.x + Tmp1.y * Tmp1.y;
+  if (res <> rIntersect) or (MinD < w * w * 4) or (D > (MinD + w + w * w)) then  // Almost 0
   begin
     VectorAdd(Tmp1, P1, Dir1);
     VectorSub(Tmp2, P1, Dir2);
@@ -310,29 +321,27 @@ begin
     PutVertexPair(P1, P2, VectorAdd(Tmp2, Norm2), VectorSub(Tmp2, Norm2), Dir2, Dest);
     Inc(FPrimitiveCount, 6);
   end else begin
-    if D < w * 5 then
+    if D < Sqr(w * LIMIT) then
     begin
       VectorAdd(P4, P1, Tmp1);
       PutVertexPair(P0, P1, P4, P3, Dir1, Dest);
       PutVertexPair(P1, P2, P4, P3, Dir2, Dest);
       Inc(FPrimitiveCount, 4);
     end else begin
+      D := w * InvSqrt(D);
       if Sign < 0 then
       begin
         VectorAdd(P3, P1, Tmp1);
         VectorSub(Tmp1, P1, P3);
-      end;
-      Tmp2 := Vec2f(Tmp1.y / D * w, -Tmp1.x / D * w);           // Lim dir
-      VectorAdd(Tmp1, P1, VectorScale(Tmp1, w * 5 / D));        // Shift to outer
-      RayIntersect(Vec2f(P0.X + Sign * Norm1.X,P0.Y + Sign * Norm1.Y), Dir1, Tmp1, Tmp2, P4);
-      RayIntersect(Vec2f(P1.X + Sign * Norm2.X,P1.Y + Sign * Norm2.Y), Dir2, Tmp1, Tmp2, P5);
-      if Sign < 0 then
-      begin
+        CalcPoints(VectorSub(P0, Norm1), VectorSub(P1, Norm2), Dir1, Dir2,
+          VectorAdd(P1, VectorScale(Tmp1, LIMIT * D)), Vec2f(Tmp1.y * D, -Tmp1.x * D), P4, P5);
         PutVertexPair(P0, P1, P3, P4, Dir1, Dest);
         PutVertexPair(P0, P1, P3, P5, Dir1, Dest);
         PutVertexPair(P1, P2, P3, P4, Dir2, Dest);
         PutVertexPair(P1, P2, P3, P5, Dir2, Dest);
       end else begin
+        CalcPoints(VectorAdd(P0, Norm1), VectorAdd(P1, Norm2), Dir1, Dir2,
+          VectorAdd(P1, VectorScale(Tmp1, LIMIT * D)), Vec2f(Tmp1.y * D, -Tmp1.x * D), P4, P5);
         PutVertexPair(P0, P1, P4, P3, Dir1, Dest);
         PutVertexPair(P0, P1, P5, P3, Dir1, Dest);
         PutVertexPair(P1, P2, P4, P3, Dir2, Dest);
@@ -358,7 +367,7 @@ begin
   oow := 1 / w;
 
   // First two points
-  CalcDir(FPoints^[0], FPoints^[1], w, Dir1, dist);
+  CalcDir(FPoints^[0], FPoints^[1], w, Dir1);
   Tmp2 := Vec2f(-Dir1.y, Dir1.x);
   VectorSub(Tmp1, FPoints^[0], Dir1);
   PutVertexPair(FPoints^[0], FPoints^[1], VectorAdd(Tmp1, Tmp2), VectorSub(Tmp1, Tmp2), Dir1, v);
@@ -369,7 +378,7 @@ begin
     CalcSegment(FPoints^[i + 0], FPoints^[i + 1], FPoints^[i + 2], 0, v);
     Inc(i);
   end;
-  CalcDir(FPoints^[i], FPoints^[i + 1], w, Dir2, dist);
+  CalcDir(FPoints^[i], FPoints^[i + 1], w, Dir2);
   VectorAdd(Tmp1, FPoints^[i + 1], Dir2);
   Tmp2 := Vec2f(-Dir2.y, Dir2.x);
   PutVertexPair(FPoints^[i], FPoints^[i + 1], VectorAdd(Tmp1, Tmp2), VectorSub(Tmp1, Tmp2), Dir2, v);

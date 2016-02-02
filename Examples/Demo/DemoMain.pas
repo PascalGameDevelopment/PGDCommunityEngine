@@ -121,7 +121,7 @@ begin
   PolyMesh.Color := GetColor(100, 200, 150, 255);
 
   LineMesh := TCELineMesh.Create(Core.EntityManager);
-  LineMesh.Softness := 2 / 1024 * 1.3 * 10;
+  LineMesh.Softness := 2 / 1024 * 1.3 * 1;
   LineMesh.Width := 1 / 1024 * 30;
   LineMesh.Count := 6;
   LineMesh.Point[0] := Vec2f(-0.5,  0.3);
@@ -201,8 +201,8 @@ begin
 
   Renderer.Clear([cfColor, cfDepth], GetColor(40, 130, 130, 0), 1.0, 0);
 
-  {Renderer.ApplyRenderPass(PolyPass);
-  Renderer.RenderMesh(PolyMesh);}
+  Renderer.ApplyRenderPass(PolyPass);
+  Renderer.RenderMesh(PolyMesh);
   Renderer.ApplyRenderPass(LinePass);
   Renderer.RenderMesh(LineMesh);
   {Renderer.ApplyRenderPass(SpritePass);
@@ -220,8 +220,8 @@ begin
     if (Renderer.Width > 0) and (Renderer.Height > 0) then
     begin
       ClickPoint := Vec2f(Core.Input.MouseState.X / Renderer.Width * 2 - 1, 1 - Core.Input.MouseState.Y / Renderer.Height * 2);
-      Ind := GetNearestPointIndex(LineMesh.Points, LineMesh.Count, ClickPoint);
-      LineMesh.Point[Ind] := ClickPoint;
+      Ind := GetNearestPointIndex(PolyMesh.Points, PolyMesh.Count, ClickPoint);
+      PolyMesh.Point[Ind] := ClickPoint;
       SpriteMesh1.Frame := SpriteMesh1.Frame + 1;
     end;
   end;

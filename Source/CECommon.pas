@@ -46,6 +46,16 @@ uses
   function MinS(V1, V2: Single): Single; {$I inline.inc}
   // Clamps value to the specified bounds. Doesn't take in account NaNs etc.
   function ClampS(V, Min, Max: Single): Single; {$I inline.inc}
+  { Returns 1/Sqrt(x). May be fast if assembler optimizations are on.
+    If FLOAT_IEEE is defined it's also fast, but returned value may differ from expected value by at most 0.175%
+      and for 0 value 19817753709685768200 is returned. }
+  function InvSqrt(x: Single): Single; {$I inline.inc}
+  {$IFDEF FLOAT_IEEE}
+  // Returns True if v1 equals to v2 with relative accuracy specified in Units in the Last Place by MAX_ULPS
+  function FloatEquals(const v1: Double; const v2: Double): Boolean; overload; {$I inline.inc}
+  // Returns True if v1 equals to v2 with relative accuracy specified in Units in the Last Place by MAX_ULPS
+  function FloatEquals(v1: Single; v2: Single): Boolean; overload; {$I inline.inc}
+  {$ENDIF}
 
   // Returns base pointer shifted by offset
   function PtrOffs(Base: Pointer; Offset: Integer): Pointer; {$I inline.inc}
@@ -182,6 +192,43 @@ function ClampS(V, Min, Max: Single): Single; {$I inline.inc}
 begin
   Result := MinS(MaxS(V, Min), Max);
 end;
+
+function InvSqrt(x: Single): Single; {$I inline.inc}
+{$IFDEF FLOAT_IEEE}
+const
+  THREE_HALFS = 1.5;
+var
+  yi: Integer absolute Result;
+begin
+  Result := x;
+  yi := $5f3759df - ( yi shr 1 );
+  Result := Result * (THREE_HALFS - (x * 0.5 * Result * Result));
+{$ELSE}
+begin
+  Result := 1 / Sqrt(x);
+{$ENDIF}
+end;
+
+{$IFDEF FLOAT_IEEE}
+function FloatEquals(const v1: Double; const v2: Double): Boolean; overload; {$I inline.inc}
+var
+  d1: Int64 absolute v1;
+  d2: Int64 absolute v2;
+begin
+  if (d1 and SIGN_BIT_DOUBLE) <> (d2 and SIGN_BIT_DOUBLE) then
+    Result := v1 = v2
+  else
+    Result := Abs(d1 - d2) <= MAX_ULPS;
+end;
+
+function FloatEquals(v1: Single; v2: Single): Boolean; overload; {$I inline.inc}
+begin
+  if (Integer((@v1)^) and SIGN_BIT_SINGLE) <> (Integer((@v2)^) and SIGN_BIT_SINGLE) then
+    Result := v1 = v2
+  else
+    Result := Abs(Integer((@v1)^) - Integer((@v2)^)) <= MAX_ULPS;
+end;
+{$ENDIF}
 
 function PtrOffs(Base: Pointer; Offset: Integer): Pointer; {$I inline.inc}
 begin

@@ -207,60 +207,11 @@ type
     Used internally for Assert-based features.
     Thread safe if MULTITHREADASSERT defined. }
   procedure AssertRestore();
-  {$IFDEF FLOAT_IEEE}
-  // Returns True if v1 equals to v2 with relative accuracy specified in Units in the Last Place by MAX_ULPS
-  function FloatEquals(const v1: Double; const v2: Double): Boolean; overload; {$I inline.inc}
-  // Returns True if v1 equals to v2 with relative accuracy specified in Units in the Last Place by MAX_ULPS
-  function FloatEquals(v1: Single; v2: Single): Boolean; overload; {$I inline.inc}
-  {$ENDIF}
 
 implementation
 
 {$IFDEF MULTITHREADASSERT}
   uses SyncObjs;
-{$ENDIF}
-(*
-bool AlmostEqualUlps(float A, float B, int maxUlpsDiff)
-{
-    Float_t uA(A);
-    Float_t uB(B);
-
-    // Different signs means they do not match.
-    if (uA.Negative() != uB.Negative())
-    {
-        // Check for equality to make sure +0==-0
-        if (A == B)
-            return true;
-        return false;
-    }
-
-    // Find the difference in ULPs.
-    int ulpsDiff = abs(uA.i - uB.i);
-    if (ulpsDiff <= maxUlpsDiff)
-        return true;
-
-    return false;
-}*)
-
-{$IFDEF FLOAT_IEEE}
-function FloatEquals(const v1: Double; const v2: Double): Boolean; overload; {$I inline.inc}
-var
-  d1: Int64 absolute v1;
-  d2: Int64 absolute v2;
-begin
-  if (d1 and SIGN_BIT_DOUBLE) <> (d2 and SIGN_BIT_DOUBLE) then
-    Result := v1 = v2
-  else
-    Result := Abs(d1 - d2) <= MAX_ULPS;
-end;
-
-function FloatEquals(v1: Single; v2: Single): Boolean; overload; {$I inline.inc}
-begin
-  if (Integer((@v1)^) and SIGN_BIT_SINGLE) <> (Integer((@v2)^) and SIGN_BIT_SINGLE) then
-    Result := v1 = v2
-  else
-    Result := Abs(Integer((@v1)^) - Integer((@v2)^)) <= MAX_ULPS;
-end;
 {$ENDIF}
 
 function GetColor(const R, G, B, A: Byte): TCEColor; {$I inline.inc}

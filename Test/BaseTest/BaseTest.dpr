@@ -10,7 +10,7 @@
   either express or implied.  See the license for the specific language governing
   rights and limitations under the license.
 
-  The Original Code is CECore.pas
+  The Original Code is BaseTest.pas
 
   The Initial Developer of the Original Code is documented in the accompanying
   help file PGDCE.chm.  Portions created by these individuals are Copyright (C)
@@ -38,9 +38,12 @@ type
   TBaseTest = class(TTestSuite)
   private
   published
+    {$IFDEF FLOAT_IEEE}
     procedure TestFloatEqual();
+    {$ENDIF}
     procedure TestJoinStr();
     procedure TestJoinPath();
+    procedure TestInvSqrt();
   end;
 
 { TBaseTest }
@@ -65,6 +68,7 @@ begin
   Result := Int64((@v)^);
 end;
 
+{$IFDEF FLOAT_IEEE}
 procedure TestSingle(v: Single);
 var
   num: Integer;
@@ -100,6 +104,7 @@ begin
   end;
   Assert(_Check(not FloatEquals(GetSingle(0)-GetSingle(1), GetSingle(0))), '-0 = 0');
 end;
+{$ENDIF}
 
 procedure TBaseTest.TestJoinStr();
 var
@@ -126,11 +131,41 @@ procedure TBaseTest.TestJoinPath();
 begin
 end;
 
+procedure TBaseTest.TestInvSqrt();
+const
+  COUNT = 100;
+var
+  i: Integer;
+  x, invx2: Single;
+
+function GetApproximationError(value, approx: Single): Single;
 begin
-    {$IF Declared(ReportMemoryLeaksOnShutdown)}
-    ReportMemoryLeaksOnShutdown := True;
-    {$IFEND}
-RegisterSuites([TBaseTest]);
+  Result := abs(value - approx) / MaxS(0.0000001, value);
+end;
+
+procedure CheckValue(x: Single);
+var
+  TrueVal: Single;
+  CheckVal: Single;
+begin
+  TrueVal := 1 / Sqrt(x);
+  CheckVal := InvSqrt(x);
+  Assert(_Check(GetApproximationError(TrueVal, CheckVal) < 0.00175), 'InvSqrt() error too big for value ' + FloatToStr(x));
+end;
+
+begin
+  for i := 1 to COUNT do
+    CheckValue(i * i);
+  {$IFDEF FLOAT_IEEE}
+  Assert(_Check(GetApproximationError(19817753709685768200.0, InvSqrt(0)) < 0.00175), 'InvSqrt() wrong value for 0');
+  {$ENDIF}
+end;
+
+begin
+  {$IF Declared(ReportMemoryLeaksOnShutdown)}
+  ReportMemoryLeaksOnShutdown := True;
+   {$IFEND}
+  RegisterSuites([TBaseTest]);
   Tester.RunTests();
   Readln;
 end.
