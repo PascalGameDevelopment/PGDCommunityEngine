@@ -375,6 +375,13 @@ begin
     Result := 0;
 end;
 
+function LinkShader(const Shader: TCEGLSLShader): Boolean;
+begin
+  glAttachShader(Shader.ShaderProgram, Shader.VertexShader);
+  glAttachShader(Shader.ShaderProgram, Shader.FragmentShader);
+  glLinkProgram(Shader.ShaderProgram);
+end;
+
 procedure UpdateShader(Pass: TCERenderPass; const Shader: TCEGLSLShader);
 var Updated: Boolean;
 begin
@@ -390,12 +397,7 @@ begin
     Updated := Updated and CompileShader(Shader.FragmentShader, PAnsiChar(Pass.FragmentShader.Text), ShaderErrorTitle[false]);
   end;
   Pass.ResetUpdateFlags();
-  if Updated then
-  begin
-    glAttachShader(Shader.ShaderProgram, Shader.VertexShader);
-    glAttachShader(Shader.ShaderProgram, Shader.FragmentShader);
-    glLinkProgram(Shader.ShaderProgram);
-  end;
+  if Updated then LinkShader(Shader);
   ReportGLErrorDebug('Update shader');
 end;
 
@@ -468,26 +470,34 @@ begin
     Result := ID_NOT_INITIALIZED;
     Exit;
   end;
-  glAttachShader(Sh.ShaderProgram, Sh.VertexShader);
-  glAttachShader(Sh.ShaderProgram, Sh.FragmentShader);
-  glLinkProgram(Sh.ShaderProgram);
+  LinkShader(Sh);
   Shaders.Add(Sh);
   Result := Shaders.Count - 1;
   Log('Shader successfully initialized');
 end;
 
+procedure UpdateTexture(Image: TCEImageResource; TexId: glUint);
+begin
+  if (TexId > 0) then
+  begin
+    glBindTexture(GL_TEXTURE_2D, TexId);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, Image.Width, Image.Height, 0, GL_RGB, GL_UNSIGNED_BYTE, Image.Data);
+  end;
+end;
+
 function InitTexture(Image: TCEImageResource): glUint;
 begin
+  Result := 0;
   if not Assigned(Image) then Exit;
   glGenTextures(1, @Result);
-  glBindTexture(GL_TEXTURE_2D, Result);
-  glTexImage2D(GL_TEXTURE_2D, 0, 3, Image.Width, Image.Height, 0, GL_RGB, GL_UNSIGNED_BYTE, Image.Data);
+  UpdateTexture(Image, Result);
 end;
 
 procedure TCEBaseOpenGLRenderer.ApplyRenderPass(Pass: TCERenderPass);
 var
   TexId, PrId: Integer;
   Sh: TCEGLSLShader;
+
 begin
   PrId := CEMaterial._GetProgramId(Pass);
   if PrId = ID_NOT_INITIALIZED then
@@ -498,7 +508,7 @@ begin
   if PrId >= 0 then
   begin
     Sh := Shaders.Get(PrId);
-    if Pass.UpdateFlags <> [] then
+    if Pass.UpdateFlags * [ufVertexShader, ufFragmentShader] <> [] then
       UpdateShader(Pass, Sh);
     glUseProgram(Sh.ShaderProgram);
     {PhaseLocation := glGetUniformLocation(Sh.ShaderProgram, 'phase');
@@ -511,8 +521,11 @@ begin
 
   TexId := CEMaterial._GetTextureId(Pass, 0);
   if TexId <> ID_NOT_INITIALIZED then
+  begin
+    if Pass.UpdateFlags * [ufTexture0] <> [] then
+      UpdateTexture(Pass.Texture0, TexId);
     glBindTexture(GL_TEXTURE_2D, TexId)
-  else begin
+  end else begin
     TexId := InitTexture(Pass.Texture0);
     CEMaterial._SetTextureId(Pass, 0, TexId);
   end;

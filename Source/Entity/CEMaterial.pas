@@ -47,7 +47,7 @@ type
   TTextureSetups = array[0..MAX_TEXTURES_PER_MATERIAL - 1] of TTextureSetup;
 
   //
-  TPassUpdateFlag = (ufVertexShader, ufFragmentShader);
+  TPassUpdateFlag = (ufVertexShader, ufFragmentShader, ufTexture0);
 
   // Flags telling which resource should be updated
   TPassUpdateFlags = set of TPassUpdateFlag;
@@ -204,6 +204,8 @@ begin
       Include(FUpdateFlags, ufVertexShader);
     if TEntityDataLoadCompleteMessage(Msg).Entity = FFragmentShader then
       Include(FUpdateFlags, ufFragmentShader);
+    if TEntityDataLoadCompleteMessage(Msg).Entity = FTexture0 then
+      Include(FUpdateFlags, ufTexture0);
   end;
 end;
 

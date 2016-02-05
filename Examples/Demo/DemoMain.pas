@@ -203,10 +203,10 @@ begin
   Renderer.RenderMesh(PolyMesh);
   Renderer.ApplyRenderPass(LinePass);
   Renderer.RenderMesh(LineMesh);
-  {Renderer.ApplyRenderPass(SpritePass);
+  Renderer.ApplyRenderPass(SpritePass);
   Renderer.RenderMesh(SpriteMesh1);
   Renderer.ApplyRenderPass(MonsterSpritePass);
-  Renderer.RenderMesh(SpriteMesh2);}
+  Renderer.RenderMesh(SpriteMesh2);
 
   if Core.Input.Pressed[vkNUMPAD6] or (Core.Input.MouseState.Buttons[mbLeft] = iaDown) then Speed := Speed + 4;
   if Core.Input.Pressed[vkNUMPAD4] or (Core.Input.MouseState.Buttons[mbRight] = iaDown) then Speed := Speed - 4;

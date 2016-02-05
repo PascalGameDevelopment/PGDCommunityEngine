@@ -400,7 +400,7 @@ begin
   Result := True;
 end;
 
-function InitResource(Image: TCEImageResource; const AURL: string; const Header: TImageHeader): Boolean;
+function InitResource(Image: TCEImageResource; const Header: TImageHeader): Boolean;
 var
   OldMipPolicy: TMipPolicy;
   OldFormat: TCEFormat;
@@ -430,7 +430,6 @@ begin
   if TCEPixelFormat(OldFormat) <> pfUndefined then
     Image.Convert(Image.Format, OldFormat);
   Image.MipPolicy := OldMipPolicy;                        // Restore mip policy
-  Image.DataURL := AURL;
   Result := True;
 end;
 
@@ -450,7 +449,7 @@ begin
       raise ECEInvalidArgument.Create('Entity must be TCEImageResource descendant');
   end else
     LoadBitmap(Stream, BMPHeader);
-  Result := InitResource(Entity as TCEImageResource, '', BMPHeader);
+  Result := InitResource(Entity as TCEImageResource, BMPHeader);
   if BMPHeader.PaletteSize <> 0 then
     FreeMem(BMPHeader.Palette, BMPHeader.PaletteSize);
 end;
