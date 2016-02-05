@@ -43,6 +43,7 @@ type
     {$ENDIF}
     procedure TestJoinStr();
     procedure TestJoinPath();
+    procedure TestGetFileExt();
     procedure TestInvSqrt();
   end;
 
@@ -131,12 +132,25 @@ procedure TBaseTest.TestJoinPath();
 begin
 end;
 
+procedure TBaseTest.TestGetFileExt();
+begin
+  Assert(_Check(CECommon.GetFileExt('c:\file.ext') = 'ext'), 'FileExt("c:\file.ext")');
+  Assert(_Check(CECommon.GetFileExt('file.ext') = 'ext'), 'FileExt("file.ext")');
+
+  Assert(_Check(CECommon.GetFileExt('/usr/lib/file.') = ''), 'FileExt() with .');
+  Assert(_Check(CECommon.GetFileExt('/usr/lib/file') = ''), 'FileExt() w/o ext');
+  Assert(_Check(CECommon.GetFileExt('file') = ''), 'FileExt() w/o ext');
+  Assert(_Check(CECommon.GetFileExt('') = ''), 'FileExt('')');
+  Assert(_Check(CECommon.GetFileExt('c:\') = ''), 'FileExt(dir) 1');
+  Assert(_Check(CECommon.GetFileExt('\') = ''), 'FileExt(dir) 2');
+  Assert(_Check(CECommon.GetFileExt('c:\direc.tory\') = ''), 'FileExt(dir) 3');
+end;
+
 procedure TBaseTest.TestInvSqrt();
 const
   COUNT = 100;
 var
   i: Integer;
-  x, invx2: Single;
 
 function GetApproximationError(value, approx: Single): Single;
 begin
@@ -164,7 +178,7 @@ end;
 begin
   {$IF Declared(ReportMemoryLeaksOnShutdown)}
   ReportMemoryLeaksOnShutdown := True;
-   {$IFEND}
+  {$IFEND}
   RegisterSuites([TBaseTest]);
   Tester.RunTests();
   Readln;
