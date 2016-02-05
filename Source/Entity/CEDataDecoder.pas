@@ -35,7 +35,7 @@ uses
   CEEntity, CEIO;
 
 type
-    // Load target. In future it will be a structure to support multiple targets.
+  // Load target. In future it will be a structure to support multiple targets.
   TCELoadTarget = Pointer;
 
   // Array of resource type IDs

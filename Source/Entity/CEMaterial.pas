@@ -32,7 +32,7 @@ unit CEMaterial;
 interface
 
 uses
-  CEEntity, CEResource, CEImageResource;
+  CEMessage, CEEntity, CEResource, CEImageResource;
 
 const
   MAX_TEXTURES_PER_MATERIAL = 32;
@@ -46,26 +46,36 @@ type
   end;
   TTextureSetups = array[0..MAX_TEXTURES_PER_MATERIAL - 1] of TTextureSetup;
 
+  //
+  TPassUpdateFlag = (ufVertexShader, ufFragmentShader);
+
+  // Flags telling which resource should be updated
+  TPassUpdateFlags = set of TPassUpdateFlag;
+
   // Encapsulates render state, texture and shader settings
   TCERenderPass = class(TCEBaseEntity)
   private
-    // Shader program ID used by a renderer
+    // Shader ID used by a renderer
     ProgramId: Integer;
     TextureSetups, _TextureSetups: TTextureSetups;
     FTexture0: TCEImageResource;
     FVertexShader: TCETextResource;
     FFragmentShader: TCETextResource;
     FAlphaBlending: Boolean;
-
+    FUpdateFlags: TPassUpdateFlags;
     function GetTexture0: TCEImageResource;
     procedure SetTexture0(const Value: TCEImageResource);
   protected
     procedure DoInit(); override;
+  public
+    procedure HandleMessage(const Msg: TCEMessage); override;
+    procedure ResetUpdateFlags();
   published
     property Texture0: TCEImageResource read GetTexture0 write SetTexture0;
     property VertexShader: TCETextResource read FVertexShader write FVertexShader;
     property FragmentShader: TCETextResource read FFragmentShader write FFragmentShader;
     property AlphaBlending: Boolean read FAlphaBlending write FAlphaBlending;
+    property UpdateFlags: TPassUpdateFlags read FUpdateFlags;
   end;
 
   // Set of render passes, represents render technique
@@ -110,7 +120,7 @@ type
 implementation
 
 uses
-  CEBaseTypes;
+  CEBaseTypes, CEEntityMessage, CELog;
 
 function CreateRenderPass(EntityManager: TCEEntityManager; AlphaBlend: Boolean;
                           const TextureUrl: string; const VSUrl: string; const PSUrl: string): TCERenderPass;
@@ -120,13 +130,20 @@ begin
   Result := TCERenderPass.Create(EntityManager);
   if TextureUrl <> '' then
   begin
-    Image := TCEImageResource.CreateFromUrl(TextureUrl);
+    Image := TCEImageResource.CreateFromUrl(EntityManager, TextureUrl);
     Result.Texture0 := Image;
+    Image.Parent := Result;
   end;
   if VSUrl <> '' then
-    Result.VertexShader := TCETextResource.CreateFromUrl(VSUrl);
+  begin
+    Result.VertexShader := TCETextResource.CreateFromUrl(EntityManager, VSUrl);
+    Result.VertexShader.Parent := Result;
+  end;
   if PSUrl <> '' then
-    Result.FragmentShader := TCETextResource.CreateFromUrl(PSUrl);
+  begin
+    Result.FragmentShader := TCETextResource.CreateFromUrl(EntityManager, PSUrl);
+    Result.FragmentShader.Parent := Result;
+  end;
   Result.AlphaBlending := AlphaBlend;
 end;
 
@@ -177,6 +194,22 @@ begin
   ProgramId := ID_NOT_INITIALIZED;
   for i := 0 to MAX_TEXTURES_PER_MATERIAL - 1 do
     TextureSetups[i].TextureId := ID_NOT_INITIALIZED;
+end;
+
+procedure TCERenderPass.HandleMessage(const Msg: TCEMessage);
+begin
+  if Msg.ClassType() = TEntityDataLoadCompleteMessage then
+  begin
+    if TEntityDataLoadCompleteMessage(Msg).Entity = FVertexShader then
+      Include(FUpdateFlags, ufVertexShader);
+    if TEntityDataLoadCompleteMessage(Msg).Entity = FFragmentShader then
+      Include(FUpdateFlags, ufFragmentShader);
+  end;
+end;
+
+procedure TCERenderPass.ResetUpdateFlags();
+begin
+  FUpdateFlags := [];
 end;
 
 { TCERenderTechnique }

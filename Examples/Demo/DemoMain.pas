@@ -95,7 +95,7 @@ uses
   {$ENDIF}
   CEOSMessageInput,
   sysutils, CELog,
-  CECommon, CEBaseInput, CEBaseTypes, CEInputMessage;
+  CECommon, CEBaseInput, CEBaseTypes, CEInputMessage, CEEntityMessage;
 
 constructor TDemo.Create(Application: TCEBaseApplication);
 begin
@@ -162,10 +162,6 @@ end;
 
 destructor TDemo.Destroy();
 begin
-  DestroyRenderPassResources(PolyPass);
-  DestroyRenderPassResources(LinePass);
-  DestroyRenderPassResources(SpritePass);
-  DestroyRenderPassResources(MonsterSpritePass);
   FreeAndNil(Core);
   inherited Destroy();
 end;
@@ -173,7 +169,9 @@ end;
 procedure TDemo.HandleMessage(const Msg: TCEMessage);
 begin
   Core.HandleMessage(Msg);
-  if Msg.ClassType() = TTouchMsg then
+  if Msg.ClassType() = TAppActivateMsg then
+    Core.EntityManager.BroadcastMessage(nil, TEntityDataReloadRequestMessage.Create(nil))
+  else if Msg.ClassType() = TTouchMsg then
     if (Renderer.Width > 0) and (Renderer.Height > 0) then
     begin
       case TTouchMsg(Msg).Action of

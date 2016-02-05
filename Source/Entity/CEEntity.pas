@@ -32,7 +32,7 @@ unit CEEntity;
 interface
 
 uses
-  CEBaseTypes, {!}CETemplate, CEProperty, CEIO;
+  CEMessage, CEBaseTypes, {!}CETemplate, CEProperty, CEIO;
 
 const
   // Entity hierarchy delimiter
@@ -81,6 +81,9 @@ type
     destructor Destroy(); override;
     // Returns an entity in hierarchy by its full absolute (starting with "/") name or nil if not found
     function Find(const FullName: TCEEntityName): TCEBaseEntity;
+    // Call HandleMessage(Msg) for the given entity and all its childs recursively. If Entity is nil all entities are affected.
+    procedure BroadcastMessage(Entity: TCEBaseEntity; const Msg: TCEMessage);
+    // Root entity
     property Root: TCEBaseEntity read FRoot write SetRoot;
   end;
 
@@ -135,6 +138,7 @@ type
     FManager: TCEEntityManager;
     procedure SetName(const Value: TCEEntityName);
     procedure SetParent(const Value: TCEBaseEntity);
+    function GetChildsCount(): Integer;
     // Destroys all childs recursively
     procedure DestroyChilds;
     // Destroys all published binary data properties
@@ -192,6 +196,8 @@ type
     procedure AddChild(AEntity: TCEBaseEntity);
     // Returns child with the given name or nil if there is no such child
     function FindChild(const Name: TCEEntityName): TCEBaseEntity;
+    // Handle message. Do nothing by default
+    procedure HandleMessage(const Msg: TCEMessage); override;
 
     { Retrieves a set of entity's properties and their values.
       The basic implementation retrieves published properties using RTTI.
@@ -204,6 +210,9 @@ type
     procedure SetProperties(const Properties: TCEProperties); virtual;
 
     property Parent: TCEBaseEntity read FParent write SetParent;
+    // Current count of childs
+    property ChildsCount: Integer read GetChildsCount;
+    // List of childs. May be nil if there is no childs.
     property Childs: TCEEntityList read FChilds;
     property Manager: TCEEntityManager read FManager;
   published
@@ -272,6 +281,14 @@ begin
     SetManager(FParent.FManager);
 end;
 
+function TCEBaseEntity.GetChildsCount(): Integer;
+begin
+  if Assigned(FChilds) then
+    Result := FChilds.Count
+  else
+    Result := 0;
+end;
+
 procedure TCEBaseEntity.CleanupBinaryData();
 var
   PropInfos: PPropList;
@@ -299,7 +316,7 @@ begin
   end;
 end;
 
-procedure TCEBaseEntity.InternalInit;
+procedure TCEBaseEntity.InternalInit();
 begin
   Assert((not Assigned(FParent)) or (FParent.FManager = FManager), 'Entity manager should be same as parent''s');
   FName := Copy(AnsiString(ClassName), STRING_INDEX_BASE+1, Length(ClassName)-1);
@@ -424,7 +441,7 @@ procedure TCEBaseEntity.AddChild(AEntity: TCEBaseEntity);
 begin
   Assert(Self <> nil);
   Assert(AEntity <> nil);
-  Assert(not Assigned(AEntity.Parent), 'TCEBaseEntity.AddChild: entity "' + AEntity.GetFullName + '" already has a parent');
+//  Assert(not Assigned(AEntity.Parent), 'TCEBaseEntity.AddChild: entity "' + AEntity.GetFullName + '" already has a parent');
   if not Assigned(FChilds) then FChilds := TCEEntityList.Create();
 
   AEntity.FParent := Self;
@@ -440,6 +457,11 @@ begin
   i := FChilds.Count-1;
   while (i >= 0) and (FChilds[i].Name <> Name) do Dec(i);
   if i >= 0 then Result := FChilds[i];
+end;
+
+procedure TCEBaseEntity.HandleMessage(const Msg: TCEMessage);
+begin
+  // do nothing by default
 end;
 
 function TCEBaseEntity.GetProperties(): TCEProperties;
@@ -614,6 +636,22 @@ begin
     ni := GetNextIndex(FullName, pi, len);
   end;
   Result := Result.FindChild(Copy(FullName, pi, ni - pi));
+end;
+
+procedure TCEEntityManager.BroadcastMessage(Entity: TCEBaseEntity; const Msg: TCEMessage);
+var i: Integer;
+begin
+  Assert(Assigned(Msg));
+  Assert(not Assigned(Entity) or (Entity.Manager = Self));
+  if not Assigned(Entity) then
+    Entity := Root;
+  if not Assigned(Entity) then Exit;
+  Entity.HandleMessage(Msg);
+  i := 0;
+  while (i < Entity.ChildsCount) and (Msg.IsValid()) do begin
+    BroadcastMessage(Entity.Childs[i], Msg);
+    Inc(i);
+  end;
 end;
 
 end.

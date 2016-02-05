@@ -136,7 +136,7 @@ type
     destructor Destroy(); override;
   end;
 
-  function PrintShaderInfoLog(Shader: TGLUint; const ShaderType: string): Boolean;
+  function CheckShaderInfoLog(Shader: TGLUint; const ShaderType: string): Boolean;
   function ReportGLErrorDebug(const ErrorLabel: string): Cardinal; {$I inline.inc}
   function ReportGLError(const ErrorLabel: string): Cardinal; {$I inline.inc}
 
@@ -162,7 +162,7 @@ type
 const
   LOGTAG = 'ce.render';
 
-function PrintShaderInfoLog(Shader: TGLUint; const ShaderType: string): Boolean;
+function CheckShaderInfoLog(Shader: TGLUint; const ShaderType: string): Boolean;
 var
   len, Success: TGLint;
   Buffer: PGLchar;
@@ -349,6 +349,7 @@ begin
     end;
     Len := Stream.Read(Buf, BufSize);
   end;
+  Result := true;
 end;
 
 procedure TCEDataDecoderGLSL.Init;
@@ -357,18 +358,48 @@ begin
   FLoadingTypes[0] := GetDataTypeFromExt('glsl');
 end;
 
-{ TCEBaseOpenGLRenderer }
+function CompileShader(Handle: TGLuint; const Source: PAnsiChar; const ErrorTitle: string): Boolean;
+begin
+  glShaderSource(Handle, 1, @Source, nil);
+  glCompileShader(Handle);
+  Result := CheckShaderInfoLog(Handle, ErrorTitle);
+end;
 
-function CreateShader(ShaderType: TGLenum; Source: PAnsiChar): TGLuint;
 const
-  Title: array[Boolean] of String = ('Fragment', 'Vertex');
+  ShaderErrorTitle: array[Boolean] of String = ('fragment shader', 'vertex shader');
+
+function CreateShader(ShaderType: TGLenum; const Source: PAnsiChar): TGLuint;
 begin
   Result := glCreateShader(ShaderType);
-  glShaderSource(Result, 1, @Source, nil);
-  glCompileShader(Result);
-  if not PrintShaderInfoLog(Result, Title[ShaderType = GL_VERTEX_SHADER] + ' shader') then
+  if not CompileShader(Result, Source, ShaderErrorTitle[ShaderType = GL_VERTEX_SHADER]) then
     Result := 0;
 end;
+
+procedure UpdateShader(Pass: TCERenderPass; const Shader: TCEGLSLShader);
+var Updated: Boolean;
+begin
+  Updated := true;
+  if (ufVertexShader in Pass.UpdateFlags) and (Shader.VertexShader > 0) then
+  begin
+    CELog.Info(Pass.Name + ': updating ' + ShaderErrorTitle[true]);
+    Updated := Updated and CompileShader(Shader.VertexShader, PAnsiChar(Pass.VertexShader.Text), ShaderErrorTitle[true]);
+  end;
+  if (ufFragmentShader in Pass.UpdateFlags) and (Shader.FragmentShader > 0) then
+  begin
+    CELog.Info(Pass.Name + ': updating ' + ShaderErrorTitle[false]);
+    Updated := Updated and CompileShader(Shader.FragmentShader, PAnsiChar(Pass.FragmentShader.Text), ShaderErrorTitle[false]);
+  end;
+  Pass.ResetUpdateFlags();
+  if Updated then
+  begin
+    glAttachShader(Shader.ShaderProgram, Shader.VertexShader);
+    glAttachShader(Shader.ShaderProgram, Shader.FragmentShader);
+    glLinkProgram(Shader.ShaderProgram);
+  end;
+  ReportGLErrorDebug('Update shader');
+end;
+
+{ TCEBaseOpenGLRenderer }
 
 procedure TCEBaseOpenGLRenderer.DoInit;
 type
@@ -467,6 +498,8 @@ begin
   if PrId >= 0 then
   begin
     Sh := Shaders.Get(PrId);
+    if Pass.UpdateFlags <> [] then
+      UpdateShader(Pass, Sh);
     glUseProgram(Sh.ShaderProgram);
     {PhaseLocation := glGetUniformLocation(Sh.ShaderProgram, 'phase');
     if PhaseLocation < 0 then begin
@@ -540,7 +573,11 @@ begin
       ptLineList: glDrawArrays(GL_LINES, VertexData^.Status.Offset, Mesh.PrimitiveCount * 2);
       ptLineStrip: glDrawArrays(GL_LINE_STRIP, VertexData^.Status.Offset, Mesh.PrimitiveCount + 1);
       ptTriangleList: glDrawArrays(GL_TRIANGLES, VertexData^.Status.Offset, Mesh.PrimitiveCount * 3);
-      ptTriangleStrip: glDrawArrays(GL_TRIANGLE_STRIP, VertexData^.Status.Offset, Mesh.PrimitiveCount + 2);
+      ptTriangleStrip: begin
+        glPointSize(4);
+        glDrawArrays(GL_TRIANGLE_STRIP, VertexData^.Status.Offset, Mesh.PrimitiveCount + 2);
+        glDrawArrays(GL_POINTS, VertexData^.Status.Offset, Mesh.PrimitiveCount + 2);
+      end;
       ptTriangleFan: glDrawArrays(GL_TRIANGLE_FAN, VertexData^.Status.Offset, Mesh.PrimitiveCount + 2);
       ptQuads:;
     end;

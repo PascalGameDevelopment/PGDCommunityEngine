@@ -31,7 +31,8 @@ unit CEBaseTypes;
 
 interface
 
-uses SysUtils;
+uses
+  SysUtils, CEMessage;
 
 const
   // Index of first character in strings
@@ -144,6 +145,8 @@ type
     function GetFullName: TCEEntityName; virtual; abstract;
     // Set full name of a linked object so it can be resolved in future. See @Link(ResolveObjectLink).
     procedure SetObjectLink(const PropertyName: string; const FullName: TCEEntityName); virtual; abstract;
+    // Handle the given message if it's appropriate for this entity
+    procedure HandleMessage(const Msg: TCEMessage); virtual; abstract;
   end;
   // Abstract entity metaclass
   CCEAbstractEntity = class of TCEAbstractEntity;

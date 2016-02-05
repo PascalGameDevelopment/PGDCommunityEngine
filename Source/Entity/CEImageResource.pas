@@ -59,7 +59,7 @@ type
     // Returns information about specified mip level
     function GetLevelInfo(Index: Integer): PImageLevel;
   protected
-    procedure Init(); override;
+    procedure DoInit(); override;
     // Images with generated mipmaps needs less space in storage stream
     function GetStoredDataSize: Integer; override;
   public
@@ -167,7 +167,7 @@ begin
   Result := FLevels^[Index];
 end;
 
-procedure TCEImageResource.Init;
+procedure TCEImageResource.DoInit();
 begin
   inherited;
   GetMem(FLevels, SizeOf(TImageLevels));

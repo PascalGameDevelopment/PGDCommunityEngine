@@ -63,14 +63,13 @@ type
   private
     FFlags: TMessageFlags;
   public
+    function IsValid(): Boolean;
     // This method overridden to store messages in specific pool
     class function NewInstance: TObject; override;
     // If you erroneously deallocate a message manually the overridden implementation of this method will signal you
     procedure FreeInstance; override;
-
-    // Call this method if you don't want the message to be broadcasted
+    // Call this method if you don't want the message to be broadcasted further
     procedure Invalidate;
-
     // Message flags
     property Flags: TMessageFlags read FFlags write FFlags;
   end;
@@ -231,6 +230,11 @@ type
 {$IFEND}
 
 { TCEMessage }
+
+function TCEMessage.IsValid(): Boolean;
+begin
+  Result := not (mfInvalid in FFlags);
+end;
 
 class function TCEMessage.NewInstance: TObject;
 begin

@@ -186,14 +186,8 @@ begin
 end;
 
 function TCELocalFileLoader.GetResourceModificationTime(const AURL: string): TDateTime;
-var
-  FileName: string;
 begin
-  FileName := GetPathFromURL(AURL);
-  if FileExists(FileName) then
-    Result := GetFileModifiedTime(FileName)
-  else
-    Result := 0;
+  Result := CEIO.GetResourceModificationTime(AURL);
 end;
 
 function FreeCallback(const e: TCEDataLoader; Data: Pointer): Boolean;

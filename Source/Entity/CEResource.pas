@@ -32,7 +32,7 @@ unit CEResource;
 interface
 
 uses
-  CEEntity, CEProperty, CEDataDecoder;
+  CEMessage, CEEntity, CEProperty, CEDataDecoder;
 
 type
   // Resource format type
@@ -67,7 +67,7 @@ type
     procedure SetDataHolder(const Value: TPointerData);
   protected
     // Called from constructor
-    procedure Init(); virtual;
+    procedure DoInit(); override;
     //procedure FlushChanges(); override;
     { Returns resource size in bytes when it is stored.
      For some types (e.g. image with generated mip maps) stored size can be less than regular size. }
@@ -77,10 +77,10 @@ type
     // Sets already allocated and probably ready to use data
     procedure SetAllocated(ASize: Integer; AData: Pointer);
   public
-    constructor Create();
     // Create and loads the resource from the specified URL
-    constructor CreateFromUrl(const Url: string);
+    constructor CreateFromUrl(AManager: TCEEntityManager; const Url: string);
     destructor Destroy(); override;
+    procedure HandleMessage(const Msg: TCEMessage); override;
     { Attempts to load resource data specified by DataURL using data loader and data decoder facilities and returns True if success.
       If NewerOnly is True resource will be loaded only if it was changed since last load.
       If Target is specified loading will be performed directly into Target bypassing Data field. }
@@ -108,7 +108,7 @@ type
     function GetText: AnsiString;
     procedure SetText(const Value: AnsiString);
   protected
-    procedure Init(); override;
+    procedure DoInit(); override;
   public
     destructor Destroy(); override;
     procedure SetBuffer(Buf: PAnsiChar; Len: Integer);
@@ -123,7 +123,7 @@ type
 implementation
 
 uses
-  SysUtils, CEDataLoader, CEDataConverter, CEIO, CELog;
+  SysUtils, CEDataLoader, CEDataConverter, CEIO, CELog, CEEntityMessage;
 
 procedure _SetResourceFormat(Resource: TCEResource; Format: TCEFormat);
 begin
@@ -142,7 +142,7 @@ begin
   FDataHolder := Value;
 end;
 
-procedure TCEResource.Init;
+procedure TCEResource.DoInit();
 begin
   SetDataHolder(TPointerData.Create());
 end;
@@ -176,16 +176,11 @@ begin
   //if Assigned(FManager) and (FDataHolder.Data <> OldData) then SendMessage(TDataAdressChangeMsg.Create(OldData, FData, True), nil, [mfCore, mfBroadcast]);
 end;
 
-constructor TCEResource.Create;
+constructor TCEResource.CreateFromUrl(AManager: TCEEntityManager; const Url: string);
 begin
-  inherited;
-  Init();
-end;
-
-constructor TCEResource.CreateFromUrl(const Url: string);
-begin
-  Create();
+  Create(AManager);
   DataURL := Url;
+  Name := ExtractFileName(Url);
   LoadExternal(False);
 end;
 
@@ -194,6 +189,15 @@ begin
   if Assigned(FDataHolder) then
     FreeAndNil(FDataHolder);
   inherited;
+end;
+
+procedure TCEResource.HandleMessage(const Msg: TCEMessage);
+begin
+  if Msg.ClassType() = TEntityDataReloadRequestMessage then
+  begin
+    if FState in [rsMemory, rsTarget, rsFull] then
+      LoadExternal(true);
+  end;
 end;
 
 function TCEResource.LoadExternal(NewerOnly: Boolean; const Target: TCELoadTarget = nil; MetadataOnly: Boolean = False): Boolean;
@@ -214,10 +218,11 @@ begin
   ResourceModified := Loader.GetResourceModificationTime(FDataURL);
   if NewerOnly and (ResourceModified <= FLastModified) then
   begin
-    CELog.Debug('Resource is up to date: ' + DateTimeToStr(FLastModified) + ', external: ' + DateTimeToStr(ResourceModified));
+    CELog.Debug(Name + ': resource is up to date: ' + DateTimeToStr(FLastModified) + ', external: ' + DateTimeToStr(ResourceModified));
     Exit;
   end;
   FLastModified := ResourceModified;
+  CELog.Debug(Name + ': reloading resource');
 
   Decoder := CEDataDecoder.GetDataDecoder(GetDataTypeIDFromUrl(FDataURL));
   if not Assigned(Decoder) then
@@ -232,7 +237,6 @@ begin
     if not Assigned(Stream) then
       raise ECEIOError.CreateFmt('Can''t obtain data stream by URL: ', [FDataURL]);
 
-    //if Result then SendMessage(TResourceModifyMsg.Create(Self), nil, [mfCore]);
     Entity := Self;
     if Assigned(Target) then begin
       Result := Decoder.Decode(Stream, Entity, Target, MetadataOnly);
@@ -241,6 +245,8 @@ begin
       Result := Decoder.Decode(Stream, Entity, FDataHolder.Data);
       FState := rsMemory;
     end;
+    if Result and Assigned(Manager) then
+      Manager.BroadcastMessage(nil, TEntityDataLoadCompleteMessage.Create(Self));
   finally
     if Assigned(Stream) then
       Stream.Free();
@@ -297,7 +303,7 @@ begin
   FTextData.Data := Value;
 end;
 
-procedure TCETextResource.Init;
+procedure TCETextResource.DoInit();
 begin
   inherited;
   SetDataHolder(TTextData.Create());

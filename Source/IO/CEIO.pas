@@ -297,14 +297,9 @@ begin
     Result := URL;
 end;
 
-function GetResourceModificationTime(const URL: string): TDateTime;
-var FileName: string;
+function IsLocalFileProtocol(const Protocol: AnsiString): Boolean;
 begin
-  FileName := GetPathFromURL(URL);
-  if FileExists(FileName) then
-    Result := GetFileModifiedTime(FileName)
-  else
-    Result := 0;
+  Result := (Protocol = '') or (Protocol = PROTOCOL_FILE) or (Protocol = PROTOCOL_ASSET);
 end;
 
 function JoinPaths(const Path1, Path2: string): string;
@@ -312,31 +307,47 @@ begin
   Result := IncludeTrailingPathDelimiter(Path1) + ExcludeTrailingPathDelimiter(Path2);
 end;
 
-function GetResourceInputStream(const URL: string): TCEInputStream;
+function ResolveFilenameFromUrl(const URL: string): string;
 var
   Protocol: AnsiString;
-  FileName: string;
   AssetsPath: string;
   Config: TCEConfig;
 begin
   Protocol := GetProtocolFromUrl(URL);
-  if (Protocol = '') or (Protocol = PROTOCOL_FILE) or (Protocol = PROTOCOL_ASSET) then
+  if IsLocalFileProtocol(Protocol) then
   begin
-    FileName := GetPathFromURL(URL);
+    Result := GetPathFromURL(URL);
     if Protocol = PROTOCOL_ASSET then
     begin
       Config := CEContext.GetSingleton(TCEConfig) as TCEConfig;
       AssetsPath := Config['Path.Asset'];
-      FileName := GetPathRelativeToFile(ParamStr(0), JoinPaths(AssetsPath, FileName));
-    end;
-    if FileExists(FileName) then
-      Result := TCEFileInputStream.Create(FileName)
-    else begin
-      CELog.Warning('Resource not found by URL: ' + URL);
-      Result := nil;
+      Result := GetPathRelativeToFile(ParamStr(0), JoinPaths(AssetsPath, Result));
     end;
   end else
     Raise ECEIOError.CreateFmt('Unknown protocol in URL: %s', [Protocol]);
+end;
+
+function GetResourceModificationTime(const URL: string): TDateTime;
+var FileName: string;
+begin
+  FileName := ResolveFilenameFromUrl(URL);
+  if FileExists(FileName) then
+    Result := GetFileModifiedTime(FileName)
+  else
+    Result := 0;
+end;
+
+function GetResourceInputStream(const URL: string): TCEInputStream;
+var
+  FileName: string;
+begin
+  FileName := ResolveFilenameFromUrl(URL);
+  if FileExists(FileName) then
+    Result := TCEFileInputStream.Create(FileName)
+  else begin
+    CELog.Warning('Resource not found by URL: ' + URL);
+    Result := nil;
+  end;
 end;
 
 { TCEStream }
