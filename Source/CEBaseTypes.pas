@@ -127,6 +127,22 @@ type
   end;
   PRect = ^TRect;
 
+  // Vector types
+  TCEVector2f = packed record
+    x, y: single;
+  end;
+  TCEVector3f = packed record
+    x, y, z: single;
+  end;
+  TCEVector4f = packed record
+    x, y, z, w: single;
+  end;
+
+  T2DPointArray = array[0..MaxInt div SizeOf(TCEVector2f)-1] of TCEVector2f;
+  T3DPointArray = array[0..MaxInt div SizeOf(TCEVector3f)-1] of TCEVector3f;
+  P2DPointArray = ^T2DPointArray;
+  P3DPointArray = ^T3DPointArray;
+
   // Base error class
   ECEError = Exception;
 
@@ -181,6 +197,14 @@ type
   procedure Rect(ALeft, ATop, ARight, ABottom: Integer; out Result: TRect); {$I inline.inc}
   // Returns the specified by its bounds rectangle record
   function GetRect(ALeft, ATop, ARight, ABottom: Integer): TRect; {$I inline.inc}
+
+  function Vec2f(x, y: Single): TCEVector2f; overload;
+  procedure Vec2f(x, y: Single; out dest: TCEVector2f); overload;
+  function Vec3f(x, y, z: Single): TCEVector3f; overload;
+  procedure Vec3f(x, y, z: Single; out dest: TCEVector3f); overload;
+  function Vec4f(x, y, z, W: Single): TCEVector4f; overload;
+  procedure Vec4f(x, y, z, W: Single; out dest: TCEVector4f); overload;
+
   // Returns filled code location structure
   function GetCodeLoc(const ASourceFilename, AUnitName, AProcedureName: string; ALineNumber: Integer; AAddress: Pointer): TCodeLocation;
   // Converts code location to a readable string
@@ -261,6 +285,42 @@ end;
 function GetRect(ALeft, ATop, ARight, ABottom: Integer): TRect;
 begin
   Rect(ALeft, ATop, ARight, ABottom, Result);
+end;
+
+function Vec2f(x, y: Single): TCEVector2f;
+begin
+  Vec2f(x, y, Result);
+end;
+
+procedure Vec2f(x, y: Single; out dest: TCEVector2f);
+begin
+  dest.x := x;
+  dest.y := y;
+end;
+
+function Vec3f(x, y, z: Single): TCEVector3f;
+begin
+  Vec3f(x, y, z, Result);
+end;
+
+procedure Vec3f(x, y, z: Single; out dest: TCEVector3f);
+begin
+  dest.x := x;
+  dest.y := y;
+  dest.z := z;
+end;
+
+function Vec4f(x, y, z, W: Single): TCEVector4f; overload;
+begin
+  Vec4f(x, y, z, w, Result);
+end;
+
+procedure Vec4f(x, y, z, W: Single; out dest: TCEVector4f); overload;
+begin
+  dest.x := x;
+  dest.y := y;
+  dest.z := z;
+  dest.w := W;
 end;
 
 function GetCodeLoc(const ASourceFilename, AUnitName, AProcedureName: string; ALineNumber: Integer; AAddress: Pointer): TCodeLocation;

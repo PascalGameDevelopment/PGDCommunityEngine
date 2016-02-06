@@ -32,37 +32,16 @@ unit CEVectors;
 
 interface
 
+uses
+  CEBaseTypes;
+
 type
-  TCEVector2f = packed record
-    x, y: single;
-  end;
-  TCEVector3f = packed record
-    x, y, z: single;
-  end;
-  TCEVector4f = packed record
-    x, y, z, w: single;
-  end;
-
-  T2DPointArray = array[0..$FFFFFF] of TCEVector2f;
-  T3DPointArray = array[0..$FFFFFF] of TCEVector3f;
-  P2DPointArray = ^T2DPointArray;
-  P3DPointArray = ^T3DPointArray;
-
-  TCEVector3fArray = array[0..$FFFFFF] of TCEVector3f;
-
   TCEMatrix3 = array[0..2, 0..2] of single;
   TCEMatrix4 = array[0..3, 0..3] of single;
   TCEMatrix = TCEMatrix4;
 
     // Line or segment intersection test result
   TIntersectResult = (irIntersect, irCoincident, irParallel, irOutOfSegment);
-
-  function Vec2f(x, y: Single): TCEVector2f; overload;
-  procedure Vec2f(x, y: Single; out dest: TCEVector2f); overload;
-  function Vec3f(x, y, z: Single): TCEVector3f; overload;
-  procedure Vec3f(x, y, z: Single; out dest: TCEVector3f); overload;
-  function Vec4f(x, y, z, W: Single): TCEVector4f; overload;
-  procedure Vec4f(x, y, z, W: Single; out dest: TCEVector4f); overload;
 
   function VectorNormalize(const V: TCEVector2f): TCEVector2f; overload;
   procedure VectorNormalize(out Result: TCEVector2f; const V: TCEVector2f); overload;
@@ -100,42 +79,6 @@ type
   function GetNearestPointIndex(const Points: P2DPointArray; Count: Integer; const Point: TCEVector2f): Integer;
 
 implementation
-
-function Vec2f(x, y: Single): TCEVector2f;
-begin
-  Vec2f(x, y, Result);
-end;
-
-procedure Vec2f(x, y: Single; out dest: TCEVector2f);
-begin
-  dest.x := x;
-  dest.y := y;
-end;
-
-function Vec3f(x, y, z: Single): TCEVector3f;
-begin
-  Vec3f(x, y, z, Result);
-end;
-
-procedure Vec3f(x, y, z: Single; out dest: TCEVector3f);
-begin
-  dest.x := x;
-  dest.y := y;
-  dest.z := z;
-end;
-
-function Vec4f(x, y, z, W: Single): TCEVector4f; overload;
-begin
-  Vec4f(x, y, z, w, Result);
-end;
-
-procedure Vec4f(x, y, z, W: Single; out dest: TCEVector4f); overload;
-begin
-  dest.x := x;
-  dest.y := y;
-  dest.z := z;
-  dest.w := W;
-end;
 
 function VectorNormalize(const V: TCEVector2f): TCEVector2f; overload;
 var

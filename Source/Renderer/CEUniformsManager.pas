@@ -40,7 +40,7 @@ const
   // Default static data buffer size measured in elements
   DATA_BUFFER_SIZE_STATIC = 65536;
   // Default dynamic data buffer size measured in elements
-  DATA_BUFFER_SIZE_DYNAMIC = 2000;
+  DATA_BUFFER_SIZE_DYNAMIC = 65536;
 
 type
   // Uniforms management class. Used in mesh classes to set uniform constants.
