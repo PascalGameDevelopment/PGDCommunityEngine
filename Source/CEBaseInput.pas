@@ -38,35 +38,39 @@ type
   // Virtual key codes
   TCEVirtualKey = (vkNONE,
                   vkESCAPE,
-                  vk1, vk2, vk3, vk4, vk5, vk6, vk7, vk8, vk9, vk0, vkMINUS, vkEQUALS, vkBACK, vkTAB,
+                  vk1, vk2, vk3, vk4, vk5, vk6, vk7, vk8, vk9, vk0, vkMINUS, vkEQUALS, vkBACKSPACE, vkTAB,
                   vkQ, vkW, vkE, vkR, vkT, vkY, vkU, vkI, vkO, vkP, vkBRACKET_L, vkBRACKET_R,
                   vkRETURN, vkNUMPAD_ENTER,
-                  vkCONTROL_L,
+                  vkCONTROL_L, vkALT_L,
                   vkA, vkS, vkD, vkF, vkG, vkH, vkJ, vkK, vkL, vkSEMICOLON, vkAPOSTROPHE,
                   vkGRAVE,
                   vkSHIFT_L, vkBACKSLASH,
                   vkZ, vkX, vkC, vkV, vkB, vkN, vkM, vkCOMMA, vkPERIOD, vkSLASH,
-                  vkSHIFT_R, vkMULTIPLY, vkMENU_L, vkSPACE, vkCAPITAL,
+                  vkSHIFT_R, vkNUMPAD_MULTIPLY, vkSPACE,
                   vkF1, vkF2, vkF3, vkF4, vkF5, vkF6, vkF7, vkF8, vkF9, vkF10,
                   vkNUM_LOCK, vkSCROLL_LOCK, vkCAPS_LOCK,
-                  vkNUMPAD_7, vkNUMPAD_8, vkNUMPAD_9, vkSUBTRACT, vkNUMPAD_4, vkNUMPAD_5, vkNUMPAD_6,
-                  vkADD, vkNUMPAD_1, vkNUMPAD_2, vkNUMPAD_3, vkNUMPAD_0, vkDECIMAL,
+                  vkNUMPAD_7, vkNUMPAD_8, vkNUMPAD_9, vkNUMPAD_MINUS, vkNUMPAD_4, vkNUMPAD_5, vkNUMPAD_6,
+                  vkNUMPAD_PLUS, vkNUMPAD_1, vkNUMPAD_2, vkNUMPAD_3, vkNUMPAD_0, vkNUMPAD_PERIOD,
                   vkOEM_102,
                   vkF11, vkF12, vkF13, vkF14, vkF15,
                   vkNUMPAD_EQUALS, vkCIRCUMFLEX, vkAT, vkCOLON, vkUNDERLINE, vkKANJI, vkNEXTTRACK,
-                  vkCONTROL_R,
-                  vkNUMPAD_COMMA, vkDIVIDE,
-                  vkSYSRQ, vkMENU_R, vkPAUSE,
-                  vkHOME, vkUP, vkPRIOR, vkLEFT, vkRIGHT, vkEND, vkDOWN,
-                  vkNEXT, vkINSERT, vkDELETE,
+                  vkALT_R, vkCONTROL_R,
+                  vkNUMPAD_COMMA, vkNUMPAD_DIVIDE,
+                  vkSYSRQ, vkPAUSE,
+                  vkHOME, vkUP, vkPGUP, vkLEFT, vkRIGHT, vkEND, vkDOWN,
+                  vkPGDN, vkINSERT, vkDELETE,
                   vkOS_L, vkOS_R, vkAPPS,
-                        //  Alternate names
-                  vkBACKSPACE, vkNUMPAD_STAR, vkALT_L, vkALT_R,
-                  vkNUMPAD_MINUS, vkNUMPAD_PLUS, vkNUMPAD_PERIOD, vkNUMPAD_SLASH,
-                  vkARROW_UP, vkPGUP, vkARROW_LEFT, vkARROW_RIGHT, vkARROW_DOWN, vkPGDN,
-                  vkPREV_TRACK,
                   vkMOUSELEFT, vkMOUSERIGHT, vkMOUSEMIDDLE,
                   vkSHIFT, vkCONTROL, vkALT);
+
+//  Alternate names
+const
+  vkMENU_L = vkALT_L;
+  vkMENU_R = vkALT_R;
+  vkMENU = vkALT;
+  vkPREV_TRACK = vkCIRCUMFLEX;
+
+type
   // Modifier keys
   TKeyModifier  = (// Any CTRL
                    kmControl,

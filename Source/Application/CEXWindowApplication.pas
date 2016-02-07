@@ -189,7 +189,7 @@ begin
   VirtualKeyCodes[vk0] := XK_0;
   VirtualKeyCodes[vkMINUS] := XK_minus;    (* - on main keyboard *)
   VirtualKeyCodes[vkEQUALS] := XK_equal;
-  VirtualKeyCodes[vkBACK] := XK_BackSpace;      (* backspace *)
+  VirtualKeyCodes[vkBACKSPACE] := XK_BackSpace;      (* backspace *)
   VirtualKeyCodes[vkTAB] := XK_Tab;
   VirtualKeyCodes[vkQ] := XK_q;
   VirtualKeyCodes[vkW] := XK_w;
@@ -230,10 +230,10 @@ begin
   VirtualKeyCodes[vkPERIOD] := XK_period;    (* . on main keyboard *)
   VirtualKeyCodes[vkSLASH] := XK_slash;    (* / on main keyboard *)
   VirtualKeyCodes[vkSHIFT_R] := XK_Shift_R;
-  VirtualKeyCodes[vkMULTIPLY] := XK_KP_Multiply;    (* * on numeric keypad *)
-  VirtualKeyCodes[vkMENU_L] := XK_Alt_L;    (* left Alt *)
+  VirtualKeyCodes[vkNUMPAD_MULTIPLY] := XK_KP_Multiply;    (* * on numeric keypad *)
+  VirtualKeyCodes[vkALT_L] := XK_Alt_L;    (* left Alt *)
   VirtualKeyCodes[vkSPACE] := XK_space;
-  VirtualKeyCodes[vkCAPITAL] := XK_Caps_Lock;
+  VirtualKeyCodes[vkCAPS_LOCK] := XK_Caps_Lock;
   VirtualKeyCodes[vkF1] := XK_F1;
   VirtualKeyCodes[vkF2] := XK_F2;
   VirtualKeyCodes[vkF3] := XK_F3;
@@ -249,16 +249,16 @@ begin
   VirtualKeyCodes[vkNUMPAD_7] := XK_KP_7;
   VirtualKeyCodes[vkNUMPAD_8] := XK_KP_8;
   VirtualKeyCodes[vkNUMPAD_9] := XK_KP_9;
-  VirtualKeyCodes[vkSUBTRACT] := XK_KP_Subtract;    (* - on numeric keypad *)
+  VirtualKeyCodes[vkNUMPAD_MINUS] := XK_KP_Subtract;    (* - on numeric keypad *)
   VirtualKeyCodes[vkNUMPAD_4] := XK_KP_4;
   VirtualKeyCodes[vkNUMPAD_5] := XK_KP_5;
   VirtualKeyCodes[vkNUMPAD_6] := XK_KP_6;
-  VirtualKeyCodes[vkADD] := XK_KP_Add;    (* + on numeric keypad *)
+  VirtualKeyCodes[vkNUMPAD_PLUS] := XK_KP_Add;    (* + on numeric keypad *)
   VirtualKeyCodes[vkNUMPAD_1] := XK_KP_1;
   VirtualKeyCodes[vkNUMPAD_2] := XK_KP_2;
   VirtualKeyCodes[vkNUMPAD_3] := XK_KP_3;
   VirtualKeyCodes[vkNUMPAD_0] := XK_KP_0;
-  VirtualKeyCodes[vkDECIMAL] := XK_KP_Decimal;     (* . on numeric keypad *)
+  VirtualKeyCodes[vkNUMPAD_PERIOD] := XK_KP_Decimal;     (* . on numeric keypad *)
 
   VirtualKeyCodes[vkOEM_102] := XK_asterisk;    (* < > | on UK/Germany keyboards *)
   VirtualKeyCodes[vkF11] := XK_F11;
@@ -278,19 +278,19 @@ begin
   VirtualKeyCodes[vkCONTROL_R] := XK_Control_R;
 
   VirtualKeyCodes[vkNUMPAD_COMMA] := XK_KP_Separator;    (* , on numeric keypad (NEC PC98) *)
-  VirtualKeyCodes[vkDIVIDE] := XK_KP_Divide;    (* / on numeric keypad *)
+  VirtualKeyCodes[vkNUMPAD_DIVIDE] := XK_KP_Divide;    (* / on numeric keypad *)
   VirtualKeyCodes[vkSYSRQ] := XK_Sys_Req;
-  VirtualKeyCodes[vkMENU_R] := XK_Alt_R;    (* right Alt *)
+  VirtualKeyCodes[vkALT_R] := XK_Alt_R;    (* right Alt *)
   VirtualKeyCodes[vkPAUSE] := XK_Pause;     (* Pause (watch out - not realiable on some kbds) *)
   VirtualKeyCodes[vkHOME] := XK_Home;     (* Home on arrow keypad *)
   VirtualKeyCodes[vkUP] := XK_UP;     (* UpArrow on arrow keypad *)
-  VirtualKeyCodes[vkPRIOR] := XK_Page_Up;     (* PgUp on arrow keypad *)
+  VirtualKeyCodes[vkPGUP] := XK_Page_Up;     (* PgUp on arrow keypad *)
 
   VirtualKeyCodes[vkLEFT] := XK_Left;     (* LeftArrow on arrow keypad *)
   VirtualKeyCodes[vkRIGHT] := XK_Right;     (* RightArrow on arrow keypad *)
   VirtualKeyCodes[vkEND] := XK_End;     (* End on arrow keypad *)
   VirtualKeyCodes[vkDOWN] := XK_Down;     (* DownArrow on arrow keypad *)
-  VirtualKeyCodes[vkNEXT] := XK_Page_Down;     (* PgDn on arrow keypad *)
+  VirtualKeyCodes[vkPGDN] := XK_Page_Down;     (* PgDn on arrow keypad *)
   VirtualKeyCodes[vkINSERT] := XK_INSERT;     (* Insert on arrow keypad *)
   VirtualKeyCodes[vkDELETE] := XK_Delete;     (* Delete on arrow keypad *)
   VirtualKeyCodes[vkOS_L] := XK_Meta_L;     (* Left Windows key *)
@@ -300,23 +300,6 @@ begin
 (*
   *  Alternate names for keys, to facilitate transition from DOS.
   *)
-  VirtualKeyCodes[vkBACKSPACE] := VirtualKeyCodes[vkBACK];      (* backspace *)
-  VirtualKeyCodes[vkNUMPAD_STAR] := VirtualKeyCodes[vkMULTIPLY];  (* * on numeric keypad *)
-  VirtualKeyCodes[vkALT_L] := VirtualKeyCodes[vkMENU_L];     (* left Alt *)
-  VirtualKeyCodes[vkCAPS_LOCK] := VirtualKeyCodes[vkCAPITAL];   (* CapsLock *)
-  VirtualKeyCodes[vkNUMPAD_MINUS] := VirtualKeyCodes[vkSUBTRACT];  (* - on numeric keypad *)
-  VirtualKeyCodes[vkNUMPAD_PLUS] := VirtualKeyCodes[vkADD];       (* + on numeric keypad *)
-  VirtualKeyCodes[vkNUMPAD_PERIOD] := VirtualKeyCodes[vkDECIMAL];   (* . on numeric keypad *)
-  VirtualKeyCodes[vkNUMPAD_SLASH] := VirtualKeyCodes[vkDIVIDE];    (* / on numeric keypad *)
-  VirtualKeyCodes[vkALT_R] := VirtualKeyCodes[vkMENU_R];     (* right Alt *)
-  VirtualKeyCodes[vkARROW_UP] := VirtualKeyCodes[vkUP];        (* UpArrow on arrow keypad *)
-  VirtualKeyCodes[vkPGUP] := VirtualKeyCodes[vkPRIOR];     (* PgUp on arrow keypad *)
-  VirtualKeyCodes[vkARROW_LEFT] := VirtualKeyCodes[vkLEFT];      (* LeftArrow on arrow keypad *)
-  VirtualKeyCodes[vkARROW_RIGHT] := VirtualKeyCodes[vkRIGHT];     (* RightArrow on arrow keypad *)
-  VirtualKeyCodes[vkARROW_DOWN] := VirtualKeyCodes[vkDOWN];      (* DownArrow on arrow keypad *)
-  VirtualKeyCodes[vkPGDN] := VirtualKeyCodes[vkNEXT];      (* PgDn on arrow keypad *)
-
-  VirtualKeyCodes[vkPREV_TRACK] := VirtualKeyCodes[vkCIRCUMFLEX];  (* Japanese keyboard *)
 
   VirtualKeyCodes[vkMOUSELEFT] := $1;
   VirtualKeyCodes[vkMOUSERIGHT] := $2;

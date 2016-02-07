@@ -35,7 +35,7 @@ uses
   CEBaseApplication,
   CEBaseRenderer,
   CEMesh, CE2DMesh, CEGameEntity,
-  CEMessage, CEInputMessage, CEBaseTypes, CEMaterial, CECore;
+  CEMessage, CEInputMessage, CEBaseTypes, CEMaterial, CECore, CESplines;
 
 type
   TRotatingTriangle = class(TCEGameEntity)
@@ -45,6 +45,7 @@ type
 
   TDemo = class(TObject)
   private
+    Spline: TSpline;
     App: TCEBaseApplication;
     Renderer: TCEBaseRenderer;
     Core: TCECore;
@@ -101,7 +102,7 @@ uses
   {$ENDIF}
   CEOSMessageInput,
   sysutils, CELog, CEOSUtils,
-  CECommon, CEBaseInput, CEEntityMessage, CEVectors, CESplines;
+  CECommon, CEBaseInput, CEEntityMessage, CEVectors;
 
 procedure TCERotatingTriangleMesh.SetAngle(const Value: Single);
 begin
@@ -133,9 +134,16 @@ begin
 end;
 
 procedure TDemo.ApplyPoints(Mesh: TCENPointMesh; CPoints: P2DPointArray; Count: Integer);
+var
+  i: Integer;
 begin
-  Mesh.Count := (Count-1) * (SplineResolution) + 1;
-  CalcCatmullRom2D(Count, SplineResolution, CPoints, Mesh.Points);
+  Mesh.Count := (Count - 1) * (SplineResolution) + 1;
+  //CalcCatmullRom2D(Count, SplineResolution, CPoints, Mesh.Points);
+  for i := 0 to Mesh.Count - 1 do
+  begin
+    Mesh.Points^[i].x := Spline.Value[i*(Count-1)/(Mesh.Count - 1), 0];
+    Mesh.Points^[i].y := Spline.Value[i*(Count-1)/(Mesh.Count - 1), 1];
+  end;
 end;
 
 constructor TDemo.Create(Application: TCEBaseApplication);
@@ -165,6 +173,7 @@ begin
   LineMesh.Softness := 2 / 1024 * 1.3 * 1;
   LineMesh.Width := 1 / 1024 * 1.3;
 
+  Spline := TSpline.Create();
   SplineResolution := 8;
   ControlPointsCount := 6;
   GetMem(ControlPoints, (ControlPointsCount + 1) * SizeOf(TCEVector2f));
@@ -176,6 +185,7 @@ begin
   ControlPoints^[3] := Vec2f( 0.5, -0.5);
   ControlPoints^[4] := Vec2f( 0.0, -0.5);
   ControlPoints^[5] := Vec2f(-0.5, -0.5);
+  Spline.SetSamples(ControlPointsCount, PSingleBuffer(ControlPoints));
 
   ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
 
@@ -213,7 +223,7 @@ end;
 destructor TDemo.Destroy();
 begin
   FreeAndNil(Core);
-  Freemem(ControlPoints);
+  FreeAndNil(Spline);
   inherited Destroy();
 end;
 
@@ -221,16 +231,16 @@ procedure TDemo.HandleKey(Msg: TKeyboardMsg);
 begin
   if Msg.Action = iaUp then
   begin
-    if Msg.Key = vkDIVIDE then begin
+    if Msg.Key = vkNUMPAD_DIVIDE then begin
       SplineResolution := MaxI(1, SplineResolution - 1);
       ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
-    end else if Msg.Key = vkMULTIPLY then begin
-      SplineResolution := MinI(100, SplineResolution + 1);
+    end else if Msg.Key = vkNUMPAD_MULTIPLY then begin
+      SplineResolution := MinI(200, SplineResolution + 1);
       ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
-    end else if Msg.Key = vkSUBTRACT then begin
+    end else if Msg.Key = vkNUMPAD_MINUS then begin
       LineMesh.Width := MaxS(0.5/1024, LineMesh.Width - ClampS(LineMesh.Width*0.1, 0.1/1024, 5/1024));
       ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
-    end else if Msg.Key = vkADD then begin
+    end else if Msg.Key = vkNUMPAD_PLUS then begin
       LineMesh.Width := MinS(100/1024, LineMesh.Width + ClampS(LineMesh.Width*0.1, 0.1/1024, 5/1024));
       ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
     end;
@@ -248,15 +258,15 @@ begin
     if (Renderer.Width > 0) and (Renderer.Height > 0) then
     begin
       case TTouchMsg(Msg).Action of
-      iaDown: begin
-        ClickPoint := Vec2f(Core.Input.MouseState.X / Renderer.Width * 2 - 1, 1 - Core.Input.MouseState.Y / Renderer.Height * 2);
-        Ids[TTouchMsg(Msg).PointerId] := GetNearestPointIndex(PolyMesh.Points, PolyMesh.Count, ClickPoint);
-        PolyMesh.Point[Ids[TTouchMsg(Msg).PointerId]] := ClickPoint;
-      end;
-      iaUp: Ids[TTouchMsg(Msg).PointerId] := -1;
-      iaMotion: PolyMesh.Point[Ids[TTouchMsg(Msg).PointerId]] :=
-        Vec2f(Core.Input.MouseState.X / Renderer.Width * 2 - 1, 1 - Core.Input.MouseState.Y / Renderer.Height * 2);
-      else FillChar(Ids, SizeOf(Ids), 255);
+        iaDown: begin
+          ClickPoint := Vec2f(Core.Input.MouseState.X / Renderer.Width * 2 - 1, 1 - Core.Input.MouseState.Y / Renderer.Height * 2);
+          Ids[TTouchMsg(Msg).PointerId] := GetNearestPointIndex(PolyMesh.Points, PolyMesh.Count, ClickPoint);
+          PolyMesh.Point[Ids[TTouchMsg(Msg).PointerId]] := ClickPoint;
+        end;
+        iaUp: Ids[TTouchMsg(Msg).PointerId] := -1;
+        iaMotion: PolyMesh.Point[Ids[TTouchMsg(Msg).PointerId]] :=
+          Vec2f(Core.Input.MouseState.X / Renderer.Width * 2 - 1, 1 - Core.Input.MouseState.Y / Renderer.Height * 2);
+        else FillChar(Ids, SizeOf(Ids), 255);
       end;
       //CELog.Debug('Touch: ' + IntToStr(Ord(Action)) + ', but: ' + IntToStr(Ord(Button)));
     end;

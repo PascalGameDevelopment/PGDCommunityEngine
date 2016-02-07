@@ -219,6 +219,7 @@ var
 begin
   Assert(Param <= FSamplesCount);
   Assert(Channel < FStride);
+  CalcKoeffs(0, FSamplesCount - 2);
   i := MinI(FSamplesCount-2, trunc(Param));
   T := Param - i;
   i := i*FStride + Channel;
@@ -280,7 +281,6 @@ begin
     FreeMem(Koeff);
   if FSamplesCount > 0 then
     GetMem(Koeff, (FSamplesCount - 1) * SizeOf(TSplineKoeff) * FStride);
-  CalcKoeffs(0, FSamplesCount - 2);
 end;
 
 end.
