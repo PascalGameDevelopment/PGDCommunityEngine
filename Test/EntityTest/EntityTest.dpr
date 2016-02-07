@@ -32,7 +32,7 @@ program EntityTest;
 {$APPTYPE CONSOLE}
 
 uses
-  SysUtils, CEBaseTypes, CEEntity, CECommon, CEProperty, CEIO, Tester, CEResource, CEImageResource;
+  SysUtils, CEEntity, CECommon, CEProperty, CEIO, Tester, CEResource;
 
 type
   TTestEnum = (tteOpt1, tteOpt2, tteOpt3);

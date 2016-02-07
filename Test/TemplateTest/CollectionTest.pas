@@ -32,7 +32,7 @@ unit CollectionTest;
 interface
 
 uses
-  SysUtils, CECommon, Tester, CETemplate;
+  SysUtils, CEBaseTypes, CECommon, Tester, CETemplate;
 
 type
   _HashMapKeyType = Integer;

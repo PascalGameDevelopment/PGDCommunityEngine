@@ -139,6 +139,8 @@ end;
 
 procedure TCEResource.SetDataHolder(const Value: TPointerData);
 begin
+  if Assigned(FDataHolder) then
+    FDataHolder.Free();
   FDataHolder := Value;
 end;
 
@@ -287,6 +289,8 @@ end;
 
 procedure TCETextResource.SetDataHolder(const Value: TTextData);
 begin
+  if Assigned(FTextData) then
+    FTextData.Free();
   FTextData := Value;
 end;
 
