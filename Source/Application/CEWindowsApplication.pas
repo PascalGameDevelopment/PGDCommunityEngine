@@ -100,9 +100,9 @@ begin
     end;
     WM_MOVE:    Result := TWindowMoveMsg.Create(lParam and 65535, lParam shr 16);
     WM_CHAR:    Result := TCharInputMsg.Create(Chr(wParam), lParam);
-    WM_KEYUP:   Result := TKeyboardMsg.Create(iaUp, wParam, (lParam shr 16) and $FF);
+    WM_KEYUP:   Result := TKeyboardMsg.Create(iaUp, CEBaseInput.GetVirtualKeyByKeyCode(wParam), (lParam shr 16) and $FF);
     WM_KEYDOWN, WM_SYSKEYDOWN: if lParam and CHANGED_MASK = 0 then
-      Result := TKeyboardMsg.Create(iaDown, wParam, (lParam shr 16) and $FF);
+      Result := TKeyboardMsg.Create(iaDown, CEBaseInput.GetVirtualKeyByKeyCode(wParam), (lParam shr 16) and $FF);
     WM_LBUTTONDOWN: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), iaDown, mbLeft);
     WM_MBUTTONDOWN: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), iaDown, mbMiddle);
     WM_RBUTTONDOWN: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), iaDown, mbRight);
@@ -139,143 +139,143 @@ end;
 // Virtual key codes initialization
 procedure TCEWindowsApplication.InitKeyCodes();
 begin
-  vkESCAPE          := 27;
-  vk1               :=Ord('1');
-  vk2               :=Ord('2');
-  vk3               :=Ord('3');
-  vk4               :=Ord('4');
-  vk5               :=Ord('5');
-  vk6               :=Ord('6');
-  vk7               :=Ord('7');
-  vk8               :=Ord('8');
-  vk9               :=Ord('9');
-  vk0               :=Ord('0');
-  vkMINUS           :=189;    (* - on main keyboard *)
-  vkEQUALS          :=187;
-  vkBACK            :=8;      (* backspace *)
-  vkTAB             :=9;
-  vkQ               :=Ord('Q');
-  vkW               :=Ord('W');
-  vkE               :=Ord('E');
-  vkR               :=Ord('R');
-  vkT               :=Ord('T');
-  vkY               :=Ord('Y');
-  vkU               :=Ord('U');
-  vkI               :=Ord('I');
-  vkO               :=Ord('O');
-  vkP               :=Ord('P');
-  vkLBRACKET        :=219;
-  vkRBRACKET        :=221;
-  vkRETURN          :=13;     (* Enter on main keyboard *)
-  vkLCONTROL        :=162;
-  vkA               :=Ord('A');
-  vkS               :=Ord('S');
-  vkD               :=Ord('D');
-  vkF               :=Ord('F');
-  vkG               :=Ord('G');
-  vkH               :=Ord('H');
-  vkJ               :=Ord('J');
-  vkK               :=Ord('K');
-  vkL               :=Ord('L');
-  vkSEMICOLON       :=186;
-  vkAPOSTROPHE      :=222;
-  vkGRAVE           :=192; (* accent grave *)
-  vkLSHIFT          :=160;
-  vkBACKSLASH       :=220;
-  vkZ               :=Ord('Z');
-  vkX               :=Ord('X');
-  vkC               :=Ord('C');
-  vkV               :=Ord('V');
-  vkB               :=Ord('B');
-  vkN               :=Ord('N');
-  vkM               :=Ord('M');
-  vkCOMMA           :=188;
-  vkPERIOD          :=190;    (* . on main keyboard *)
-  vkSLASH           :=191;    (* / on main keyboard *)
-  vkRSHIFT          :=161;
-  vkMULTIPLY        :=106;    (* * on numeric keypad *)
-  vkLMENU           :=164;    (* left Alt *)
-  vkSPACE           :=32;
-  vkCAPITAL         :=20;
-  vkF1              :=112;
-  vkF2              :=113;
-  vkF3              :=114;
-  vkF4              :=115;
-  vkF5              :=116;
-  vkF6              :=117;
-  vkF7              :=118;
-  vkF8              :=119;
-  vkF9              :=120;
-  vkF10             :=121;
-  vkNUMLOCK         :=144;
-  vkSCROLL          :=145;    (* Scroll Lock *)
-  vkNUMPAD7         :=36;
-  vkNUMPAD8         :=38;
-  vkNUMPAD9         :=33;
-  vkSUBTRACT        :=109;    (* - on numeric keypad *)
-  vkNUMPAD4         :=37;
-  vkNUMPAD5         :=12;
-  vkNUMPAD6         :=39;
-  vkADD             :=107;    (* + on numeric keypad *)
-  vkNUMPAD1         :=35;
-  vkNUMPAD2         :=40;
-  vkNUMPAD3         :=34;
-  vkNUMPAD0         :=45;
-  vkDECIMAL         :=46;     (* . on numeric keypad *)
+  VirtualKeyCodes[vkESCAPE] := 27;
+  VirtualKeyCodes[vk1] := Ord('1');
+  VirtualKeyCodes[vk2] := Ord('2');
+  VirtualKeyCodes[vk3] := Ord('3');
+  VirtualKeyCodes[vk4] := Ord('4');
+  VirtualKeyCodes[vk5] := Ord('5');
+  VirtualKeyCodes[vk6] := Ord('6');
+  VirtualKeyCodes[vk7] := Ord('7');
+  VirtualKeyCodes[vk8] := Ord('8');
+  VirtualKeyCodes[vk9] := Ord('9');
+  VirtualKeyCodes[vk0] := Ord('0');
+  VirtualKeyCodes[vkMINUS] := 189;    (* - on main keyboard *)
+  VirtualKeyCodes[vkEQUALS] := 187;
+  VirtualKeyCodes[vkBACK] := 8;      (* backspace *)
+  VirtualKeyCodes[vkTAB] := 9;
+  VirtualKeyCodes[vkQ] := Ord('Q');
+  VirtualKeyCodes[vkW] := Ord('W');
+  VirtualKeyCodes[vkE] := Ord('E');
+  VirtualKeyCodes[vkR] := Ord('R');
+  VirtualKeyCodes[vkT] := Ord('T');
+  VirtualKeyCodes[vkY] := Ord('Y');
+  VirtualKeyCodes[vkU] := Ord('U');
+  VirtualKeyCodes[vkI] := Ord('I');
+  VirtualKeyCodes[vkO] := Ord('O');
+  VirtualKeyCodes[vkP] := Ord('P');
+  VirtualKeyCodes[vkBRACKET_L] := 219;
+  VirtualKeyCodes[vkBRACKET_R] := 221;
+  VirtualKeyCodes[vkRETURN] := 13;     (* Enter on main keyboard *)
+  VirtualKeyCodes[vkCONTROL_L] := 162;
+  VirtualKeyCodes[vkA] := Ord('A');
+  VirtualKeyCodes[vkS] := Ord('S');
+  VirtualKeyCodes[vkD] := Ord('D');
+  VirtualKeyCodes[vkF] := Ord('F');
+  VirtualKeyCodes[vkG] := Ord('G');
+  VirtualKeyCodes[vkH] := Ord('H');
+  VirtualKeyCodes[vkJ] := Ord('J');
+  VirtualKeyCodes[vkK] := Ord('K');
+  VirtualKeyCodes[vkL] := Ord('L');
+  VirtualKeyCodes[vkSEMICOLON] := 186;
+  VirtualKeyCodes[vkAPOSTROPHE] := 222;
+  VirtualKeyCodes[vkGRAVE] := 192; (* accent grave *)
+  VirtualKeyCodes[vkSHIFT_L] := 160;
+  VirtualKeyCodes[vkBACKSLASH] := 220;
+  VirtualKeyCodes[vkZ] := Ord('Z');
+  VirtualKeyCodes[vkX] := Ord('X');
+  VirtualKeyCodes[vkC] := Ord('C');
+  VirtualKeyCodes[vkV] := Ord('V');
+  VirtualKeyCodes[vkB] := Ord('B');
+  VirtualKeyCodes[vkN] := Ord('N');
+  VirtualKeyCodes[vkM] := Ord('M');
+  VirtualKeyCodes[vkCOMMA] := 188;
+  VirtualKeyCodes[vkPERIOD] := 190;    (* . on main keyboard *)
+  VirtualKeyCodes[vkSLASH] := 191;    (* / on main keyboard *)
+  VirtualKeyCodes[vkSHIFT_R] := 161;
+  VirtualKeyCodes[vkMULTIPLY] := 106;    (* * on numeric keypad *)
+  VirtualKeyCodes[vkMENU_L] := 164;    (* left Alt *)
+  VirtualKeyCodes[vkSPACE] := 32;
+  VirtualKeyCodes[vkCAPITAL] := 20;
+  VirtualKeyCodes[vkF1] := 112;
+  VirtualKeyCodes[vkF2] := 113;
+  VirtualKeyCodes[vkF3] := 114;
+  VirtualKeyCodes[vkF4] := 115;
+  VirtualKeyCodes[vkF5] := 116;
+  VirtualKeyCodes[vkF6] := 117;
+  VirtualKeyCodes[vkF7] := 118;
+  VirtualKeyCodes[vkF8] := 119;
+  VirtualKeyCodes[vkF9] := 120;
+  VirtualKeyCodes[vkF10] := 121;
+  VirtualKeyCodes[vkNUM_LOCK] := 144;
+  VirtualKeyCodes[vkSCROLL_LOCK] := 145;    (* Scroll Lock *)
+  VirtualKeyCodes[vkNUMPAD_7] := 36;
+  VirtualKeyCodes[vkNUMPAD_8] := 38;
+  VirtualKeyCodes[vkNUMPAD_9] := 33;
+  VirtualKeyCodes[vkSUBTRACT] := 109;    (* - on numeric keypad *)
+  VirtualKeyCodes[vkNUMPAD_4] := 37;
+  VirtualKeyCodes[vkNUMPAD_5] := 12;
+  VirtualKeyCodes[vkNUMPAD_6] := 39;
+  VirtualKeyCodes[vkADD] := 107;    (* + on numeric keypad *)
+  VirtualKeyCodes[vkNUMPAD_1] := 35;
+  VirtualKeyCodes[vkNUMPAD_2] := 40;
+  VirtualKeyCodes[vkNUMPAD_3] := 34;
+  VirtualKeyCodes[vkNUMPAD_0] := 45;
+  VirtualKeyCodes[vkDECIMAL] := 46;     (* . on numeric keypad *)
   // $54 to $55 unassigned
-  vkOEM_102         :=$56;    (* < > | on UK/Germany keyboards *)
-  vkF11             :=122;
-  vkF12             :=123;
+  VirtualKeyCodes[vkOEM_102] := $56;    (* < > | on UK/Germany keyboards *)
+  VirtualKeyCodes[vkF11] := 122;
+  VirtualKeyCodes[vkF12] := 123;
   // $59 to $63 unassigned
-  vkF13             :=$64;    (*                     (NEC PC98) *)
-  vkF14             :=$65;    (*                     (NEC PC98) *)
-  vkF15             :=$66;    (*                     (NEC PC98) *)
+  VirtualKeyCodes[vkF13] := $64;    (*                     (NEC PC98) *)
+  VirtualKeyCodes[vkF14] := $65;    (*                     (NEC PC98) *)
+  VirtualKeyCodes[vkF15] := $66;    (*                     (NEC PC98) *)
   // $67 to $6F unassigned
   // $74 to $78 unassigned
   // $7A unassigned
   // $7C unassigned
   // $7F to 8C unassigned
-  vkNUMPADEQUALS    :=13;     (* :=on numeric keypad (NEC PC98) *)
+  VirtualKeyCodes[vkNUMPAD_EQUALS] := 13;     (* :=on numeric keypad (NEC PC98) *)
   // $8E to $8F unassigned
-  vkCIRCUMFLEX      :=$90;    (* (Japanese keyboard)            *)
-  vkAT              :=$91;    (*                     (NEC PC98) *)
-  vkCOLON           :=$92;    (*                     (NEC PC98) *)
-  vkUNDERLINE       :=$93;    (*                     (NEC PC98) *)
-  vkKANJI           :=$94;    (* (Japanese keyboard)            *)
+  VirtualKeyCodes[vkCIRCUMFLEX] := $90;    (* (Japanese keyboard)            *)
+  VirtualKeyCodes[vkAT] := $91;    (*                     (NEC PC98) *)
+  VirtualKeyCodes[vkCOLON] := $92;    (*                     (NEC PC98) *)
+  VirtualKeyCodes[vkUNDERLINE] := $93;    (*                     (NEC PC98) *)
+  VirtualKeyCodes[vkKANJI] := $94;    (* (Japanese keyboard)            *)
   // $98 unassigned
-  vkNEXTTRACK       :=$99;    (* Next Track *)
+  VirtualKeyCodes[vkNEXTTRACK] := $99;    (* Next Track *)
   // $9A to $9D unassigned
-  vkNUMPADENTER     :=13;     (* Enter on numeric keypad *)
-  vkRCONTROL        :=163;
+  VirtualKeyCodes[vkNUMPAD_ENTER] := 13;     (* Enter on numeric keypad *)
+  VirtualKeyCodes[vkCONTROL_R] := 163;
   // $9E to $9F unassigned
   // $A5 to $AD unassigned
   // $AF unassigned
   // $B1 unassigned
-  vkNUMPADCOMMA     :=$B3;    (* , on numeric keypad (NEC PC98) *)
+  VirtualKeyCodes[vkNUMPAD_COMMA] := $B3;    (* , on numeric keypad (NEC PC98) *)
   // $B4 unassigned
-  vkDIVIDE          :=111;    (* / on numeric keypad *)
+  VirtualKeyCodes[vkDIVIDE] := 111;    (* / on numeric keypad *)
   // $B6 unassigned
-  vkSYSRQ           :=$B7;
-  vkRMENU           :=165;    (* right Alt *)
+  VirtualKeyCodes[vkSYSRQ] := $B7;
+  VirtualKeyCodes[vkMENU_R] := 165;    (* right Alt *)
   // $B9 to $C4 unassigned
-  vkPAUSE           :=19;     (* Pause (watch out - not realiable on some kbds) *)
+  VirtualKeyCodes[vkPAUSE] := 19;     (* Pause (watch out - not realiable on some kbds) *)
   // $C6 unassigned
-  vkHOME            :=36;     (* Home on arrow keypad *)
-  vkUP              :=38;     (* UpArrow on arrow keypad *)
-  vkPRIOR           :=33;     (* PgUp on arrow keypad *)
+  VirtualKeyCodes[vkHOME] := 36;     (* Home on arrow keypad *)
+  VirtualKeyCodes[vkUP] := 38;     (* UpArrow on arrow keypad *)
+  VirtualKeyCodes[vkPRIOR] := 33;     (* PgUp on arrow keypad *)
   // $CA unassigned
-  vkLEFT            :=37;     (* LeftArrow on arrow keypad *)
+  VirtualKeyCodes[vkLEFT] := 37;     (* LeftArrow on arrow keypad *)
   // $CC unassigned
-  vkRIGHT           :=39;     (* RightArrow on arrow keypad *)
+  VirtualKeyCodes[vkRIGHT] := 39;     (* RightArrow on arrow keypad *)
   // $CE unassigned
-  vkEND             :=35;     (* End on arrow keypad *)
-  vkDOWN            :=40;     (* DownArrow on arrow keypad *)
-  vkNEXT            :=34;     (* PgDn on arrow keypad *)
-  vkINSERT          :=45;     (* Insert on arrow keypad *)
-  vkDELETE          :=46;     (* Delete on arrow keypad *)
-  vkLOS             :=91;     (* Left Windows key *)
-  vkROS             :=92;     (* Right Windows key *)
-  vkAPPS            :=93;     (* AppMenu key *)
+  VirtualKeyCodes[vkEND] := 35;     (* End on arrow keypad *)
+  VirtualKeyCodes[vkDOWN] := 40;     (* DownArrow on arrow keypad *)
+  VirtualKeyCodes[vkNEXT] := 34;     (* PgDn on arrow keypad *)
+  VirtualKeyCodes[vkINSERT] := 45;     (* Insert on arrow keypad *)
+  VirtualKeyCodes[vkDELETE] := 46;     (* Delete on arrow keypad *)
+  VirtualKeyCodes[vkOS_L] := 91;     (* Left Windows key *)
+  VirtualKeyCodes[vkOS_R] := 92;     (* Right Windows key *)
+  VirtualKeyCodes[vkAPPS] := 93;     (* AppMenu key *)
   // $E0 to $E2 unassigned
   // $E4 unassigned
 
@@ -283,40 +283,39 @@ begin
 (*
   *  Alternate names for keys, to facilitate transition from DOS.
   *)
-  vkBACKSPACE      :=vkBACK;      (* backspace *)
-  vkNUMPADSTAR     :=vkMULTIPLY;  (* * on numeric keypad *)
-  vkLALT           :=vkLMENU;     (* left Alt *)
-  vkCAPSLOCK       :=vkCAPITAL;   (* CapsLock *)
-  vkNUMPADMINUS    :=vkSUBTRACT;  (* - on numeric keypad *)
-  vkNUMPADPLUS     :=vkADD;       (* + on numeric keypad *)
-  vkNUMPADPERIOD   :=vkDECIMAL;   (* . on numeric keypad *)
-  vkNUMPADSLASH    :=vkDIVIDE;    (* / on numeric keypad *)
-  vkRALT           :=vkRMENU;     (* right Alt *)
-  vkUPARROW        :=vkUP;        (* UpArrow on arrow keypad *)
-  vkPGUP           :=vkPRIOR;     (* PgUp on arrow keypad *)
-  vkLEFTARROW      :=vkLEFT;      (* LeftArrow on arrow keypad *)
-  vkRIGHTARROW     :=vkRIGHT;     (* RightArrow on arrow keypad *)
-  vkDOWNARROW      :=vkDOWN;      (* DownArrow on arrow keypad *)
-  vkPGDN           :=vkNEXT;      (* PgDn on arrow keypad *)
+  VirtualKeyCodes[vkBACKSPACE] := VirtualKeyCodes[vkBACK];      (* backspace *)
+  VirtualKeyCodes[vkNUMPAD_STAR] := VirtualKeyCodes[vkMULTIPLY];  (* * on numeric keypad *)
+  VirtualKeyCodes[vkALT_L] := VirtualKeyCodes[vkMENU_L];     (* left Alt *)
+  VirtualKeyCodes[vkCAPS_LOCK] := VirtualKeyCodes[vkCAPITAL];   (* CapsLock *)
+  VirtualKeyCodes[vkNUMPAD_MINUS] := VirtualKeyCodes[vkSUBTRACT];  (* - on numeric keypad *)
+  VirtualKeyCodes[vkNUMPAD_PLUS] := VirtualKeyCodes[vkADD];       (* + on numeric keypad *)
+  VirtualKeyCodes[vkNUMPAD_PERIOD] := VirtualKeyCodes[vkDECIMAL];   (* . on numeric keypad *)
+  VirtualKeyCodes[vkNUMPAD_SLASH] := VirtualKeyCodes[vkDIVIDE];    (* / on numeric keypad *)
+  VirtualKeyCodes[vkALT_R] := VirtualKeyCodes[vkMENU_R];     (* right Alt *)
+  VirtualKeyCodes[vkARROW_UP] := VirtualKeyCodes[vkUP];        (* UpArrow on arrow keypad *)
+  VirtualKeyCodes[vkPGUP] := VirtualKeyCodes[vkPRIOR];     (* PgUp on arrow keypad *)
+  VirtualKeyCodes[vkARROW_LEFT] := VirtualKeyCodes[vkLEFT];      (* LeftArrow on arrow keypad *)
+  VirtualKeyCodes[vkARROW_RIGHT] := VirtualKeyCodes[vkRIGHT];     (* RightArrow on arrow keypad *)
+  VirtualKeyCodes[vkARROW_DOWN] := VirtualKeyCodes[vkDOWN];      (* DownArrow on arrow keypad *)
+  VirtualKeyCodes[vkPGDN] := VirtualKeyCodes[vkNEXT];      (* PgDn on arrow keypad *)
 
 (*
   *  Alternate names for keys originally not used on US keyboards.
   *)
+  VirtualKeyCodes[vkPREV_TRACK] := VirtualKeyCodes[vkCIRCUMFLEX];  (* Japanese keyboard *)
 
-  vkPREVTRACK      :=vkCIRCUMFLEX;  (* Japanese keyboard *)
+  VirtualKeyCodes[vkMOUSELEFT] := $1;
+  VirtualKeyCodes[vkMOUSERIGHT] := $2;
+  VirtualKeyCodes[vkMOUSEMIDDLE] := $4;
 
-  vkMOUSELEFT       :=$1;
-  vkMOUSERIGHT      :=$2;
-  vkMOUSEMIDDLE     :=$4;
+  VirtualKeyCodes[vkSHIFT] := 16;
+  VirtualKeyCodes[vkCONTROL] := 17;
+  VirtualKeyCodes[vkALT] := 18;
 
-  vkSHIFT :=16;
-  vkCONTROL :=17;
-  vkALT :=18;
-
-  vkMOUSEBUTTON[mbLeft]    := vkMOUSELEFT;
-  vkMOUSEBUTTON[mbRight]   := vkMOUSERIGHT;
-  vkMOUSEBUTTON[mbMiddle]  := vkMOUSEMIDDLE;
-  vkMOUSEBUTTON[mbCustom1] := vkNONE;
+  vkMOUSEBUTTON[mbLeft] := VirtualKeyCodes[vkMOUSELEFT];
+  vkMOUSEBUTTON[mbRight] := VirtualKeyCodes[vkMOUSERIGHT];
+  vkMOUSEBUTTON[mbMiddle] := VirtualKeyCodes[vkMOUSEMIDDLE];
+  vkMOUSEBUTTON[mbCustom1] := VirtualKeyCodes[vkNONE];
 end;
 
 function TCEWindowsApplication.DoCreateWindow(): Boolean;

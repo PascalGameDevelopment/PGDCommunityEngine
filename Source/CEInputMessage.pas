@@ -31,7 +31,7 @@ unit CEInputMessage;
 
 interface
 
-uses CEMessage, CEBaseTypes;
+uses CEMessage, CEBaseTypes, CEBaseInput;
 
 type
   // Base class for user-input messages

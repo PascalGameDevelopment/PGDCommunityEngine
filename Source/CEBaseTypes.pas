@@ -86,8 +86,6 @@ type
       True: (B, G, R, A: Byte);
   end;
 
-  // Identifier of a virtual key which may be a key on keyboard, mouse etc
-  TCEVirtualKey = Byte;
   // Input action
   TInputAction = (
           // Release of button or touch screen

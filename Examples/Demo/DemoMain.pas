@@ -153,7 +153,7 @@ begin
   PolyMesh := TCEPolygonMesh.Create(Core.EntityManager);
   PolyMesh.Count := 4;
   PolyMesh.Point[3] := Vec2f(-0.5, -0.5);
-  PolyMesh.Point[2] := Vec2f( 0.0,  -0.4);
+  PolyMesh.Point[2] := Vec2f( 0.0, -0.4);
   PolyMesh.Point[1] := Vec2f( 0.2, 0.4);
   PolyMesh.Point[0] := Vec2f(-0.3, 0.5);
   PolyMesh.Softness := 2 / 1024 * 1.5;
@@ -217,7 +217,6 @@ procedure TDemo.HandleKey(Msg: TKeyboardMsg);
 begin
   if Msg.Action = iaUp then
   begin
-    WriteLn('===', Msg.Key, ' ', vkDIVIDE, ' ', vkMULTIPLY, ' ', vkSUBTRACT, ' ', vkADD, ' ');
     if Msg.Key = vkDIVIDE then begin
       SplineResolution := MaxI(1, SplineResolution - 1);
       ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
@@ -278,8 +277,8 @@ begin
   Renderer.ApplyRenderPass(MonsterSpritePass);
   Renderer.RenderMesh(SpriteMesh2);}
 
-  if Core.Input.Pressed[vkNUMPAD6] or (Core.Input.MouseState.Buttons[mbLeft] = iaDown) then Speed := Speed + 4;
-  if Core.Input.Pressed[vkNUMPAD4] or (Core.Input.MouseState.Buttons[mbRight] = iaDown) then Speed := Speed - 4;
+  if Core.Input.Pressed[vkNUMPAD_6] or (Core.Input.MouseState.Buttons[mbLeft] = iaDown) then Speed := Speed + 4;
+  if Core.Input.Pressed[vkNUMPAD_4] or (Core.Input.MouseState.Buttons[mbRight] = iaDown) then Speed := Speed - 4;
   Speed := Clamps(Speed, -360, 360);
 
   if Core.Input.Pressed[vkALT] and Core.Input.Pressed[vkX] then App.Terminated := True;
@@ -287,8 +286,7 @@ begin
   begin
     if (Renderer.Width > 0) and (Renderer.Height > 0) then
     begin
-      ClickPoint
-        := Vec2f(Core.Input.MouseState.X / Renderer.Width * 2 - 1, 1 - Core.Input.MouseState.Y / Renderer.Height * 2);
+      ClickPoint := Vec2f(Core.Input.MouseState.X / Renderer.Width * 2 - 1, 1 - Core.Input.MouseState.Y / Renderer.Height * 2);
       Ind := GetNearestPointIndex(ControlPoints, ControlPointsCount, ClickPoint);
       ControlPoints^[Ind] := ClickPoint;
       ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);

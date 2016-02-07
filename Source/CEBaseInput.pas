@@ -35,6 +35,38 @@ uses
   CEMessage, CEBaseTypes;
 
 type
+  // Virtual key codes
+  TCEVirtualKey = (vkNONE,
+                  vkESCAPE,
+                  vk1, vk2, vk3, vk4, vk5, vk6, vk7, vk8, vk9, vk0, vkMINUS, vkEQUALS, vkBACK, vkTAB,
+                  vkQ, vkW, vkE, vkR, vkT, vkY, vkU, vkI, vkO, vkP, vkBRACKET_L, vkBRACKET_R,
+                  vkRETURN, vkNUMPAD_ENTER,
+                  vkCONTROL_L,
+                  vkA, vkS, vkD, vkF, vkG, vkH, vkJ, vkK, vkL, vkSEMICOLON, vkAPOSTROPHE,
+                  vkGRAVE,
+                  vkSHIFT_L, vkBACKSLASH,
+                  vkZ, vkX, vkC, vkV, vkB, vkN, vkM, vkCOMMA, vkPERIOD, vkSLASH,
+                  vkSHIFT_R, vkMULTIPLY, vkMENU_L, vkSPACE, vkCAPITAL,
+                  vkF1, vkF2, vkF3, vkF4, vkF5, vkF6, vkF7, vkF8, vkF9, vkF10,
+                  vkNUM_LOCK, vkSCROLL_LOCK, vkCAPS_LOCK,
+                  vkNUMPAD_7, vkNUMPAD_8, vkNUMPAD_9, vkSUBTRACT, vkNUMPAD_4, vkNUMPAD_5, vkNUMPAD_6,
+                  vkADD, vkNUMPAD_1, vkNUMPAD_2, vkNUMPAD_3, vkNUMPAD_0, vkDECIMAL,
+                  vkOEM_102,
+                  vkF11, vkF12, vkF13, vkF14, vkF15,
+                  vkNUMPAD_EQUALS, vkCIRCUMFLEX, vkAT, vkCOLON, vkUNDERLINE, vkKANJI, vkNEXTTRACK,
+                  vkCONTROL_R,
+                  vkNUMPAD_COMMA, vkDIVIDE,
+                  vkSYSRQ, vkMENU_R, vkPAUSE,
+                  vkHOME, vkUP, vkPRIOR, vkLEFT, vkRIGHT, vkEND, vkDOWN,
+                  vkNEXT, vkINSERT, vkDELETE,
+                  vkOS_L, vkOS_R, vkAPPS,
+                        //  Alternate names
+                  vkBACKSPACE, vkNUMPAD_STAR, vkALT_L, vkALT_R,
+                  vkNUMPAD_MINUS, vkNUMPAD_PLUS, vkNUMPAD_PERIOD, vkNUMPAD_SLASH,
+                  vkARROW_UP, vkPGUP, vkARROW_LEFT, vkARROW_RIGHT, vkARROW_DOWN, vkPGDN,
+                  vkPREV_TRACK,
+                  vkMOUSELEFT, vkMOUSERIGHT, vkMOUSEMIDDLE,
+                  vkSHIFT, vkCONTROL, vkALT);
   // Modifier keys
   TKeyModifier  = (// Any CTRL
                    kmControl,
@@ -113,54 +145,23 @@ type
     end;
 
 var
-  // Virtual key codes
-  vkNONE: Integer = 0;
-  vkESCAPE,
-  vk1, vk2, vk3, vk4, vk5, vk6, vk7, vk8, vk9, vk0,
-  vkMINUS, vkEQUALS, vkBACK, vkTAB,
-  vkQ, vkW, vkE, vkR, vkT, vkY, vkU, vkI, vkO, vkP,
-  vkLBRACKET, vkRBRACKET,
-  vkRETURN,
-  vkLCONTROL,
-  vkA, vkS, vkD, vkF, vkG, vkH, vkJ, vkK, vkL,
-  vkSEMICOLON, vkAPOSTROPHE, vkGRAVE,
-  vkLSHIFT,
-  vkBACKSLASH,
-  vkZ, vkX, vkC, vkV, vkB, vkN, vkM,
-  vkCOMMA, vkPERIOD, vkSLASH,
-  vkRSHIFT,
-  vkMULTIPLY,
-  vkLMENU,
-  vkSPACE,
-  vkCAPITAL,
-  vkF1, vkF2, vkF3, vkF4, vkF5, vkF6, vkF7, vkF8, vkF9, vkF10,
-  vkNUMLOCK, vkSCROLL,
-  vkNUMPAD7, vkNUMPAD8, vkNUMPAD9, vkSUBTRACT, vkNUMPAD4, vkNUMPAD5, vkNUMPAD6,
-  vkADD, vkNUMPAD1, vkNUMPAD2, vkNUMPAD3, vkNUMPAD0, vkDECIMAL,
-  vkOEM_102,
-  vkF11, vkF12,
-  vkF13, vkF14, vkF15,
-  vkNUMPADEQUALS, vkCIRCUMFLEX,
-  vkAT, vkCOLON, vkUNDERLINE, vkKANJI,
-  vkNEXTTRACK,
-  vkNUMPADENTER,
-  vkRCONTROL,
-  vkNUMPADCOMMA, vkDIVIDE,
-  vkSYSRQ, vkRMENU, vkPAUSE,
-  vkHOME, vkUP, vkPRIOR, vkLEFT, vkRIGHT, vkEND, vkDOWN,
-  vkNEXT, vkINSERT, vkDELETE,
-  vkLOS, vkROS, vkAPPS,
-  //  Alternate names
-  vkBACKSPACE, vkNUMPADSTAR, vkLALT, vkCAPSLOCK,
-  vkNUMPADMINUS, vkNUMPADPLUS, vkNUMPADPERIOD, vkNUMPADSLASH,
-  vkRALT,
-  vkUPARROW, vkPGUP, vkLEFTARROW, vkRIGHTARROW, vkDOWNARROW, vkPGDN,
-  vkPREVTRACK, vkMOUSELEFT, vkMOUSERIGHT, vkMOUSEMIDDLE,
-  vkSHIFT, vkCONTROL, vkALT: Integer;
-
+  // Maps virtual key codes to platform specific key codes. Initialized typically by OS-dependent application class.
+  VirtualKeyCodes: array[TCEVirtualKey] of Integer;
+  // Maps virtual MOUSE BUTTON to platform specific key codes. Initialized typically by OS-dependent application class.
   vkMOUSEBUTTON: array[TMouseButton] of Integer;
 
+// Returns virtual key code by platform specific key code
+function GetVirtualKeyByKeyCode(Code: Integer): TCEVirtualKey;
+
 implementation
+
+function GetVirtualKeyByKeyCode(Code: Integer): TCEVirtualKey;
+begin
+  for Result := Low(VirtualKeyCodes) to High(VirtualKeyCodes) do
+    if VirtualKeyCodes[Result] = Code then
+      Exit;
+  Result := vkNONE;
+end;
 
 { TCEBaseInput }
 
