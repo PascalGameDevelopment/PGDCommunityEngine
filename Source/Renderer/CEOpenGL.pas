@@ -103,13 +103,13 @@ type
     procedure DoFinalizeGAPI(); override;
     function DoInitGAPIPlatform(App: TCEBaseApplication): Boolean; virtual; abstract;
     procedure DoFinalizeGAPIPlatform(); virtual; abstract;
+    procedure DoNextFrame(); override;
 
     function InitShader(Pass: TCERenderPass): Integer;
   public
     procedure ApplyRenderPass(Pass: TCERenderPass); override;
     procedure RenderMesh(Mesh: TCEMesh); override;
     procedure Clear(Flags: TCEClearFlags; Color: TCEColor; Z: Single; Stencil: Cardinal); override;
-    procedure NextFrame; override;
   end;
 
   TCEOpenGLUniformsManager = class(TCEUniformsManager)
@@ -375,7 +375,7 @@ begin
     Result := 0;
 end;
 
-function LinkShader(const Shader: TCEGLSLShader): Boolean;
+procedure LinkShader(const Shader: TCEGLSLShader);
 begin
   glAttachShader(Shader.ShaderProgram, Shader.VertexShader);
   glAttachShader(Shader.ShaderProgram, Shader.FragmentShader);
@@ -453,6 +453,16 @@ begin
   Shaders.ForEach(FreeCallback, nil);
   Shaders.Free();
   Shaders := nil;
+end;
+
+procedure TCEBaseOpenGLRenderer.DoNextFrame();
+begin
+  {$IFDEF WINDOWS}
+  SwapBuffers(FOGLDC);                  // Display the scene
+  {$ENDIF}
+  {$IFDEF XWINDOW}
+  glXSwapBuffers(FDisplay, FRenderWindowHandle);
+  {$ENDIF}
 end;
 
 function TCEBaseOpenGLRenderer.InitShader(Pass: TCERenderPass): Integer;
@@ -587,9 +597,9 @@ begin
       ptLineStrip: glDrawArrays(GL_LINE_STRIP, VertexData^.Status.Offset, Mesh.PrimitiveCount + 1);
       ptTriangleList: glDrawArrays(GL_TRIANGLES, VertexData^.Status.Offset, Mesh.PrimitiveCount * 3);
       ptTriangleStrip: begin
-        glPointSize(4);
         glDrawArrays(GL_TRIANGLE_STRIP, VertexData^.Status.Offset, Mesh.PrimitiveCount + 2);
-        glDrawArrays(GL_POINTS, VertexData^.Status.Offset, Mesh.PrimitiveCount + 2);
+        //glPointSize(4);
+        //glDrawArrays(GL_POINTS, VertexData^.Status.Offset, Mesh.PrimitiveCount + 2);
       end;
       ptTriangleFan: glDrawArrays(GL_TRIANGLE_FAN, VertexData^.Status.Offset, Mesh.PrimitiveCount + 2);
       ptQuads:;
@@ -625,17 +635,6 @@ begin
 
   glClear(GL_COLOR_BUFFER_BIT * Ord(cfColor in Flags) or GL_DEPTH_BUFFER_BIT * Ord(cfDepth in Flags) or
           GL_STENCIL_BITS * Ord(cfStencil in Flags));
-end;
-
-procedure TCEBaseOpenGLRenderer.NextFrame;
-begin
-  if not Active then Exit;
-  {$IFDEF WINDOWS}
-  SwapBuffers(FOGLDC);                  // Display the scene
-  {$ENDIF}
-  {$IFDEF XWINDOW}
-  glXSwapBuffers(FDisplay, FRenderWindowHandle);
-  {$ENDIF}
 end;
 
 { TCEOpenGLES2UniformsManager }

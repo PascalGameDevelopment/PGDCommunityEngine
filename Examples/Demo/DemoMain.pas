@@ -60,6 +60,8 @@ type
     SplineResolution: Integer;
     ControlPoints: P2DPointArray;
     ControlPointsCount: Integer;
+    LastFrameNum: Cardinal;
+    LastFPSTime: Int64;
     procedure ApplyPoints(Mesh: TCENPointMesh; CPoints: P2DPointArray; Count: Integer);
   public
     constructor Create(Application: TCEBaseApplication);
@@ -98,7 +100,7 @@ uses
   {$ENDIF}
   {$ENDIF}
   CEOSMessageInput,
-  sysutils, CELog,
+  sysutils, CELog, CEOSUtils,
   CECommon, CEBaseInput, CEEntityMessage, CEVectors, CESplines;
 
 procedure TCERotatingTriangleMesh.SetAngle(const Value: Single);
@@ -132,7 +134,7 @@ end;
 
 procedure TDemo.ApplyPoints(Mesh: TCENPointMesh; CPoints: P2DPointArray; Count: Integer);
 begin
-  Mesh.Count := (Count) * (SplineResolution) + 1;
+  Mesh.Count := (Count-1) * (SplineResolution) + 1;
   CalcCatmullRom2D(Count, SplineResolution, CPoints, Mesh.Points);
 end;
 
@@ -204,6 +206,8 @@ begin
   //Core.OnUpdateDelegate := Mesh.Update;
 
   FillChar(Ids, SizeOf(Ids), 255);
+
+  LastFPSTime := GetCurrentMs();
 end;
 
 destructor TDemo.Destroy();
@@ -259,6 +263,10 @@ begin
 end;
 
 function TDemo.Process(): Boolean;
+const
+  FPS_INTERVAL = 500;
+var
+  LTime: Int64;
 begin
   if App.Terminated then begin
     Result := false;
@@ -294,6 +302,13 @@ begin
     end;
   end;
   Core.Process();
+  LTime := CEOSUtils.GetCurrentMs();
+  if (LTime - LastFPSTime) > FPS_INTERVAL then
+  begin
+    CELog.Info('FPS: ' + FloatToStr((Core.Renderer.FrameNum - LastFrameNum) * 1000 / (LTime - LastFPSTime)));
+    LastFrameNum := Core.Renderer.FrameNum;
+    LastFPSTime := LTime;
+  end;
 end;
 
 end.

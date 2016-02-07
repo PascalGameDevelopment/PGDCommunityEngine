@@ -61,6 +61,8 @@ type
 
   // Abstract renderer class
   TCEBaseRenderer = class(TCESubSystem)
+  private
+    FFrameNum: Cardinal;
   protected
     FUniformsManager: TCEUniformsManager;
     FBufferManager: TCERenderBufferManager;
@@ -73,6 +75,8 @@ type
     procedure DoFinalizeGAPI(); virtual; abstract;
     // Handle render context resize
     procedure HandleResize(Msg: TWindowResizeMsg); virtual; abstract;
+    // Performs necessary GAPI calls to finish and present current frame
+    procedure DoNextFrame(); virtual; abstract;
   public
     // Current render area width
     Width,
@@ -88,16 +92,18 @@ type
     procedure RenderMesh(Mesh: TCEMesh); virtual; abstract;
     // Clear current render target
     procedure Clear(Flags: TCEClearFlags; Color: TCEColor; Z: Single; Stencil: Cardinal); virtual; abstract;
-    // Performs necessary GAPI calls to finish and present current frame
-    procedure NextFrame(); virtual; abstract;
+    // Increments frame and calls DoNextFrame
+    procedure NextFrame();
     // Determines if the renderer should render anything
     property Active: Boolean read FActive write FActive;
+    // Current frame number
+    property FrameNum: Cardinal read FFrameNum;
   end;
 
 implementation
 
 uses
-  CELog;
+  CELog, CEOSUtils;
 
 { TCEBaseRenderer }
 
@@ -130,6 +136,13 @@ begin
     Width := TWindowResizeMsg(Msg).NewWidth;
     Height := TWindowResizeMsg(Msg).NewHeight;
   end;
+end;
+
+procedure TCEBaseRenderer.NextFrame();
+begin
+  if not Active then Exit;
+  DoNextFrame();
+  Inc(FFrameNum);
 end;
 
 end.

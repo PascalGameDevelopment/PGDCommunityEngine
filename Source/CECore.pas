@@ -47,7 +47,7 @@ type
 
   TCECore = class
   private
-    LastTime: Int64;
+    LastUpdateTime: Int64;
     FOnUpdateDelegate: TUpdateDelegate;
     procedure DoUpdate();
     procedure DoRender();
@@ -95,11 +95,11 @@ var
 begin
   LTime := CEOSUtils.GetCurrentMs();
   if Assigned(OnUpdateDelegate) then
-    OnUpdateDelegate((LTime - LastTime) * 0.001)
+    OnUpdateDelegate((LTime - LastUpdateTime) * 0.001)
   else
-    Update((LTime - LastTime) * 0.001);
+    Update((LTime - LastUpdateTime) * 0.001);
 
-  LastTime := LTime;
+  LastUpdateTime := LTime;
 end;
 
 procedure TCECore.DoRender();
