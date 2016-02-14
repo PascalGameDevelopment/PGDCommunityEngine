@@ -236,7 +236,7 @@ begin
 end;
 
 const
-  EPSILON = 0.000001;
+  EPSILON = 0.00001;
 
 function LineIntersect(const AP1, AP2, BP1, BP2: TCEVector2f; out Hit: TCEVector2f): TIntersectResult;
 begin

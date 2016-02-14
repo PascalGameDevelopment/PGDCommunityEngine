@@ -32,7 +32,7 @@ unit CE2DMesh;
 interface
 
 uses
-  CEBaseTypes, CEMesh, CEVectors, CEUniformsManager;
+  CEBaseTypes, CEMesh, CEUniformsManager;
 
 type
   // Sprite mesh class
@@ -127,7 +127,8 @@ type
 implementation
 
 uses
-  CECommon;
+  CECommon,
+  CEVectors;
 
 type
   TLineVertex = packed record
@@ -229,7 +230,7 @@ procedure CalcDir(const P1, P2: TCEVector2f; w: Single; out Dir: TCEVector2f);
 var
   Dist: Single;
 begin
-  Dir := VectorSub(P2, P1);
+  VectorSub(Dir, P2, P1);
   Dist := Sqr(Dir.X) + Sqr(Dir.Y);
   if Dist > 0 then
     Dist := w * InvSqrt(Dist)
@@ -240,23 +241,11 @@ begin
 end;
 
 function CalcVertex(const P1, D1, P2, D2: TCEVector2f; Width: Single; out Res: TCEVector2f): TCVRes;
-var
-  Dist: Single;
-  V: TCEVector2f;
 begin
   if (RayIntersect(P1, D1, P2, D2, Res) = irIntersect) then
+    Result := rIntersect
+  else if VectorDot(D1, D2) < 0 then
   begin
-    V := VectorSub(Res, P2);
-    Dist := V.x * V.x + V.y * V.y;                        //TODO
-    if Dist > Sqr(Width) then
-    begin
-      Res := VectorAdd(P2, VectorScale(V, Width * InvSqrt(Dist) * (Ord(V.x * D1.x + V.y * D1.y > 0) * 2 - 1)));
-      Result := rSharp;
-    end else
-      Result := rIntersect;
-  end else if VectorDot(D1, D2) < 0 then
-  begin
-    Res := VectorAdd(P2, D2);
     Res := P2;
     Result := rInvDir;
   end else begin
@@ -304,7 +293,7 @@ begin
   CalcDir(P1, P2, w, Dir2);
   Norm1 := Vec2f(-Dir1.y, Dir1.x);
   Norm2 := Vec2f(-Dir2.y, Dir2.x);
-  res := CalcVertex(VectorSub(P0, Norm1), Dir1, VectorSub(P1, Norm2), Dir2, w * 1000000, P3);
+  res := CalcVertex(VectorSub(P0, Norm1), Dir1, VectorSub(P1, Norm2), Dir2, w, P3);
   Sign := 2 * Ord(SignedAreaX2(Dir1, Dir2) < 0) - 1;
   VectorSub(Tmp1, P1, P3);
   MinD := MinS(VectorMagnitudeSq(VectorSub(P0, P1)), VectorMagnitudeSq(VectorSub(P2, P1)));
