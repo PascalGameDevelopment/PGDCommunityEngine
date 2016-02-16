@@ -350,7 +350,7 @@ begin
   case Header.BitsPerPixel of                                  // ToDo: Test with more .bmp files and fix if necessary
     15, 16: Header.Format := pfR5G6B5;
     24:     Header.Format := pfB8G8R8;
-    32:     Header.Format := pfA8R8G8B8;
+    32:     Header.Format := pfB8G8R8A8;
   end;
 
   Header.PaletteSize := InfoHeader.biClrUsed;

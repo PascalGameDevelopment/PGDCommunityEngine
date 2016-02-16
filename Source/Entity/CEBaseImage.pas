@@ -45,7 +45,7 @@ type
                     pfR5G6B5  = 4,  pfR5G5B5   = 5,  pfA1R5G5B5 = 6,  pfA4R4G4B4 = 7,
                     pfA8      = 8,  pfA8P8     = 9,  pfP8       = 10, pfL8       = 11,
                     pfA8L8    = 12, pfA4L4     = 13,
-                    pfB8G8R8  = 14, pfR8G8B8A8 = 15, pfA1B5G5R5 = 16,
+                    pfB8G8R8  = 14, pfB8G8R8A8 = 15, pfA1B5G5R5 = 16,
                     pfD16     = 20, pfD24      = 21, pfD32      = 22,  pfD15S1   = 23, pfD24S8 = 24,
                     pfATIDF16 = 40, pfATIDF24  = 41,
                     pfDXT1    = 50, pfDXT3     = 51, pfDXT5     = 52
@@ -104,7 +104,7 @@ function GetBitsPerPixel(PixelFormat: TCEPixelFormat): Integer;
 begin
   Result := 0;
   case PixelFormat of
-    pfA8R8G8B8, pfD32, pfD24S8, pfD24, pfR8G8B8A8: Result := 32;
+    pfA8R8G8B8, pfD32, pfD24S8, pfD24, pfB8G8R8A8: Result := 32;
     pfR8G8B8, pfB8G8R8, pfATIDF24: Result := 24;
     pfR5G6B5, pfR5G5B5, pfA1R5G5B5, pfA4R4G4B4, pfA8P8, pfA8L8,
     pfD15S1, pfD16, pfA1B5G5R5, pfATIDF16: Result := 16;

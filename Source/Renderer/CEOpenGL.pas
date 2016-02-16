@@ -32,7 +32,7 @@ unit CEOpenGL;
 interface
 
 uses
-  CEBaseTypes, CEEntity, CEBaseApplication, CEBaseRenderer, CEMesh, CEMaterial, CEVectors,
+  CEBaseTypes, CEEntity, CEBaseApplication, CEBaseRenderer, CEMesh, CEMaterial,
   {$IFDEF GLES20}
     {$IFDEF OPENGLES_EMULATION}
     GLES20Regal,
@@ -145,7 +145,7 @@ type
 implementation
 
 uses
-  SysUtils, CEStrUtils, CEResource, CEImageResource, CELog, CECommon;
+  SysUtils, CEStrUtils, CEResource, CEBaseImage, CEImageResource, CELog, CECommon;
 
 const
   SAMPLER_PREFIX = 'SAMPLER';
@@ -487,11 +487,30 @@ begin
 end;
 
 procedure UpdateTexture(Image: TCEImageResource; TexId: glUint);
+var
+  GLFormat: GLenum;
+  BpP: Integer;
 begin
   if (TexId > 0) then
   begin
-    glBindTexture(GL_TEXTURE_2D, TexId);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, Image.Width, Image.Height, 0, GL_RGB, GL_UNSIGNED_BYTE, Image.Data);
+    GLFormat := GL_RGBA;
+    BpP := GetBitsPerPixel(TCEPixelFormat(Image.Format));
+    if BpP >= 8 then begin
+      glBindTexture(GL_TEXTURE_2D, TexId);
+      case TCEPixelFormat(Image.Format) of
+        pfR8G8B8: GLFormat := GL_RGB;
+        pfA8R8G8B8: GLFormat := GL_RGBA;
+        pfR5G6B5: GLFormat := GL_RGB565;
+        pfR5G5B5: GLFormat := GL_RGB5;
+        pfA1R5G5B5: GLFormat := GL_RGB5_A1;
+        pfA4R4G4B4: GLFormat := GL_RGBA4;
+        pfB8G8R8: GLFormat := GL_BGR;
+        pfB8G8R8A8: GLFormat := GL_BGRA;
+        pfA1B5G5R5: GLFormat := GL_RGBA4;
+        else CELog.Error('UpdateTexture: Unsupported image format: ' + IntToStr(Image.Format));
+      end;
+      glTexImage2D(GL_TEXTURE_2D, 0, BpP div 8, Image.Width, Image.Height, 0, GLFormat, GL_UNSIGNED_BYTE, Image.Data);
+    end;
   end;
 end;
 
