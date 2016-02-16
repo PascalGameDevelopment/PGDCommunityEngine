@@ -435,8 +435,8 @@ end;
 
 { TCEDataDecoderBmp }
 
-function TCEDataDecoderBmp.DoDecode(Stream: TCEInputStream; var Entity: TCEBaseEntity; const Target: TCELoadTarget;
-  MetadataOnly: Boolean): Boolean;
+function TCEDataDecoderBmp.DoDecode(Stream: TCEInputStream; var Entity: TCEBaseEntity;
+                                    const Target: TCELoadTarget; MetadataOnly: Boolean): Boolean;
 var
   BMPHeader: TImageHeader;
 begin

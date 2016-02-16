@@ -100,7 +100,7 @@ begin
     end;
     WM_MOVE:    Result := TWindowMoveMsg.Create(lParam and 65535, lParam shr 16);
     WM_CHAR:    Result := TCharInputMsg.Create(Chr(wParam), lParam);
-    WM_KEYUP:   Result := TKeyboardMsg.Create(iaUp, CEBaseInput.GetVirtualKeyByKeyCode(wParam), (lParam shr 16) and $FF);
+    WM_KEYUP, WM_SYSKEYUP: Result := TKeyboardMsg.Create(iaUp, CEBaseInput.GetVirtualKeyByKeyCode(wParam), (lParam shr 16) and $FF);
     WM_KEYDOWN, WM_SYSKEYDOWN: if lParam and CHANGED_MASK = 0 then
       Result := TKeyboardMsg.Create(iaDown, CEBaseInput.GetVirtualKeyByKeyCode(wParam), (lParam shr 16) and $FF);
     WM_LBUTTONDOWN: Result := TMouseButtonMsg.Create(GetX(lParam), GetY(lParam), iaDown, mbLeft);
@@ -166,6 +166,8 @@ begin
   VirtualKeyCodes[vkP] := Ord('P');
   VirtualKeyCodes[vkBRACKET_L] := 219;
   VirtualKeyCodes[vkBRACKET_R] := 221;
+  VirtualKeyCodes[vkPAREN_L] := 0;
+  VirtualKeyCodes[vkPAREN_R] := 0;
   VirtualKeyCodes[vkRETURN] := 13;     (* Enter on main keyboard *)
   VirtualKeyCodes[vkCONTROL_L] := 162;
   VirtualKeyCodes[vkA] := Ord('A');

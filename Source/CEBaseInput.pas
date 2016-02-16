@@ -39,7 +39,7 @@ type
   TCEVirtualKey = (vkNONE,
                   vkESCAPE,
                   vk1, vk2, vk3, vk4, vk5, vk6, vk7, vk8, vk9, vk0, vkMINUS, vkEQUALS, vkBACKSPACE, vkTAB,
-                  vkQ, vkW, vkE, vkR, vkT, vkY, vkU, vkI, vkO, vkP, vkBRACKET_L, vkBRACKET_R,
+                  vkQ, vkW, vkE, vkR, vkT, vkY, vkU, vkI, vkO, vkP, vkBRACKET_L, vkBRACKET_R, vkPAREN_L, vkPAREN_R,
                   vkRETURN, vkNUMPAD_ENTER,
                   vkCONTROL_L, vkALT_L,
                   vkA, vkS, vkD, vkF, vkG, vkH, vkJ, vkK, vkL, vkSEMICOLON, vkAPOSTROPHE,

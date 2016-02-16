@@ -171,17 +171,19 @@ begin
 
   LineMesh := TCELineMesh.Create(Core.EntityManager);
   LineMesh.Softness := 2 / 1024 * 1.3 * 1;
-  LineMesh.Width := 1 / 1024 * 1.3;
+  LineMesh.Width := 1 / 1024 * 1.3*40;
 
   Spline := TSpline.Create();
-  SplineResolution := 8;
+  SplineResolution := 1;
   ControlPointsCount := 6;
   GetMem(ControlPoints, (ControlPointsCount + 1) * SizeOf(TCEVector2f));
-  ControlPoints^[0] := Vec2f(-0.5,  0.5);
+  ControlPoints^[0] := Vec2f(-0.5,  0.5 + 0.1);
+  //ControlPoints^[0] := Vec2f(-0.46484375, 0.462890625);
   {pnt^[2] := Vec2f(0.4,  0.25);
   pnt^[1] := Vec2f(0.5,  0.3);}
-  ControlPoints^[1] := Vec2f( 0.0, 0.5);
-  ControlPoints^[2] := Vec2f( 0.5, 0.5);
+  ControlPoints^[1] := Vec2f( 0.0, 0.0);
+  ControlPoints^[2] := Vec2f( 0.5, -0.5);
+  //ControlPoints^[2] := Vec2f(0.37890625, -0.376953125);
   ControlPoints^[3] := Vec2f( 0.5, -0.5);
   ControlPoints^[4] := Vec2f( 0.0, -0.5);
   ControlPoints^[5] := Vec2f(-0.5, -0.5);
@@ -231,18 +233,31 @@ procedure TDemo.HandleKey(Msg: TKeyboardMsg);
 begin
   if Msg.Action = iaUp then
   begin
-    if Msg.Key = vkNUMPAD_DIVIDE then begin
-      SplineResolution := MaxI(1, SplineResolution - 1);
-      ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
-    end else if Msg.Key = vkNUMPAD_MULTIPLY then begin
-      SplineResolution := MinI(200, SplineResolution + 1);
-      ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
-    end else if Msg.Key = vkNUMPAD_MINUS then begin
-      LineMesh.Width := MaxS(0.5/1024, LineMesh.Width - ClampS(LineMesh.Width*0.1, 0.1/1024, 5/1024));
-      ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
-    end else if Msg.Key = vkNUMPAD_PLUS then begin
-      LineMesh.Width := MinS(100/1024, LineMesh.Width + ClampS(LineMesh.Width*0.1, 0.1/1024, 5/1024));
-      ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
+    case Msg.Key of
+      vkNUMPAD_DIVIDE: begin
+        SplineResolution := MaxI(1, SplineResolution - 1);
+        ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
+      end;
+      vkNUMPAD_MULTIPLY: begin
+        SplineResolution := MinI(200, SplineResolution + 1);
+        ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
+      end;
+      vkNUMPAD_MINUS: begin
+        LineMesh.Width := MaxS(0.5/1024, LineMesh.Width - ClampS(LineMesh.Width*0.1, 0.1/1024, 5/1024));
+        ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
+      end;
+      vkNUMPAD_PLUS: begin
+        LineMesh.Width := MinS(100/1024, LineMesh.Width + ClampS(LineMesh.Width*0.1, 0.1/1024, 5/1024));
+        ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
+      end;
+      vkNUMPAD_2: begin            // 2 / 1024 * 1.3;
+        LineMesh.Softness := MaxS(0, LineMesh.Softness - 0.4/1024);
+        ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
+      end;
+      vkNUMPAD_8: begin
+        LineMesh.Softness := MinS(20/1024, LineMesh.Softness + 0.4/1024);
+        ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
+      end;
     end;
   end;
 end;

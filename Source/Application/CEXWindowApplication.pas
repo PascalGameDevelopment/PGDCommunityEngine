@@ -203,6 +203,8 @@ begin
   VirtualKeyCodes[vkP] := XK_p;
   VirtualKeyCodes[vkBRACKET_L] := XK_bracketleft;
   VirtualKeyCodes[vkBRACKET_R] := XK_bracketright;
+  VirtualKeyCodes[vkPAREN_L] := XK_parenleft;
+  VirtualKeyCodes[vkPAREN_R] := XK_parenright;
   VirtualKeyCodes[vkRETURN] := XK_Return;     (* Enter on main keyboard *)
   VirtualKeyCodes[vkCONTROL_L] := XK_Control_L;
   VirtualKeyCodes[vkA] := XK_a;
@@ -246,18 +248,18 @@ begin
   VirtualKeyCodes[vkF10] := XK_F10;
   VirtualKeyCodes[vkNUM_LOCK] := XK_Num_Lock;
   VirtualKeyCodes[vkSCROLL_LOCK] := XK_Scroll_Lock;    (* Scroll Lock *)
-  VirtualKeyCodes[vkNUMPAD_7] := XK_KP_7;
-  VirtualKeyCodes[vkNUMPAD_8] := XK_KP_8;
-  VirtualKeyCodes[vkNUMPAD_9] := XK_KP_9;
+  VirtualKeyCodes[vkNUMPAD_7] := XK_KP_Home;
+  VirtualKeyCodes[vkNUMPAD_8] := XK_KP_Up;
+  VirtualKeyCodes[vkNUMPAD_9] := XK_KP_Page_Up;
   VirtualKeyCodes[vkNUMPAD_MINUS] := XK_KP_Subtract;    (* - on numeric keypad *)
-  VirtualKeyCodes[vkNUMPAD_4] := XK_KP_4;
-  VirtualKeyCodes[vkNUMPAD_5] := XK_KP_5;
-  VirtualKeyCodes[vkNUMPAD_6] := XK_KP_6;
+  VirtualKeyCodes[vkNUMPAD_4] := XK_KP_Left;
+  VirtualKeyCodes[vkNUMPAD_5] := XK_KP_Begin;
+  VirtualKeyCodes[vkNUMPAD_6] := XK_KP_Right;
   VirtualKeyCodes[vkNUMPAD_PLUS] := XK_KP_Add;    (* + on numeric keypad *)
-  VirtualKeyCodes[vkNUMPAD_1] := XK_KP_1;
-  VirtualKeyCodes[vkNUMPAD_2] := XK_KP_2;
-  VirtualKeyCodes[vkNUMPAD_3] := XK_KP_3;
-  VirtualKeyCodes[vkNUMPAD_0] := XK_KP_0;
+  VirtualKeyCodes[vkNUMPAD_1] := XK_KP_End;
+  VirtualKeyCodes[vkNUMPAD_2] := XK_KP_Down;
+  VirtualKeyCodes[vkNUMPAD_3] := XK_KP_Page_Down;
+  VirtualKeyCodes[vkNUMPAD_0] := XK_KP_Insert;
   VirtualKeyCodes[vkNUMPAD_PERIOD] := XK_KP_Decimal;     (* . on numeric keypad *)
 
   VirtualKeyCodes[vkOEM_102] := XK_asterisk;    (* < > | on UK/Germany keyboards *)
@@ -293,8 +295,8 @@ begin
   VirtualKeyCodes[vkPGDN] := XK_Page_Down;     (* PgDn on arrow keypad *)
   VirtualKeyCodes[vkINSERT] := XK_INSERT;     (* Insert on arrow keypad *)
   VirtualKeyCodes[vkDELETE] := XK_Delete;     (* Delete on arrow keypad *)
-  VirtualKeyCodes[vkOS_L] := XK_Meta_L;     (* Left Windows key *)
-  VirtualKeyCodes[vkOS_R] := XK_Meta_R;     (* Right Windows key *)
+  VirtualKeyCodes[vkOS_L] := XK_Super_L;     (* Left Windows key *)
+  VirtualKeyCodes[vkOS_R] := XK_Super_R;     (* Right Windows key *)
   VirtualKeyCodes[vkAPPS] := XK_Menu;     (* AppMenu key *)
 
 (*
