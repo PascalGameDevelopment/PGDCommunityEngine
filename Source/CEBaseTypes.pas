@@ -45,6 +45,8 @@ const
   SIGN_BIT_DOUBLE = 1 shl 63;
   // Max difference in Units in the Last Place when numbers are considered equal
   MAX_ULPS = 2;
+  // Minimal value
+  EPSILON_SINGLE = 0.0000001;
 
   ONE_OVER_255 = 1/255;
 

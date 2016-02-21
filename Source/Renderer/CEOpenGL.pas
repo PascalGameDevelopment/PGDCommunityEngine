@@ -604,7 +604,7 @@ begin
       glEnableVertexAttribArray(i);
       glVertexAttribPointer(i, VertexData^.VertexAttribs^[i].Size, GetGLType(VertexData^.VertexAttribs^[i].DataType),
                             {$IFDEF GLES20}GL_FALSE{$ELSE}false{$ENDIF},
-                            VertexData^.Size, PtrOffs(nil, i * SizeOf(TCEVector4f)));
+                            VertexData^.Size, PtrOffs(nil, i * SizeOf(TCEVector4f)));  // TODO count offset
     end;
 
     TCEOpenGLUniformsManager(FUniformsManager).ShaderProgram := CurShader.ShaderProgram;
@@ -620,7 +620,7 @@ begin
         //glPointSize(4);
         //glDrawArrays(GL_POINTS, VertexData^.Status.Offset, Mesh.PrimitiveCount + 2);
       end;
-      ptTriangleFan: glDrawArrays(GL_TRIANGLE_FAN, VertexData^.Status.Offset, Mesh.PrimitiveCount + 2);
+      ptTriangleFan: glDrawArrays(GL_TRIANGLE_FAN, VertexData^.Status.Offset, Mesh.VerticesCount);
       ptQuads:;
     end;
   end;

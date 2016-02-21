@@ -52,7 +52,8 @@ type
     PolyMesh: TCEPolygonMesh;
     LineMesh: TCELineMesh;
     SpriteMesh1, SpriteMesh2: TCESpriteMesh;
-    PolyPass, LinePass, SpritePass, MonsterSpritePass: TCERenderPass;
+    PolyPass, LinePass, SpritePass, MonsterSpritePass, PointPass: TCERenderPass;
+    PointMesh: TCECircleMesh;
     Triangle: TRotatingTriangle;
     ClickPoint: TCEVector2f;
     Ind: Integer;
@@ -199,13 +200,16 @@ begin
   SpriteMesh2.Width := 0.5;
   SpriteMesh2.Height := 0.5;
 
+  PointMesh := TCECircleMesh.Create(Core.EntityManager);
+  PointMesh.Radius := 0.7;
+  PointMesh.Color := GetColor($FFFF9F40);
+
   CELog.Info('Loading materials');
   PolyPass := CreateRenderPass(Core.EntityManager, true, '', 'asset://vs_poly.glsl', 'asset://fs_poly.glsl');
   LinePass := CreateRenderPass(Core.EntityManager, true, '', 'asset://vs_line.glsl', 'asset://fs_line.glsl');
-  SpritePass :=
-  CreateRenderPass(Core.EntityManager, true, 'asset://sprites.bmp', 'asset://vs_sprite.glsl', 'asset://fs_sprite.glsl');
-  MonsterSpritePass :=
-  CreateRenderPass(Core.EntityManager, true, 'asset://monster.bmp', 'asset://vs_sprite.glsl', 'asset://fs_sprite.glsl');
+  SpritePass := CreateRenderPass(Core.EntityManager, true, 'asset://sprites.bmp', 'asset://vs_sprite.glsl', 'asset://fs_sprite.glsl');
+  MonsterSpritePass := CreateRenderPass(Core.EntityManager, true, 'asset://monster.bmp', 'asset://vs_sprite.glsl', 'asset://fs_sprite.glsl');
+  PointPass := CreateRenderPass(Core.EntityManager, true, '', 'asset://vs_circle.glsl', 'asset://fs_circle.glsl');
 
   {Mat := TCEMaterial.Create(Core.EntityManager);
   Mat.TotalTechniques := 1;
@@ -301,14 +305,16 @@ begin
 
   Renderer.Clear([cfColor, cfDepth], GetColor(40, 130, 130, 0), 1.0, 0);
 
-  Renderer.ApplyRenderPass(PolyPass);
+  {Renderer.ApplyRenderPass(PolyPass);
   Renderer.RenderMesh(PolyMesh);
   Renderer.ApplyRenderPass(LinePass);
   Renderer.RenderMesh(LineMesh);
-{  Renderer.ApplyRenderPass(SpritePass);
+  Renderer.ApplyRenderPass(SpritePass);
   Renderer.RenderMesh(SpriteMesh1);
   Renderer.ApplyRenderPass(MonsterSpritePass);
   Renderer.RenderMesh(SpriteMesh2);}
+  Renderer.ApplyRenderPass(PointPass);
+  Renderer.RenderMesh(PointMesh);
 
   if Core.Input.Pressed[vkNUMPAD_6] or (Core.Input.MouseState.Buttons[mbLeft] = iaDown) then Speed := Speed + 4;
   if Core.Input.Pressed[vkNUMPAD_4] or (Core.Input.MouseState.Buttons[mbRight] = iaDown) then Speed := Speed - 4;
@@ -324,6 +330,8 @@ begin
       ControlPoints^[Ind] := ClickPoint;
       ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
       SpriteMesh1.Frame := SpriteMesh1.Frame + 1;
+      PointMesh.X := ClickPoint.x;
+      PointMesh.Y := ClickPoint.y;
     end;
   end;
   Core.Process();

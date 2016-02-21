@@ -1,10 +1,10 @@
-varying mediump vec2 pos;
-uniform mediump float phase;
-uniform sampler2D s_texture0;
+#version 130
+varying mediump vec2 pos;                // x-cx, y-cy
+uniform mediump vec4 data;               // cx, cy, rad, th
+uniform mediump vec4 color;
 void main() {
-  float r = ((pos.x*pos.x)+(pos.y*pos.y));
-  float rad = 0.4*0.4;
-  float th = 0.002;
-  float k = clamp((rad+th-r)/th, 0, 1);
-  gl_FragColor = int (r < rad) + k;
+  mediump float r = (pos.x*pos.x)+(pos.y*pos.y);
+  mediump float alpha = clamp((data.w*data.w - r) * data.z, 0.0, 1.0);
+  gl_FragColor.rgb = color.rgb;
+  gl_FragColor.a = color.a * alpha;
 }

@@ -57,8 +57,34 @@ type
   // Circle mesh class
   TCECircleMesh = class(TCEMesh)
   private
+    FX, FY: Single;
+    FRadius, FThreshold: Single;
+    FSegments: Integer;
+    FColor: TCEColor;
+    procedure SetX(Value: Single);
+    procedure SetY(Value: Single);
+    procedure SetRadius(Value: Single);
+    procedure SetSegments(Value: Integer);
+    procedure SetSoftness(Value: Single);
+    procedure SetColor(const Value: TCEColor);
+  protected
+    procedure DoInit(); override;
+    procedure ApplyParameters(); override;
   public
     procedure FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer); override;
+    procedure SetUniforms(Manager: TCEUniformsManager); override;
+    // X coordinate of point center
+    property X: Single read FX write SetX;
+    // Y coordinate of point center
+    property Y: Single read FY write SetY;
+    // Point radius
+    property Radius: Single read FRadius write SetRadius;
+    // Number of segments in polygon approximation of a circle
+    property Segments: Integer read FSegments write SetSegments;
+    // Antialiasing softness. 0 - no antialiasing.
+    property Softness: Single read FThreshold write SetSoftness;
+    // Fill color
+    property Color: TCEColor read FColor write SetColor;
   end;
 
   // Abstract base class for multipoint meshes such as lines or polygons
@@ -146,23 +172,87 @@ type
 
   TCVRes = (rIntersect, rCoDir, rInvDir, rSharp);
 
+{ TCECircleMesh }
+
+procedure TCECircleMesh.SetX(Value: Single);
+begin
+  FX := Value;
+  InvalidateData(dbtVertex1, true);
+end;
+
+procedure TCECircleMesh.SetY(Value: Single);
+begin
+  FY := Value;
+  InvalidateData(dbtVertex1, true);
+end;
+
+procedure TCECircleMesh.SetRadius(Value: Single);
+begin
+  FRadius := Value;
+  InvalidateData(dbtVertex1, true);
+end;
+
+procedure TCECircleMesh.SetSegments(Value: Integer);
+begin
+  InvalidateData(dbtVertex1, (FSegments = Value));
+  FSegments := Value;
+end;
+
+procedure TCECircleMesh.SetSoftness(Value: Single);
+begin
+  if Value > 0 then
+    FThreshold := Value
+  else
+    FThreshold := EPSILON_SINGLE;
+  InvalidateData(dbtVertex1, true);
+end;
+
+procedure TCECircleMesh.SetColor(const Value: TCEColor);
+begin
+  FColor := Value;
+  InvalidateData(dbtVertex1, true);
+end;
+
+procedure TCECircleMesh.DoInit();
+begin
+  inherited;
+  SetVertexAttribsCount(dbtVertex1, 1);
+  SetVertexAttrib(dbtVertex1, 0, adtSingle, 3, 'position');
+  FPrimitiveType := ptTriangleFan;
+  SetDataSize(dbtVertex1, SizeOf(TVBRecPos));
+  FRadius := 0.5;
+  FThreshold := 2 / 1024;
+  FSegments := 8;
+  FColor := GetColor(255, 255, 255, 255);
+  ApplyParameters();
+end;
+
+procedure TCECircleMesh.ApplyParameters();
+begin
+  FVerticesCount := 1 + FSegments * 2;
+end;
+
 procedure TCECircleMesh.FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer);
-const
-  SEGMENTS = 16;
-  RADIUS = 0.5;
 var
   i: Integer;
   v: ^TVBPos;
+  Rad: Single;
 begin
   v := Dest;
-  for i := 0 to SEGMENTS - 1 do begin
-    Vec3f(0, 0, 0, v^[i * 3].vec);
-    Vec3f(RADIUS * Cos((i + 1) / SEGMENTS * 2 * pi), RADIUS * Sin((i + 1) / SEGMENTS * 2 * pi), 0, v^[i * 3 + 1].vec);
-    Vec3f(RADIUS * Cos(i / SEGMENTS * 2 * pi), RADIUS * Sin(i / SEGMENTS * 2 * pi), 0, v^[i * 3 + 2].vec);
+  Vec3f(FX, FY, 0, v^[0].vec);
+  Rad := (FRadius + FThreshold) / Cos(pi / FSegments);
+  for i := 0 to FSegments - 1 do begin
+    Vec3f(FX + Rad * Cos(i       / FSegments * 2 * pi), FY + Rad * Sin(i       / FSegments * 2 * pi), 0, v^[i * 2 + 1].vec);
+    Vec3f(FX + Rad * Cos((i + 1) / FSegments * 2 * pi), FY + Rad * Sin((i + 1) / FSegments * 2 * pi), 0, v^[i * 2 + 2].vec);
   end;
-  FVerticesCount := SEGMENTS * 3;
-  FPrimitiveCount := SEGMENTS;
-  SetDataSize(dbtVertex1, SizeOf(TVBRecPos));
+  FPrimitiveCount := FSegments;
+  InvalidateData(dbtVertex1, true);
+end;
+
+procedure TCECircleMesh.SetUniforms(Manager: TCEUniformsManager);
+begin
+  Manager.SetSingleVec4('data', Vec4f(FX, FY, 1/(Sqr(FThreshold) + 2 * FThreshold * FRadius), FRadius + FThreshold));
+  Manager.SetSingleVec4('color', Vec4f(Color.R * ONE_OVER_255, Color.G * ONE_OVER_255, Color.B * ONE_OVER_255, Color.A * ONE_OVER_255));
 end;
 
 { TCENPointMesh }
@@ -224,6 +314,7 @@ begin
   FThreshold := 0;
   Count := 0;
   SetDataSize(dbtVertex1, SizeOf(TLineVertex));
+  ApplyParameters();
 end;
 
 procedure CalcDir(const P1, P2: TCEVector2f; w: Single; out Dir: TCEVector2f);
@@ -288,7 +379,6 @@ var
   res: TCVRes;
   D, Sign: Single;
   MinD: Single;
-
 begin
   CalcDir(P1, P2, w, Dir2);
   Norm1 := Vec2f(-Dir1.y, Dir1.x);
@@ -412,6 +502,7 @@ begin
   FThreshold := 2;
   FColor := GetColor(255, 255, 255, 255);
   SetDataSize(dbtVertex1, SizeOf(TVBRecPos));
+  ApplyParameters();
 end;
 
 procedure TCEPolygonMesh.FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer);
