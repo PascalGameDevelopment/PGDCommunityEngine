@@ -80,7 +80,7 @@ type
     procedure SetAngle(const Value: Single);
   public
     property Angle: Single read FAngle write SetAngle;
-    procedure FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer); override;
+    procedure WriteMeshData(Destinations: PDataDestinations); override;
   end;
 
 implementation
@@ -111,14 +111,14 @@ begin
   InvalidateData(dbtVertex1, true);
 end;
 
-procedure TCERotatingTriangleMesh.FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer);
+procedure TCERotatingTriangleMesh.WriteMeshData(Destinations: PDataDestinations);
 var
   a: Single;
   v: ^TVBPos;
 begin
   inherited;
   a := Angle * pi / 180;
-  v := Dest;
+  v := Destinations^[dbtVertex1];
   Vec3f(cos(a), sin(a), 0, v^[0].vec);
   //v^[0].u := 0; v^[0].v := 0;
   Vec3f(cos(a + 2 * pi / 3), sin(a + 2 * pi / 3), 0, v^[1].vec);
@@ -201,7 +201,7 @@ begin
   SpriteMesh2.Height := 0.5;
 
   PointMesh := TCECircleMesh.Create(Core.EntityManager);
-  PointMesh.Radius := 0.7;
+  PointMesh.Radius := 0.02;
   PointMesh.Color := GetColor($FFFF9F40);
 
   CELog.Info('Loading materials');
@@ -308,13 +308,13 @@ begin
   {Renderer.ApplyRenderPass(PolyPass);
   Renderer.RenderMesh(PolyMesh);
   Renderer.ApplyRenderPass(LinePass);
-  Renderer.RenderMesh(LineMesh);
+  Renderer.RenderMesh(LineMesh);}
   Renderer.ApplyRenderPass(SpritePass);
   Renderer.RenderMesh(SpriteMesh1);
   Renderer.ApplyRenderPass(MonsterSpritePass);
-  Renderer.RenderMesh(SpriteMesh2);}
-  Renderer.ApplyRenderPass(PointPass);
-  Renderer.RenderMesh(PointMesh);
+  Renderer.RenderMesh(SpriteMesh2);
+  {Renderer.ApplyRenderPass(PointPass);
+  Renderer.RenderMesh(PointMesh);}
 
   if Core.Input.Pressed[vkNUMPAD_6] or (Core.Input.MouseState.Buttons[mbLeft] = iaDown) then Speed := Speed + 4;
   if Core.Input.Pressed[vkNUMPAD_4] or (Core.Input.MouseState.Buttons[mbRight] = iaDown) then Speed := Speed - 4;
@@ -328,10 +328,8 @@ begin
       ClickPoint := Vec2f(Core.Input.MouseState.X / Renderer.Width * 2 - 1, 1 - Core.Input.MouseState.Y / Renderer.Height * 2);
       Ind := GetNearestPointIndex(ControlPoints, ControlPointsCount, ClickPoint);
       ControlPoints^[Ind] := ClickPoint;
-      ApplyPoints(LineMesh, ControlPoints, ControlPointsCount);
+      ApplyPoints(PolyMesh, ControlPoints, ControlPointsCount);
       SpriteMesh1.Frame := SpriteMesh1.Frame + 1;
-      PointMesh.X := ClickPoint.x;
-      PointMesh.Y := ClickPoint.y;
     end;
   end;
   Core.Process();

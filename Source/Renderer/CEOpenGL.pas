@@ -564,7 +564,7 @@ begin
   if Assigned(Pass.Texture0) then
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, Pass.Texture0.ActualLevels);
   {$ENDIF}
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glActiveTexture(GL_TEXTURE0);
   glEnable(GL_TEXTURE_2D);
@@ -582,19 +582,19 @@ procedure TCEBaseOpenGLRenderer.RenderMesh(Mesh: TCEMesh);
 var
   i, Ind: Integer;
   VertexData: PCEMeshData;
-  Data: Pointer;
+  Destinations: TDataDestinations;
 begin
   Assert(Assigned(Mesh));
   if not Active then Exit;
   VertexData := CEMesh.GetBuffer(Mesh, dbtVertex1);
 
-  Data := FBufferManager.MapBuffer(Mesh.VerticesCount, VertexData^.Size, VertexData^.Status);
-  Mesh.FillVertexBuffer(dbtVertex1, Data);
-  FBufferManager.UnMapBuffer(VertexData^.Status, Mesh.VerticesCount, Data);
+  Destinations[dbtVertex1] := FBufferManager.MapBuffer(Mesh.VerticesCount, VertexData^.Size, VertexData^.Status);
+  if not Assigned(Destinations[dbtVertex1]) then
+    Exit;
+
+  Mesh.WriteMeshData(@Destinations);
+  FBufferManager.UnMapBuffer(VertexData^.Status, Mesh.VerticesCount, Destinations[dbtVertex1]);
   Assert(Mesh.VerticesCount >= Mesh.PrimitiveCount, 'Inconsistent mesh state');
-  if VertexData^.Status.Status <> dsValid then begin
-//    glBufferData(GL_ARRAY_BUFFER, Mesh.VerticesCount * VertexData^.Size, TmpData, GL_STATIC_DRAW);
-  end;
 
   if Assigned(CurShader) then
   begin
@@ -719,7 +719,7 @@ end;
 
 constructor TCEOpenGLBufferManager.Create();
 begin
-  GetMem(TmpData, DATA_BUFFER_SIZE_DYNAMIC);
+  GetMem(TmpData, DATA_BUFFER_SIZE_DYNAMIC * DATA_BUFFER_ELEMENT_MAX_SIZE);
 end;
 
 destructor TCEOpenGLBufferManager.Destroy();

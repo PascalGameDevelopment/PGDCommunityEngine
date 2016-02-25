@@ -32,7 +32,7 @@ unit CEUniformsManager;
 interface
 
 uses
-  CEVectors, CEBaseTypes;
+  CEBaseTypes;
 
 const
   // Special buffer index value meaning that the buffer was not allocated yet
@@ -41,6 +41,8 @@ const
   DATA_BUFFER_SIZE_STATIC = 65536;
   // Default dynamic data buffer size measured in elements
   DATA_BUFFER_SIZE_DYNAMIC = 65536;
+  // Max size of data buffer element in bytes
+  DATA_BUFFER_ELEMENT_MAX_SIZE = 64;
 
 type
   // Uniforms management class. Used in mesh classes to set uniform constants.
@@ -60,7 +62,7 @@ type
                  // Data changes every frame (particle system vertices, etc)
                  dtStreaming);
 
-  //  Data state
+  // Data state
   TCEDataState = (// Data size changed. May need to invalidate other data in buffer.
                   dsSizeChanged,
                   // Data was changed
@@ -123,6 +125,8 @@ type
 
 implementation
 
+uses CELog;
+
 function TCERenderBufferManager.IndexOf(ElementSize: Integer; const DataType: TCEDataType): Integer;
 begin
   Result := Count-1;
@@ -183,10 +187,14 @@ begin
       Status.Offset := FBuffers^[Status.BufferIndex].Position;
       Inc(FBuffers^[Status.BufferIndex].Position, ElementsCount);
       Result := ApiMapBuffer(Status, ElementsCount, false);
-    end else begin
+    end else if ElementsCount <= FBuffers^[Status.BufferIndex].Size then begin
       Status.Offset := 0;
       FBuffers^[Status.BufferIndex].Position := ElementsCount;
       Result := ApiMapBuffer(Status, ElementsCount, true);
+    end else
+    begin
+      Result := nil;
+      CELog.Error('Mesh data doesn''t fit into buffer. ElementSize: ' + IntToStr(ElementsSize));
     end;
   end else
     Result := ApiMapBuffer(Status, ElementsCount, false);

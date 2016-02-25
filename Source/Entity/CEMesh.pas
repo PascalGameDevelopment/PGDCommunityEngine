@@ -41,7 +41,7 @@ type
   // Vertex attribute data types
   TAttributeDataType = (adtShortint, adtByte, adtSmallint, adtWord, adtSingle);
   // Data buffer types
-  TDataBufferType = (dbtIndex, dbtVertex1, dbtVertex2, dbtVertex3);
+  TDataBufferType = (dbtVertex1, dbtIndex, dbtVertex2, dbtVertex3);
   // Vertex attribute data information
   TAttributeData = record
     DataType: TAttributeDataType;
@@ -50,6 +50,9 @@ type
   end;
   TAttributeDataArray = array[0..$FFFF] of TAttributeData;
   PAttributeDataArray = ^TAttributeDataArray;
+
+  TDataDestinations = array[TDataBufferType] of Pointer;
+  PDataDestinations = ^TDataDestinations;
 
   TCEMeshData = record
     Status: TCEDataStatus;
@@ -80,10 +83,8 @@ type
     procedure ApplyParameters(); virtual;
   public
     destructor Destroy; override;
-    // Fill vertex buffer
-    procedure FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer); virtual;
-    // Fill index buffer
-    procedure FillIndexBuffer(Buffer: TDataBufferType; Dest: Pointer); virtual;
+    // Writes vertex/index data into destination pointed by Destinations
+    procedure WriteMeshData(Destinations: PDataDestinations); virtual; abstract;
     // Called by renderer when uniforms for the mesh need to be set
     procedure SetUniforms(Manager: TCEUniformsManager); virtual;
     { Number of vertices to allocate buffer space for.
@@ -177,16 +178,6 @@ begin
     SetVertexAttribsCount(buf, 0);
     InitTesselationStatus(FBuffer[buf].Status);
   end;
-end;
-
-procedure TCEMesh.FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer);
-begin
-  FBuffer[Buffer].Status.Status := dsValid;
-end;
-
-procedure TCEMesh.FillIndexBuffer(Buffer: TDataBufferType; Dest: Pointer);
-begin
-  FBuffer[Buffer].Status.Status := dsValid;
 end;
 
 procedure TCEMesh.SetUniforms(Manager: TCEUniformsManager);

@@ -46,7 +46,7 @@ type
     procedure DoInit(); override;
   public
     procedure SetTextureParameters(FramesPerTextureCol, FramesPerTextureRow: Integer);
-    procedure FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer); override;
+    procedure WriteMeshData(Destinations: PDataDestinations); override;
     property Frame: Integer read FFrame write FFrame;
     property X: Single read Fx write Fx;
     property Y: Single read Fy write Fy;
@@ -71,7 +71,7 @@ type
     procedure DoInit(); override;
     procedure ApplyParameters(); override;
   public
-    procedure FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer); override;
+    procedure WriteMeshData(Destinations: PDataDestinations); override;
     procedure SetUniforms(Manager: TCEUniformsManager); override;
     // X coordinate of point center
     property X: Single read FX write SetX;
@@ -116,7 +116,7 @@ type
     procedure DoInit(); override;
     procedure ApplyParameters(); override;
   public
-    procedure FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer); override;
+    procedure WriteMeshData(Destinations: PDataDestinations); override;
     procedure SetUniforms(Manager: TCEUniformsManager); override;
     // Line width
     property Width: Single read FWidth write SetWidth;
@@ -135,7 +135,7 @@ type
     procedure DoInit(); override;
     procedure ApplyParameters(); override;
   public
-    procedure FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer); override;
+    procedure WriteMeshData(Destinations: PDataDestinations); override;
     procedure SetUniforms(Manager: TCEUniformsManager); override;
     // Antialiasing softness. 0 - no antialiasing.
     property Softness: Single read FThreshold write SetSoftness;
@@ -232,13 +232,13 @@ begin
   FVerticesCount := 1 + FSegments * 2;
 end;
 
-procedure TCECircleMesh.FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer);
+procedure TCECircleMesh.WriteMeshData(Destinations: PDataDestinations);
 var
   i: Integer;
   v: ^TVBPos;
   Rad: Single;
 begin
-  v := Dest;
+  v := Destinations^[dbtVertex1];
   Vec3f(FX, FY, 0, v^[0].vec);
   Rad := (FRadius + FThreshold) / Cos(pi / FSegments);
   for i := 0 to FSegments - 1 do begin
@@ -345,7 +345,7 @@ begin
   end;
 end;
 
-procedure TCELineMesh.FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer);
+procedure TCELineMesh.WriteMeshData(Destinations: PDataDestinations);
 var
   w, oow: Single;
   Dir1, Dir2: TCEVector2f;
@@ -441,7 +441,7 @@ begin
   FPrimitiveCount := 0;
   if Count < 2 then Exit;
 
-  v := Dest;
+  v := Destinations^[dbtVertex1];
   w := FWidth + FThreshold;
   oow := 1 / w;
 
@@ -505,7 +505,7 @@ begin
   ApplyParameters();
 end;
 
-procedure TCEPolygonMesh.FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer);
+procedure TCEPolygonMesh.WriteMeshData(Destinations: PDataDestinations);
 
 function Sharpness(dx, dy: Single): Single;
 const
@@ -522,7 +522,7 @@ begin
   FPrimitiveCount := 0;
   if Count < 3 then Exit;
 
-  v := Dest;
+  v := Destinations^[dbtVertex1];
 
   Center.x := 0;
   Center.y := 0;
@@ -607,12 +607,12 @@ begin
   InvalidateData(dbtVertex1, true);
 end;
 
-procedure TCESpriteMesh.FillVertexBuffer(Buffer: TDataBufferType; Dest: Pointer);
+procedure TCESpriteMesh.WriteMeshData(Destinations: PDataDestinations);
 var
   vb: ^TSpriteVertexBuffer;
   w, h, u, v, uw, vh: Single;
 begin
-  vb := Dest;
+  vb := Destinations^[dbtVertex1];
   w := width * 0.5;
   h := height * 0.5;
   uw := 1 / FFramesPerTextureRow;
