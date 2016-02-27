@@ -41,8 +41,10 @@ const
   DATA_BUFFER_SIZE_STATIC = 65536;
   // Default dynamic data buffer size measured in elements
   DATA_BUFFER_SIZE_DYNAMIC = 65536;
-  // Max size of data buffer element in bytes
-  DATA_BUFFER_ELEMENT_MAX_SIZE = 64;
+  // Max size of vertex buffer element in bytes
+  DATA_VERTEX_BUFFER_ELEMENT_MAX_SIZE = 64;
+  // Max size of index buffer element in bytes
+  DATA_INDEX_BUFFER_ELEMENT_MAX_SIZE = 4;
 
 type
   // Uniforms management class. Used in mesh classes to set uniform constants.
@@ -55,12 +57,17 @@ type
     procedure SetSingleVec4(const Name: PAPIChar; const Value: TCEVector4f); virtual; abstract;
   end;
 
-  // Type of data stores in a buffer
-  TCEDataType = ({ Data persists between frames and may be updated from time to time.
-                   Data size change will invalidate whole buffer which may be expensive. }
-                 dtStatic,
-                 // Data changes every frame (particle system vertices, etc)
-                 dtStreaming);
+  // Type of data stored in a buffer
+  TCEDataUsage = ({ Index data. Persists between frames and may be updated from time to time.
+                    Data size change will invalidate whole buffer which may be expensive. }
+                  duStaticIndices,
+                  { Vertex data. Persists between frames and may be updated from time to time.
+                    Data size change will invalidate whole buffer which may be expensive. }
+                  duStaticVertices,
+                  // Index data. Changes every frame (particle system vertices, etc)
+                  duStreamingIndices,
+                  // Vertex data. Changes every frame (particle system vertices, etc)
+                  duStreamingVertices);
 
   // Data state
   TCEDataState = (// Data size changed. May need to invalidate other data in buffer.
@@ -69,28 +76,33 @@ type
                   dsChanged,
                   // Data was not changed so no reason to update it
                   dsValid);
+  // Data buffer types
+  TCEDataType = (dbtVertex1, dbtIndex, dbtVertex2, dbtVertex3);
 
   PCEDataStatus = ^TCEDataStatus;
-    { Current data status data structure
+
+  { Current data status data structure
       <b>BufferIndex</b>      - index of buffer in API-independent buffers
       <b>Offset</b>           - offset within the buffer measured in elements
       <b>Status</b>           - current data state
       should not be modified manually }
   TCEDataStatus = record
-    BufferIndex, Offset: Integer;
-    DataType: TCEDataType;
+    BufferIndex: Integer;
+    Offset: Cardinal;
+    DataUsage: TCEDataUsage;
     Status: TCEDataState;
   end;
 
-  TCEDataBuffer = record
+  // Internal data structure for buffer manager
+  TCEDataBuffer = packed record
     // API-specific buffer identifier
     Id: Integer;
     // Current position and size measured in elements
     Position, Size: Integer;
     // Size of each element in bytes
-    ElementSize: Integer;
+    ElementSize: Word;
     // Kind of data: static or streaming
-    DataType: TCEDataType;
+    DataUsage: TCEDataUsage;
   end;
   PCEDataBuffer = ^TCEDataBuffer;
   TCEDataBufferList = array[0..$FFFF] of TCEDataBuffer;
@@ -99,7 +111,7 @@ type
   // Render buffer management class. User of PGDCE usually should not use this class directly.
   TCERenderBufferManager = class(TObject)
   private
-    function IndexOf(ElementSize: Integer; const DataType: TCEDataType): Integer;
+    function IndexOf(ElementSize: Integer; const DataType: TCEDataUsage): Integer;
     function AddBuffer(ElementSize: Integer; const Status: TCEDataStatus): Integer;
   protected
     FBuffers: PCEDataBufferList;
@@ -127,11 +139,11 @@ implementation
 
 uses CELog;
 
-function TCERenderBufferManager.IndexOf(ElementSize: Integer; const DataType: TCEDataType): Integer;
+function TCERenderBufferManager.IndexOf(ElementSize: Integer; const DataType: TCEDataUsage): Integer;
 begin
   Result := Count-1;
   while (Result >= 0)
-    and ((FBuffers^[Result].ElementSize <> ElementSize) or (FBuffers^[Result].DataType <> DataType)) do
+    and ((FBuffers^[Result].ElementSize <> ElementSize) or (FBuffers^[Result].DataUsage <> DataType)) do
     Dec(Result);
 end;
 
@@ -142,7 +154,7 @@ begin
   FBuffers^[Count].Id := DATA_NOT_ALLOCATED;
   FBuffers^[Count].Position := 0;
   FBuffers^[Count].ElementSize := ElementSize;
-  FBuffers^[Count].DataType := Status.DataType;
+  FBuffers^[Count].DataUsage := Status.DataUsage;
   FBuffers^[Count].Size := DATA_BUFFER_SIZE_DYNAMIC;
   Inc(Count);
   ApiAddBuffer(Count - 1);
@@ -157,7 +169,7 @@ end;
 procedure TCERenderBufferManager.FindOrCreate(ElementsCount, ElementsSize: Integer; var Status: TCEDataStatus; out Res: PCEDataBuffer);
 begin
   Assert(ElementsSize * ElementsCount > 0, 'Invalid element size');
-  Status.BufferIndex := IndexOf(ElementsSize, Status.DataType);
+  Status.BufferIndex := IndexOf(ElementsSize, Status.DataUsage);
   if Status.BufferIndex = -1 then
     Status.BufferIndex := AddBuffer(ElementsSize, Status);
   Status.Offset := FBuffers^[Status.BufferIndex].Position;
@@ -171,7 +183,7 @@ begin
   Assert(ElementsSize * ElementsCount > 0, 'Invalid element size');
   if Status.BufferIndex = DATA_NOT_ALLOCATED then
   begin
-    Status.BufferIndex := IndexOf(ElementsSize, Status.DataType);
+    Status.BufferIndex := IndexOf(ElementsSize, Status.DataUsage);
     if Status.BufferIndex < 0 then
       Status.BufferIndex := AddBuffer(ElementsSize, Status);
   end;
@@ -180,7 +192,7 @@ begin
     - get or create buffer
     - if current mesh doesn't fit: discard and reset
     - write at current position}
-  if Status.DataType = dtStreaming then
+  if Status.DataUsage >= duStreamingIndices then
   begin
     if FBuffers^[Status.BufferIndex].Position + ElementsCount <= FBuffers^[Status.BufferIndex].Size then
     begin

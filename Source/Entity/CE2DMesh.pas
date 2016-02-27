@@ -590,9 +590,13 @@ begin
   SetVertexAttribsCount(dbtVertex1, 1);
   SetVertexAttrib(dbtVertex1, 0, adtSingle, 4, 'xyuv');
   SetDataSize(dbtVertex1, SizeOf(TSpriteVertex));
+  SetVertexAttribsCount(dbtIndex, 1);
+  SetVertexAttrib(dbtIndex, 0, adtWord, 1, '');
+  SetDataSize(dbtIndex, SizeOf(Word));
   FPrimitiveType := ptTriangleList;
   FPrimitiveCount := 2;
-  FVerticesCount := 6;
+  FVerticesCount := 4;
+  FIndicesCount := 6;
   Width := 0.1;
   Height := 0.1;
   SetTextureParameters(1, 1);
@@ -610,9 +614,19 @@ end;
 procedure TCESpriteMesh.WriteMeshData(Destinations: PDataDestinations);
 var
   vb: ^TSpriteVertexBuffer;
+  ib: PWordArray;
   w, h, u, v, uw, vh: Single;
 begin
   vb := Destinations^[dbtVertex1];
+  ib := Destinations^[dbtIndex];
+
+  ib^[0] := 0;
+  ib^[1] := 1;
+  ib^[2] := 2;
+  ib^[3] := 0;
+  ib^[4] := 2;
+  ib^[5] := 3;
+
   w := width * 0.5;
   h := height * 0.5;
   uw := 1 / FFramesPerTextureRow;
@@ -622,10 +636,12 @@ begin
   Vec4f(x - w, y + h, u, v, vb^[0].xyuv);
   Vec4f(x - w, y - h, u, v + vh, vb^[1].xyuv);
   Vec4f(x + w, y - h, u + uw, v + vh, vb^[2].xyuv);
-  Vec4f(x - w, y + h, u, v, vb^[3].xyuv);
-  Vec4f(x + w, y - h, u + uw, v + vh, vb^[4].xyuv);
-  Vec4f(x + w, y + h, u + uw, v, vb^[5].xyuv);
+  //Vec4f(x - w, y + h, u, v, vb^[3].xyuv);
+  //Vec4f(x + w, y - h, u + uw, v + vh, vb^[4].xyuv);
+  Vec4f(x + w, y + h, u + uw, v, vb^[3].xyuv);
+
   InvalidateData(dbtVertex1, true);
+  InvalidateData(dbtIndex, true);
 end;
 
 end.

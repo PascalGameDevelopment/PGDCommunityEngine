@@ -124,7 +124,7 @@ type
 
   TCEOpenGLBufferManager = class(TCERenderBufferManager)
   private
-    TmpData: Pointer;
+    TmpData: array[Boolean] of Pointer;
   protected
     procedure ApiAddBuffer(Index: Integer); override;
     function ApiMapBuffer(const Status: TCEDataStatus; ElementsCount: Integer; Discard: Boolean): Pointer; override;
@@ -580,49 +580,84 @@ end;
 
 procedure TCEBaseOpenGLRenderer.RenderMesh(Mesh: TCEMesh);
 var
-  i, Ind: Integer;
-  VertexData: PCEMeshData;
+  i: Integer;
+  VertexData, IndexData: PCEMeshData;
   Destinations: TDataDestinations;
+  VBOffset: Cardinal;
+
+function GetAttributeDataSize(const Attribute: TAttributeData): Cardinal; {$I inline.inc}
+begin
+  Result := Attribute.Count;
+  case Attribute.DataType of
+    //adtShortint, adtByte: Result := Attribute.Count;
+    adtSmallint, adtWord: Result := Attribute.Count * 2;
+    adtSingle: Result := Attribute.Count * 4;
+  end;
+end;
+
 begin
   Assert(Assigned(Mesh));
   if not Active then Exit;
-  VertexData := CEMesh.GetBuffer(Mesh, dbtVertex1);
 
+  IndexData := nil;
+  if Mesh.IndicesCount > 0 then
+  begin
+    IndexData := CEMesh.GetBuffer(Mesh, dbtIndex);
+    Destinations[dbtIndex] := FBufferManager.MapBuffer(Mesh.IndicesCount, IndexData^.Size, IndexData^.Status);
+  end;
+
+  VertexData := CEMesh.GetBuffer(Mesh, dbtVertex1);
   Destinations[dbtVertex1] := FBufferManager.MapBuffer(Mesh.VerticesCount, VertexData^.Size, VertexData^.Status);
   if not Assigned(Destinations[dbtVertex1]) then
     Exit;
 
   Mesh.WriteMeshData(@Destinations);
   FBufferManager.UnMapBuffer(VertexData^.Status, Mesh.VerticesCount, Destinations[dbtVertex1]);
-  Assert(Mesh.VerticesCount >= Mesh.PrimitiveCount, 'Inconsistent mesh state');
+  Assert(Mesh.VerticesCount >= Mesh.PrimitiveCount, 'Inconsistent state of mesh: ' + Mesh.Name);
 
   if Assigned(CurShader) then
   begin
+    // glDrawElements() doesn't allow to specify starting vertex so adding offset here. May be glDrawElementsBaseVertex() is better option.
+    VBOffset := VertexData^.Status.Offset * VertexData^.Size;
     for i := 0 to VertexData^.VertexAttribsCount - 1 do
     begin
-      Ind := glGetAttribLocation(CurShader.ShaderProgram, VertexData^.VertexAttribs^[i].Name);
+      Assert(glGetAttribLocation(CurShader.ShaderProgram, VertexData^.VertexAttribs^[i].Name) = i, 'Attribute index mismatch: ' + IntToStr(i));
       glEnableVertexAttribArray(i);
-      glVertexAttribPointer(i, VertexData^.VertexAttribs^[i].Size, GetGLType(VertexData^.VertexAttribs^[i].DataType),
+      glVertexAttribPointer(i, VertexData^.VertexAttribs^[i].Count, GetGLType(VertexData^.VertexAttribs^[i].DataType),
                             {$IFDEF GLES20}GL_FALSE{$ELSE}false{$ENDIF},
-                            VertexData^.Size, PtrOffs(nil, i * SizeOf(TCEVector4f)));  // TODO count offset
+                            VertexData^.Size, PtrOffs(nil, VBOffset));
+      Inc(VBOffset, GetAttributeDataSize(VertexData^.VertexAttribs^[i]));
     end;
 
     TCEOpenGLUniformsManager(FUniformsManager).ShaderProgram := CurShader.ShaderProgram;
     Mesh.SetUniforms(FUniformsManager);
 
-    case Mesh.PrimitiveType of
-      ptPointList: glDrawArrays(GL_POINTS, VertexData^.Status.Offset, Mesh.PrimitiveCount);
-      ptLineList: glDrawArrays(GL_LINES, VertexData^.Status.Offset, Mesh.PrimitiveCount * 2);
-      ptLineStrip: glDrawArrays(GL_LINE_STRIP, VertexData^.Status.Offset, Mesh.PrimitiveCount + 1);
-      ptTriangleList: glDrawArrays(GL_TRIANGLES, VertexData^.Status.Offset, Mesh.PrimitiveCount * 3);
-      ptTriangleStrip: begin
-        glDrawArrays(GL_TRIANGLE_STRIP, VertexData^.Status.Offset, Mesh.PrimitiveCount + 2);
-        //glPointSize(4);
-        //glDrawArrays(GL_POINTS, VertexData^.Status.Offset, Mesh.PrimitiveCount + 2);
+    if Mesh.IndicesCount > 0 then
+    begin
+      FBufferManager.UnMapBuffer(IndexData^.Status, Mesh.IndicesCount, Destinations[dbtIndex]);
+      case Mesh.PrimitiveType of
+        ptPointList: glDrawElements(GL_POINTS, Mesh.PrimitiveCount, GL_UNSIGNED_SHORT, PtrOffs(nil, IndexData^.Status.Offset));
+        ptLineList: glDrawElements(GL_LINES, Mesh.PrimitiveCount * 2, GL_UNSIGNED_SHORT, PtrOffs(nil, IndexData^.Status.Offset));
+        ptLineStrip: glDrawElements(GL_LINE_STRIP, Mesh.PrimitiveCount + 1, GL_UNSIGNED_SHORT, PtrOffs(nil, IndexData^.Status.Offset));
+        ptTriangleList: glDrawElements(GL_TRIANGLES, Mesh.PrimitiveCount * 3, GL_UNSIGNED_SHORT, PtrOffs(nil, IndexData^.Status.Offset));
+        ptTriangleStrip: glDrawElements(GL_TRIANGLE_STRIP, Mesh.PrimitiveCount + 2, GL_UNSIGNED_SHORT, PtrOffs(nil, IndexData^.Status.Offset));
+        ptTriangleFan: glDrawElements(GL_TRIANGLE_FAN, Mesh.VerticesCount, GL_UNSIGNED_SHORT, PtrOffs(nil, IndexData^.Status.Offset));
+        ptQuads:;
+      end
+    end else
+      case Mesh.PrimitiveType of
+        ptPointList: glDrawArrays(GL_POINTS, 0, Mesh.PrimitiveCount);
+        ptLineList: glDrawArrays(GL_LINES, 0, Mesh.PrimitiveCount * 2);
+        ptLineStrip: glDrawArrays(GL_LINE_STRIP, 0, Mesh.PrimitiveCount + 1);
+        ptTriangleList: glDrawArrays(GL_TRIANGLES, 0, Mesh.PrimitiveCount * 3);
+        ptTriangleStrip: begin
+          glDrawArrays(GL_TRIANGLE_STRIP, 0, Mesh.PrimitiveCount + 2);
+          //glPointSize(4);
+          //glDrawArrays(GL_POINTS, VertexData^.Status.Offset, Mesh.PrimitiveCount + 2);
+        end;
+        ptTriangleFan: glDrawArrays(GL_TRIANGLE_FAN, 0, Mesh.VerticesCount);
+        ptQuads:;
       end;
-      ptTriangleFan: glDrawArrays(GL_TRIANGLE_FAN, VertexData^.Status.Offset, Mesh.VerticesCount);
-      ptQuads:;
-    end;
   end;
 end;
 
@@ -692,34 +727,54 @@ end;
 
 { TCEOpenGLBufferManager }
 
+function IsIndexBuffer(Usage: TCEDataUsage): Boolean; {$I inline.inc}
+begin
+  Result := (Usage = duStaticIndices) or (Usage = duStreamingIndices);
+end;
+
+function GetBufferType(Usage: TCEDataUsage): Cardinal; {$I inline.inc}
+const
+  BUFFER_TYPE: array[Boolean] of Cardinal = (GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER);
+begin
+  Result := BUFFER_TYPE[IsIndexBuffer(Usage)];
+end;
+
+const
+  BUFFER_USAGE: array[Boolean] of Cardinal = (GL_STATIC_DRAW, GL_STREAM_DRAW);
+
 procedure TCEOpenGLBufferManager.ApiAddBuffer(Index: Integer);
 begin
   Assert((Index >= 0) and (Index < Count), 'Invalid index');
   glGenBuffers(1, @FBuffers^[Index].Id);
-  glBindBuffer(GL_ARRAY_BUFFER, FBuffers^[Index].Id);
-  glBufferData(GL_ARRAY_BUFFER, DATA_BUFFER_SIZE_DYNAMIC * FBuffers^[Index].ElementSize, nil, GL_STATIC_DRAW);
+  glBindBuffer(GetBufferType(FBuffers^[Index].DataUsage), FBuffers^[Index].Id);
+  glBufferData(GetBufferType(FBuffers^[Index].DataUsage), DATA_BUFFER_SIZE_DYNAMIC * FBuffers^[Index].ElementSize, nil,
+    BUFFER_USAGE[FBuffers^[Index].DataUsage >= duStreamingIndices]);
+  ReportGLError('AddBuffer');
 end;
 
 function TCEOpenGLBufferManager.ApiMapBuffer(const Status: TCEDataStatus; ElementsCount: Integer; Discard: Boolean): Pointer;
 begin
-  glBindBuffer(GL_ARRAY_BUFFER, FBuffers^[Status.BufferIndex].Id);
+  glBindBuffer(GetBufferType(FBuffers^[Status.BufferIndex].DataUsage), FBuffers^[Status.BufferIndex].Id);
   if Discard then
   begin
-    glBufferData(GL_ARRAY_BUFFER, FBuffers^[Status.BufferIndex].Size * FBuffers^[Status.BufferIndex].ElementSize, nil, GL_STATIC_DRAW);
+    glBufferData(GetBufferType(FBuffers^[Status.BufferIndex].DataUsage), FBuffers^[Status.BufferIndex].Size * FBuffers^[Status.BufferIndex].ElementSize,
+      nil, BUFFER_USAGE[FBuffers^[Status.BufferIndex].DataUsage >= duStreamingIndices]);
     CELog.Debug('Discarding buffer #' + IntToStr(Status.BufferIndex));
   end;
-  Result := TmpData;
+  Result := TmpData[IsIndexBuffer(FBuffers^[Status.BufferIndex].DataUsage)];
 end;
 
 procedure TCEOpenGLBufferManager.ApiUnmapBuffer(const Status: TCEDataStatus; ElementsCount: Integer; Data: Pointer);
 begin
-  glBufferSubData(GL_ARRAY_BUFFER, Status.Offset * FBuffers^[Status.BufferIndex].ElementSize, ElementsCount * FBuffers^[Status.BufferIndex].ElementSize, Data);
+  glBufferSubData(GetBufferType(FBuffers^[Status.BufferIndex].DataUsage), Status.Offset * FBuffers^[Status.BufferIndex].ElementSize,
+    ElementsCount * FBuffers^[Status.BufferIndex].ElementSize, Data);
   ReportGLError('SubData');
 end;
 
 constructor TCEOpenGLBufferManager.Create();
 begin
-  GetMem(TmpData, DATA_BUFFER_SIZE_DYNAMIC * DATA_BUFFER_ELEMENT_MAX_SIZE);
+  GetMem(TmpData[false], DATA_BUFFER_SIZE_DYNAMIC * DATA_VERTEX_BUFFER_ELEMENT_MAX_SIZE);
+  GetMem(TmpData[true], DATA_BUFFER_SIZE_DYNAMIC * DATA_INDEX_BUFFER_ELEMENT_MAX_SIZE);
 end;
 
 destructor TCEOpenGLBufferManager.Destroy();
@@ -728,8 +783,10 @@ var
 begin
   for i := 0 to Count - 1 do
     glDeleteBuffers(1, @FBuffers^[i].Id);
-  if Assigned(TmpData) then
-    FreeMem(TmpData);
+  if Assigned(TmpData[false]) then
+    FreeMem(TmpData[false]);
+  if Assigned(TmpData[true]) then
+    FreeMem(TmpData[true]);
   inherited;
 end;
 
