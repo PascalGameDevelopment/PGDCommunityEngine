@@ -194,7 +194,7 @@ begin
 
   SpriteMesh1 := TCESpriteMesh.Create(Core.EntityManager);
   SpriteMesh1.X := -0.5;
-  SpriteMesh1.SetTextureParameters(7, 7);
+  SpriteMesh1.SetTextureParameters(4, 4);
   SpriteMesh2 := TCESpriteMesh.Create(Core.EntityManager);
   SpriteMesh2.X := 0.5;
   SpriteMesh2.Width := 0.5;
@@ -208,7 +208,7 @@ begin
   PolyPass := CreateRenderPass(Core.EntityManager, true, '', 'asset://vs_poly.glsl', 'asset://fs_poly.glsl');
   LinePass := CreateRenderPass(Core.EntityManager, true, '', 'asset://vs_line.glsl', 'asset://fs_line.glsl');
   SpritePass := CreateRenderPass(Core.EntityManager, true, 'asset://sprites.bmp', 'asset://vs_sprite.glsl', 'asset://fs_sprite.glsl');
-  MonsterSpritePass := CreateRenderPass(Core.EntityManager, true, 'asset://monster.bmp', 'asset://vs_sprite.glsl', 'asset://fs_sprite.glsl');
+  MonsterSpritePass := CreateRenderPass(Core.EntityManager, true, 'asset://chest.bmp', 'asset://vs_sprite.glsl', 'asset://fs_sprite.glsl');
   PointPass := CreateRenderPass(Core.EntityManager, true, '', 'asset://vs_circle.glsl', 'asset://fs_circle.glsl');
 
   {Mat := TCEMaterial.Create(Core.EntityManager);
